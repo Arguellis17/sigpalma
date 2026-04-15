@@ -1,0 +1,55 @@
+================================================================================
+EXPLICACIÓN DE APORTE — Jean Pauldi
+Tema: Primer despliegue y configuración en Vercel del front
+Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+================================================================================
+
+QUÉ HIZO EN TÉRMINOS SENCILLOS
+------------------------------
+Se encargó de llevar la aplicación Next.js desde el entorno de desarrollo
+(ordenadores del equipo) a un entorno en Internet donde la puedan abrir con un
+navegador, típicamente usando Vercel, que es la plataforma muy alineada con
+Next.js.
+
+Ese paso no es solo “subir archivos”: implica conectar el repositorio, definir
+cómo se construye el proyecto en cada cambio, y sobre todo configurar las
+variables de entorno para que la aplicación en la nube sepa dónde está el
+proyecto de Supabase y qué claves puede usar de forma segura.
+
+QUÉ HAY QUE TENER CLARO EN UN DESPLIEGUE ASÍ
+--------------------------------------------
+• La URL pública del proyecto Supabase y la clave pensada para el cliente (navegador
+  y servidor con reglas de seguridad) deben estar configuradas en Vercel con los
+  mismos nombres que espera el código. Si faltan o están mal, la app compila pero
+  falla al iniciar sesión o al cargar datos.
+
+• La clave de administrador del servicio (service role) solo debe existir en el
+  entorno del servidor en Vercel, nunca como variable “pública” accesible desde
+  el navegador del usuario. Eso es crítico para funciones como crear usuarios desde
+  el panel de administración.
+
+• Opcionalmente, si el equipo usa Drizzle u otras herramientas contra Postgres
+  directamente, puede hacer falta otra variable con la cadena de conexión a la
+  base; eso se decide según qué se ejecute en despliegue y qué solo en local.
+
+• El comando de construcción y la versión de Node deben coincidir con lo probado
+  en el repositorio para evitar sorpresas entre “en mi máquina funciona” y “en
+  producción no”.
+
+EN PALABRAS DE EQUIPO
+---------------------
+Jean Pauldi hizo posible que SIG-Palma dejara de ser solo un proyecto en carpetas
+locales y pasara a ser una URL compartible con el docente, el cliente académico
+o el resto del grupo. Además, el despliegue correcto valida que la integración con
+Supabase y las variables secretas están bien planteadas para un entorno real.
+
+NOTA
+----
+La documentación interna del snapshot enfatiza el desarrollo con Webpack en local
+por estabilidad de estilos; en Vercel el proceso de build de producción sigue las
+reglas del proveedor y del archivo de configuración del proyecto. Si algo falla
+solo en producción, suele revisarse el log de build y las variables de entorno.
+
+================================================================================
+Fin del texto — listo para informes o presentaciones académicas.
+================================================================================

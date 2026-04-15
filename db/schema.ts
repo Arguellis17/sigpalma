@@ -1,0 +1,198 @@
+/**
+ * Espejo del esquema aplicado por SQL en `supabase/migrations/`.
+ * Mantener alineado con la migración; usar Drizzle Studio / consultas tipadas.
+ * No reemplaza las migraciones Supabase: son la fuente de verdad para RLS, triggers y auth.
+ */
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  date,
+  integer,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+
+export const userRoleEnum = pgEnum("user_role", [
+  "admin",
+  "agronomo",
+  "operario",
+]);
+
+export const registroSourceEnum = pgEnum("registro_source", [
+  "web",
+  "mobile",
+  "api",
+]);
+
+export const catalogoCategoriaEnum = pgEnum("catalogo_categoria", [
+  "plaga",
+  "enfermedad",
+  "insumo",
+  "material_genetico",
+  "otro",
+]);
+
+export const nivelSeveridadEnum = pgEnum("nivel_severidad", [
+  "baja",
+  "media",
+  "alta",
+  "critica",
+]);
+
+export const fincas = pgTable(
+  "fincas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nombre: text("nombre").notNull(),
+    ubicacion: text("ubicacion"),
+    areaHa: numeric("area_ha", { precision: 12, scale: 4 }).notNull(),
+    propietario: text("propietario"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("fincas_nombre_unique").on(sql`lower(${t.nombre})`),
+  ]
+);
+
+export const profiles = pgTable("profiles", {
+  id: uuid("id").primaryKey(),
+  fullName: text("full_name").notNull().default(""),
+  role: userRoleEnum("role").notNull().default("operario"),
+  fincaId: uuid("finca_id").references(() => fincas.id, {
+    onDelete: "set null",
+  }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const lotes = pgTable(
+  "lotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fincaId: uuid("finca_id")
+      .notNull()
+      .references(() => fincas.id, { onDelete: "restrict" }),
+    codigo: text("codigo").notNull(),
+    areaHa: numeric("area_ha", { precision: 12, scale: 4 }).notNull(),
+    anioSiembra: integer("anio_siembra").notNull(),
+    materialGenetico: text("material_genetico"),
+    densidadPalmasHa: numeric("densidad_palmas_ha", {
+      precision: 10,
+      scale: 2,
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("lotes_finca_codigo").on(t.fincaId, t.codigo)]
+);
+
+export const catalogoItems = pgTable(
+  "catalogo_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    categoria: catalogoCategoriaEnum("categoria").notNull(),
+    nombre: text("nombre").notNull(),
+    descripcion: text("descripcion"),
+    activo: boolean("activo").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("catalogo_items_categoria_nombre_lower").on(
+      t.categoria,
+      sql`lower(${t.nombre})`
+    ),
+  ]
+);
+
+export const laboresAgronomicas = pgTable("labores_agronomicas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  tipo: text("tipo").notNull(),
+  fechaEjecucion: date("fecha_ejecucion").notNull(),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const cosechasRff = pgTable("cosechas_rff", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  fecha: date("fecha").notNull(),
+  pesoKg: numeric("peso_kg", { precision: 14, scale: 3 }).notNull(),
+  conteoRacimos: integer("conteo_racimos").notNull(),
+  madurezFrutosCaidosMin: integer("madurez_frutos_caidos_min"),
+  madurezFrutosCaidosMax: integer("madurez_frutos_caidos_max"),
+  observacionesCalidad: text("observaciones_calidad"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const alertasFitosanitarias = pgTable("alertas_fitosanitarias", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  catalogoItemId: uuid("catalogo_item_id").references(() => catalogoItems.id, {
+    onDelete: "set null",
+  }),
+  severidad: nivelSeveridadEnum("severidad").notNull(),
+  descripcion: text("descripcion"),
+  loteEstadoAlerta: boolean("lote_estado_alerta").notNull().default(false),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

@@ -1,0 +1,57 @@
+================================================================================
+EXPLICACIÓN DE APORTE — Omar
+Tema: Definición inicial de “API” y contratos de datos — Lotes, Insumos, Material genético, Diccionario
+Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+================================================================================
+
+QUÉ SIGNIFICA “API” EN ESTE CONTEXTO (SIN PERDERSE EN JERGAS)
+------------------------------------------------------------
+En muchos proyectos se habla de API pensando solo en URLs tipo REST. En SIG-Palma,
+la documentación del equipo distingue dos ideas:
+
+• Las operaciones que la aplicación web ejecuta en el servidor (llamadas “Server
+  Actions”) actúan como capa de acceso a los datos: reciben entradas validadas,
+  llaman a Supabase y devuelven resultados. Eso cumple el papel práctico de una
+  API interna para el front.
+
+• Para el futuro, el proyecto reserva la posibilidad de una API HTTP versionada
+  para sistemas externos, exportaciones o integraciones que no encajen en ese
+  modelo. Esa capa no tiene por qué estar toda construida en la primera entrega.
+
+QUÉ TIENE QUE VER CON LOTES, INSUMOS, MATERIAL GENÉTICO Y DICCIONARIO
+---------------------------------------------------------------------
+• Lotes: en el sistema actual hay gestión de lotes vinculados a cada finca (alta,
+  edición, listado, detalle con historial). Los “contratos” de datos incluyen
+  campos como código, área, año de siembra y, entre otros, material genético
+  asociado al lote cuando el equipo lo registra.
+
+• Material genético e insumos en el modelo de datos: el esquema de base prevé
+  categorías de catálogo (por ejemplo insumo y material genético, junto con otras
+  como plaga o enfermedad). Eso apoya la idea de un diccionario o catálogo maestro:
+  listas normalizadas para evitar que cada usuario escriba lo mismo de formas
+  distintas. Parte de esa estructura ya está en las tablas de referencia; la
+  interfaz puede ir incorporando su uso según prioridad del sprint.
+
+• Diccionario: en la práctica corresponde a ese catálogo de ítems por categoría,
+  pensado para estandarizar términos técnicos del cultivo y del manejo fitosanitario.
+
+EN PALABRAS DE EQUIPO
+---------------------
+Omar aportó la definición inicial de qué entidades y agrupaciones son necesarias
+para que Lotes y los catálogos (insumos, material genético, resto del diccionario)
+tengan un comportamiento predecible: qué campos existen, cómo se relacionan con
+fincas y con el resto del dominio, y cómo se podría exponer el acceso a datos
+(Server Actions ahora; API HTTP más adelante si el producto lo requiere). Ese
+trabajo de definición evita que cada desarrollador interprete el negocio de una
+manera distinta y facilita que la base de datos y la interfaz hablen el mismo idioma.
+
+NOTA HONESTA PARA LA DEFENSA
+----------------------------
+Si en la entrega actual algunas pantallas aún usan texto libre donde el catálogo
+podría reemplazarlo, eso no invalida la definición: suele ser una decisión de
+prioridad de implementación; el modelo prepara el terreno para unificar datos en
+ciclos siguientes.
+
+================================================================================
+Fin del texto — listo para informes o presentaciones académicas.
+================================================================================

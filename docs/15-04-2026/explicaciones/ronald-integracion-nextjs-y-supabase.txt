@@ -1,0 +1,58 @@
+================================================================================
+EXPLICACIÓN DE APORTE — Ronald
+Tema: Integración de Next.js con Supabase
+Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+================================================================================
+
+QUÉ HIZO EN TÉRMINOS SENCILLOS
+------------------------------
+Se encargó de que la aplicación web hecha con Next.js pudiera “hablar” con
+Supabase de manera correcta: es decir, que el inicio de sesión, las cookies de
+seguridad y las consultas a la base respeten las buenas prácticas recomendadas
+para proyectos que mezclan servidor (donde corre la aplicación) y navegador
+(donde el usuario interactúa).
+
+Supabase aquí cumple varios papeles: guardar datos en PostgreSQL, gestionar
+usuarios y contraseñas, y exponer APIs seguras. La integración consiste en
+configurar los clientes de Supabase en los lugares adecuados (servidor y
+navegador), y en asegurar que en cada petición la sesión se actualice bien para
+que el usuario no quede desconectado de forma inesperada o con datos obsoletos.
+
+CÓMO SE VE ESO EN EL COMPORTAMIENTO DEL SISTEMA
+-----------------------------------------------
+• Cuando alguien navega por la aplicación, una capa en el borde de Next.js
+  revisa y refresca la sesión de Supabase usando mecanismos actuales
+  recomendados por la documentación oficial (validación del token de seguridad,
+  no depender de métodos antiguos que ya no se consideran seguros en servidor).
+
+• Las rutas que requieren usuario identificado redirigen al login si no hay
+  sesión; las rutas públicas de autenticación siguen accesibles.
+
+• En el servidor (páginas y acciones que corren en el backend de Next) se usa un
+  cliente Supabase que lee las cookies de la petición, de modo que las reglas de
+  seguridad de la base (RLS) se aplican con el usuario correcto.
+
+• En el navegador hay otro cliente, pensado para la parte interactiva cuando
+  haga falta.
+
+• Para operaciones muy sensibles que solo puede hacer el sistema (por ejemplo
+  crear usuarios con privilegios especiales desde un panel de administración),
+  existe un cliente separado que usa una clave secreta solo en el servidor,
+  nunca expuesta al usuario final.
+
+EN PALABRAS DE EQUIPO
+---------------------
+Ronald cerró el circuito “pantalla → Next.js → Supabase → base de datos” de
+forma segura y alineada con las guías actuales. Sin esa integración, la app
+podría compilar, pero fallaría al guardar datos, al iniciar sesión o al proteger
+correctamente la información según cada rol.
+
+NOTA
+----
+Las direcciones URL y claves del proyecto Supabase se configuran como variables
+de entorno (no se suben al repositorio); cada ambiente —local o en la nube—
+tiene sus propios valores.
+
+================================================================================
+Fin del texto — listo para informes o presentaciones académicas.
+================================================================================

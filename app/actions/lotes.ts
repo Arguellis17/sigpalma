@@ -1,0 +1,107 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import {
+  getSessionProfile,
+  canManageLotes,
+} from "@/lib/auth/session-profile";
+import {
+  crearLoteSchema,
+  actualizarLoteSchema,
+  type CrearLoteInput,
+  type ActualizarLoteInput,
+} from "@/lib/validations/finca-lote";
+import { actionError, actionOk, type ActionResult } from "./types";
+
+export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string }>> {
+  const parsed = crearLoteSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const input: CrearLoteInput = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile || !canManageLotes(session.profile)) {
+    return actionError("No tiene permiso para crear lotes.");
+  }
+
+  const { profile } = session;
+  if (profile.role === "agronomo") {
+    if (!profile.finca_id || profile.finca_id !== input.finca_id) {
+      return actionError("Solo puede crear lotes en su finca asignada.");
+    }
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lotes")
+    .insert({
+      finca_id: input.finca_id,
+      codigo: input.codigo.trim(),
+      area_ha: input.area_ha,
+      anio_siembra: input.anio_siembra,
+      material_genetico: input.material_genetico?.trim() || null,
+      densidad_palmas_ha: input.densidad_palmas_ha ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk({ id: data.id });
+}
+
+export async function actualizarLote(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = actualizarLoteSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const input: ActualizarLoteInput = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile || !canManageLotes(session.profile)) {
+    return actionError("No tiene permiso para editar lotes.");
+  }
+
+  const { profile } = session;
+  if (profile.role === "agronomo") {
+    if (!profile.finca_id || profile.finca_id !== input.finca_id) {
+      return actionError("Solo puede editar lotes de su finca asignada.");
+    }
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("lotes")
+    .select("id, finca_id")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (!existing || existing.finca_id !== input.finca_id) {
+    return actionError("El lote no coincide con la finca indicada.");
+  }
+
+  const { data, error } = await supabase
+    .from("lotes")
+    .update({
+      codigo: input.codigo.trim(),
+      area_ha: input.area_ha,
+      anio_siembra: input.anio_siembra,
+      material_genetico: input.material_genetico?.trim() || null,
+      densidad_palmas_ha: input.densidad_palmas_ha ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.id)
+    .select("id")
+    .single();
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk({ id: data.id });
+}
