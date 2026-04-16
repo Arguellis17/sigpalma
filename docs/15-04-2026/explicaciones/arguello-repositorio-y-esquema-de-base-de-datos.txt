@@ -1,58 +1,33 @@
 ================================================================================
-EXPLICACIÓN DE APORTE — Arguello
-Tema: Creación del repositorio y definición, diseño e integración del esquema de BD
-Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+APORTE — Arguello
+Tema: Creación del repositorio y diseño del esquema de base de datos
+Proyecto: SIG-Palma (snapshot 15-04-2026)
 ================================================================================
 
-QUÉ HIZO EN TÉRMINOS SENCILLOS
-------------------------------
-Se encargó de poner en marcha el repositorio del proyecto (el lugar donde vive el
-código versionado) y de definir cómo debe organizarse la información en la base
-de datos para que SIG-Palma pueda registrar fincas, lotes, usuarios, labores de
-campo, cosechas, alertas y datos de referencia, de forma ordenada y coherente con
-el negocio agrícola (palma de aceite, trazabilidad, roles de usuario).
+Arguello se encargó de inicializar el repositorio del proyecto SIG-Palma sobre
+Next.js (App Router, TypeScript) y de fijar las convenciones mínimas para que el
+código y las migraciones pudieran evolucionar en grupo sin perder trazabilidad.
+Ese cimiento permitió que el resto del equipo trabajara sobre una misma base
+tecnológica versionada.
 
-El “esquema” es el plan de tablas, relaciones y reglas: qué se guarda, cómo se
-relaciona una finca con sus lotes, cómo se identifica a cada persona que inicia
-sesión, y cómo se protege la información para que cada usuario solo vea lo que
-le corresponde según su rol.
+Definió el modelo relacional de dominio: fincas y lotes, perfiles de usuario
+ligados a `auth.users`, labores y cosecha, catálogos de referencia y soporte para
+evidencias, coherente con la trazabilidad agrícola y con los roles previstos
+(`admin`, `agronomo`, `operario`). Volcó ese diseño en SQL inicial dentro de
+`supabase/migrations/`: creación de tablas, claves foráneas, índices de consulta,
+tipos o enums de dominio, triggers que mantienen `profiles` alineado con Auth, y
+políticas RLS que acotan lecturas y escrituras según `auth.uid()`, rol y
+`finca_id`. Incluyó además la idea de un catálogo por categorías (plagas,
+enfermedades, insumos, material genético, etc.) para normalizar términos en lugar
+de depender de texto libre, y contempló el bucket de Storage para evidencia
+técnica con reglas acordes a los roles.
 
-CÓMO ENCAJA CON LO QUE MUESTRA EL PROYECTO HOY
-----------------------------------------------
-• El diseño de la base quedó plasmado en una migración inicial en SQL (archivos
-  versionados en la carpeta de migraciones de Supabase). Ahí están creadas las
-  tablas principales, tipos de datos de dominio (por ejemplo roles de usuario),
-  índices para búsquedas eficientes y la tabla de perfiles ligada a las cuentas
-  de autenticación.
-
-• Se previó un catálogo de ítems de referencia (por categorías como plagas,
-  enfermedades, insumos, material genético u otros), pensado para servir como
-  “diccionario” o lista maestra cuando la aplicación necesite valores
-  estandarizados en lugar de texto libre repetido.
-
-• La seguridad a nivel de filas (quién puede leer o escribir qué filas) forma
-  parte del diseño: las políticas se alinean con el modelo de acceso del
-  proyecto (administradores con visión más amplia; otros roles asociados a una
-  finca concreta).
-
-• También se contempló almacenamiento de archivos de evidencia técnica (por
-  ejemplo fotos o documentos), con un espacio dedicado en el servicio y reglas
-  acordes a los roles.
-
-EN PALABRAS DE EQUIPO
----------------------
-Sin esta base definida de forma clara, el resto del equipo no podría conectar la
-interfaz ni las acciones de la aplicación con datos consistentes. Arguello
-sentó la columna vertebral de datos: nombres de tablas, relaciones y reglas que
-hacen posible que Supabase (PostgreSQL) sea la fuente de verdad del sistema.
-
-NOTA
-----
-Las migraciones son el contrato oficial entre “cómo debe verse la base” y lo que
-realmente está desplegado en el proyecto de Supabase; el equipo debe aplicar
-esos scripts en el entorno cloud acordado para que la aplicación funcione igual
-para todos.
+En conjunto, su trabajo estableció el contrato de datos que Postgres y la
+aplicación deben compartir: sin ese esquema versionado y las políticas asociadas,
+las Server Actions y la UI no tendrían una fuente transaccional única alineada al
+negocio. Las migraciones en el repo son el medio oficial de expresar y desplegar
+ese contrato hacia el proyecto Supabase que use el equipo.
 
 ================================================================================
-Fin del texto — listo para informes o presentaciones académicas.
+Fin
 ================================================================================

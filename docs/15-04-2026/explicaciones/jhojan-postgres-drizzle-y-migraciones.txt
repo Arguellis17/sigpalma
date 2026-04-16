@@ -1,63 +1,45 @@
 ================================================================================
-EXPLICACIÓN DE APORTE — Jhojan
-Tema: Conexión a la base de datos PostgreSQL en Supabase con el front, Drizzle y migraciones
-Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+APORTE — Jhojan
+Tema: PostgreSQL en Supabase, Drizzle como espejo de esquema y migraciones
+Proyecto: SIG-Palma (snapshot 15-04-2026)
 ================================================================================
 
-QUÉ HIZO EN TÉRMINOS SENCILLOS
-------------------------------
-Se encargó de alinear tres cosas que a veces se confunden: (1) dónde vive la
-verdad del diseño de la base de datos, (2) cómo el equipo puede consultar o
-documentar ese diseño desde el proyecto con herramientas tipadas, y (3) cómo
-aplicar los cambios de estructura en el servidor PostgreSQL que ofrece Supabase.
+Jhojan se encargó de llevar a Supabase los esquemas que el equipo había definido
+con anterioridad —en particular el trabajo de modelado y DDL inicial asociado a
+Arguello— materializándolos como migraciones SQL versionadas bajo `supabase/migrations/`
+(con `supabase/config.toml` en la raíz del repo) y aplicándolas al Postgres
+gestionado por el proyecto Supabase Cloud. El procedimiento operativo que quedó
+documentado es el siguiente: autenticarse contra la CLI con `npx supabase login`;
+desde la raíz del repositorio vincular el directorio local al proyecto remoto con
+`npx supabase link --project-ref <REF> --password '<contraseña postgres del panel Database>'`,
+usando el mismo `<REF>` que aparece en `NEXT_PUBLIC_SUPABASE_URL`
+(`https://<REF>.supabase.co`); y aplicar las migraciones pendientes al remoto con
+`npx supabase db push` (opcional `--yes` en scripts para evitar confirmaciones). Como paso previo opcional, el
+equipo puede levantar un Postgres local con Docker mediante `npx supabase start`
+para comprobar que el SQL corre sin errores sin tocar credenciales de producción;
+eso no sustituye el `db push` contra Cloud. La alternativa sin CLI es pegar el
+contenido del `.sql` de migración en el SQL Editor del dashboard y ejecutarlo una
+vez sobre una base que aún no tenga ese esquema. Todo ese SQL versionado es la
+fuente de verdad del diseño: cualquier cambio estructural pasa por ahí antes de
+considerarse “real” en la base compartida.
 
-En este proyecto la “fuente de verdad” del esquema son los archivos SQL de
-migraciones: son los que se versionan y se aplican al proyecto de Supabase
-(en la nube o en un entorno local de prueba). Paralelamente, se usa Drizzle como
-espejo del mismo esquema en TypeScript: sirve para tener el modelo escrito en
-código, usar herramientas visuales de exploración y mantener coherencia con lo
-que realmente hay en la base una vez migrada.
+En paralelo configuró Drizzle (`db/schema.ts`, `drizzle.config.ts`) como espejo
+declarativo del mismo esquema en TypeScript, de modo que el equipo pueda abrir
+`drizzle-kit studio` (en el proyecto, expuesto como script `npm run db:studio`)
+para inspeccionar tablas, documentar índices y FKs en código y, si existe
+`DATABASE_URL` (cadena directa al Postgres del dashboard), ejecutar consultas o
+herramientas que hablan el protocolo nativo. Dejó explícito que la aplicación en
+operación normal no depende de Drizzle en cada pantalla: el runtime sigue siendo
+el cliente de Supabase con RLS; Drizzle es capa de apoyo técnico y reporting, no
+sustituto del cliente público.
 
-CÓMO SE COMPLEMENTA CON LA APLICACIÓN WEB
------------------------------------------
-• La aplicación en funcionamiento normal usa el cliente de Supabase (con las
-  reglas de seguridad por usuario). Drizzle no es obligatorio para cada pantalla;
-  es una capa extra útil para el equipo técnico y para consultas directas si se
-  configura una cadena de conexión a Postgres.
-
-• Opcionalmente se puede definir una variable de entorno con la URL de conexión
-  directa a PostgreSQL (la que aparece en el panel de Supabase), separando el
-  uso “herramienta / reporting” del flujo habitual de la app.
-
-• Después de aplicar migraciones en la base, el espejo en Drizzle debe
-  actualizarse para que coincida; si no, el código de tipos y el diseño real
-  podrían desalinearse.
-
-QUÉ GANA EL EQUIPO CON ESTE TRABAJO
------------------------------------
-• Migraciones ordenadas: cada cambio de estructura queda registrado con fecha y
-  nombre, lo que facilita auditorías y despliegues en grupo.
-
-• Menos errores por “memoria” del esquema: el modelo tipado ayuda a detectar
-  inconsistencias cuando se evoluciona el sistema.
-
-• Documentación viva: la configuración de Drizzle y el archivo de esquema
-  reflejan tablas y relaciones para quien entre nuevo al proyecto.
-
-EN PALABRAS DE EQUIPO
----------------------
-Jhojan conectó el mundo “operativo de la base” (migraciones SQL en Supabase) con
-el mundo “desarrollo TypeScript” (Drizzle), de modo que el equipo pueda evolucionar
-el modelo sin perder el hilo entre lo que está en el servidor y lo que está en el
-código.
-
-NOTA
-----
-Probar el SQL en local con las herramientas de Supabase puede servir para validar
-sintaxis, pero el entorno de trabajo acordado para la aplicación es el proyecto
-en la nube; hay que aplicar allí los mismos cambios para que todos vean los
-mismos datos y tablas.
+Su aporte cerró el ciclo “definición → DDL aplicado → espejo tipado”: tras cada
+aplicación de migraciones en Supabase corresponde actualizar el espejo Drizzle
+para evitar desalineación entre lo desplegado y lo que el repo afirma sobre tablas
+y tipos. El entorno de datos compartido para el equipo sigue siendo el proyecto
+Supabase en la nube; lo probado solo en máquina local debe replicarse allí para
+que todos trabajen contra el mismo esquema.
 
 ================================================================================
-Fin del texto — listo para informes o presentaciones académicas.
+Fin
 ================================================================================

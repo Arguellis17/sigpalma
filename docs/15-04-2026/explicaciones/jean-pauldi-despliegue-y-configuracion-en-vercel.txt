@@ -1,55 +1,33 @@
 ================================================================================
-EXPLICACIÓN DE APORTE — Jean Pauldi
+APORTE — Jean Pauldi
 Tema: Primer despliegue y configuración en Vercel del front
-Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+Proyecto: SIG-Palma (snapshot 15-04-2026)
 ================================================================================
 
-QUÉ HIZO EN TÉRMINOS SENCILLOS
-------------------------------
-Se encargó de llevar la aplicación Next.js desde el entorno de desarrollo
-(ordenadores del equipo) a un entorno en Internet donde la puedan abrir con un
-navegador, típicamente usando Vercel, que es la plataforma muy alineada con
-Next.js.
+Jean Pauldi se encargó de sacar la aplicación Next.js del entorno local y publicarla
+en Vercel, conectando el repositorio Git al proyecto de hosting de modo que cada
+push (o los acordados por el equipo) dispare builds y, si aplica, despliegues de
+preview por rama o pull request. Ajustó el pipeline de construcción para que use
+el mismo gestor de paquetes y rango de versión de Node que el repo declara o
+documenta, reduciendo la brecha entre “funciona en mi máquina” y el build remoto.
 
-Ese paso no es solo “subir archivos”: implica conectar el repositorio, definir
-cómo se construye el proyecto en cada cambio, y sobre todo configurar las
-variables de entorno para que la aplicación en la nube sepa dónde está el
-proyecto de Supabase y qué claves puede usar de forma segura.
+La parte crítica fue configurar las variables de entorno en Vercel con los mismos
+nombres que espera el código: `NEXT_PUBLIC_SUPABASE_URL` y
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` para el cliente que puede empaquetarse en el
+navegador, y `SUPABASE_SERVICE_ROLE_KEY` únicamente en el lado servidor, sin
+prefijo `NEXT_PUBLIC_`, para rutas o acciones que instancian el cliente admin
+(por ejemplo creación de usuarios con privilegios). Opcionalmente dejó documentado
+si hace falta `DATABASE_URL` para jobs que hablen Postgres directo; eso no forma
+parte del flujo estándar del cliente Supabase en la UI.
 
-QUÉ HAY QUE TENER CLARO EN UN DESPLIEGUE ASÍ
---------------------------------------------
-• La URL pública del proyecto Supabase y la clave pensada para el cliente (navegador
-  y servidor con reglas de seguridad) deben estar configuradas en Vercel con los
-  mismos nombres que espera el código. Si faltan o están mal, la app compila pero
-  falla al iniciar sesión o al cargar datos.
-
-• La clave de administrador del servicio (service role) solo debe existir en el
-  entorno del servidor en Vercel, nunca como variable “pública” accesible desde
-  el navegador del usuario. Eso es crítico para funciones como crear usuarios desde
-  el panel de administración.
-
-• Opcionalmente, si el equipo usa Drizzle u otras herramientas contra Postgres
-  directamente, puede hacer falta otra variable con la cadena de conexión a la
-  base; eso se decide según qué se ejecute en despliegue y qué solo en local.
-
-• El comando de construcción y la versión de Node deben coincidir con lo probado
-  en el repositorio para evitar sorpresas entre “en mi máquina funciona” y “en
-  producción no”.
-
-EN PALABRAS DE EQUIPO
----------------------
-Jean Pauldi hizo posible que SIG-Palma dejara de ser solo un proyecto en carpetas
-locales y pasara a ser una URL compartible con el docente, el cliente académico
-o el resto del grupo. Además, el despliegue correcto valida que la integración con
-Supabase y las variables secretas están bien planteadas para un entorno real.
-
-NOTA
-----
-La documentación interna del snapshot enfatiza el desarrollo con Webpack en local
-por estabilidad de estilos; en Vercel el proceso de build de producción sigue las
-reglas del proveedor y del archivo de configuración del proyecto. Si algo falla
-solo en producción, suele revisarse el log de build y las variables de entorno.
+Con ese despliegue quedó demostrado que la integración con Supabase no solo es
+válida en localhost: la app es accesible por URL, los secretos quedan acotados al
+runtime correcto y los fallos típicos de producción (env mal copiada, service role
+filtrada al bundle) quedan acotados revisando logs de build y el panel de
+variables en Vercel. Si el desarrollo local usa Webpack por estabilidad de estilos,
+producción sigue las reglas del builder de Vercel; las discrepancias solo en prod
+se depuran comparando esos logs con el entorno local.
 
 ================================================================================
-Fin del texto — listo para informes o presentaciones académicas.
+Fin
 ================================================================================

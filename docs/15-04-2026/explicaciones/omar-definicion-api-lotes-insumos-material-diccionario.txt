@@ -1,57 +1,65 @@
 ================================================================================
-EXPLICACIÓN DE APORTE — Omar
-Tema: Definición inicial de “API” y contratos de datos — Lotes, Insumos, Material genético, Diccionario
-Proyecto: SIG-Palma (snapshot documentado al 15-04-2026)
+APORTE — Omar
+Tema: APIs realizadas según los esquemas — lotes, fincas, catálogo, labores, cosecha
+Proyecto: SIG-Palma (snapshot 15-04-2026)
 ================================================================================
 
-QUÉ SIGNIFICA “API” EN ESTE CONTEXTO (SIN PERDERSE EN JERGAS)
-------------------------------------------------------------
-En muchos proyectos se habla de API pensando solo en URLs tipo REST. En SIG-Palma,
-la documentación del equipo distingue dos ideas:
+Omar se encargó de definir y documentar qué operaciones de acceso a datos necesita
+la aplicación para cubrir el aplicativo: lotes, insumos, material
+genético y el diccionario de referencia. En este proyecto esas operaciones no son
+endpoints REST en el sentido clásico, sino Server Actions definidas en
+`app/actions/` — funciones de servidor validadas con Zod que reciben los datos del
+formulario, comprueban permisos y llaman a Supabase con el JWT del usuario, de
+modo que las políticas RLS de Postgres aplican siempre sobre el usuario correcto.
 
-• Las operaciones que la aplicación web ejecuta en el servidor (llamadas “Server
-  Actions”) actúan como capa de acceso a los datos: reciben entradas validadas,
-  llaman a Supabase y devuelven resultados. Eso cumple el papel práctico de una
-  API interna para el front.
+Con base en los esquemas relacionales definidos por Arguello, las siguientes
+operaciones ya están implementadas y funcionales en el repositorio:
 
-• Para el futuro, el proyecto reserva la posibilidad de una API HTTP versionada
-  para sistemas externos, exportaciones o integraciones que no encajen en ese
-  modelo. Esa capa no tiene por qué estar toda construida en la primera entrega.
+Sobre fincas: `crearFinca` permite al rol administrador registrar una nueva finca
+con nombre, ubicación, área y propietario insertando en la tabla `fincas`; y
+`actualizarFinca` edita esos mismos campos sobre una finca existente. Ambas
+comprueban rol admin antes de escribir.
 
-QUÉ TIENE QUE VER CON LOTES, INSUMOS, MATERIAL GENÉTICO Y DICCIONARIO
----------------------------------------------------------------------
-• Lotes: en el sistema actual hay gestión de lotes vinculados a cada finca (alta,
-  edición, listado, detalle con historial). Los “contratos” de datos incluyen
-  campos como código, área, año de siembra y, entre otros, material genético
-  asociado al lote cuando el equipo lo registra.
+Sobre lotes: `crearLote` inserta un nuevo lote vinculado a una finca (código, área,
+año de siembra, material genético como texto, densidad de palmas por hectárea),
+verificando que el usuario tenga permiso de gestión y, si es agrónomo, que el lote
+pertenezca a su finca asignada. `actualizarLote` hace lo mismo para editar un lote
+existente, confirmando además que el `lote_id` y el `finca_id` coincidan antes de
+hacer el UPDATE. La lectura de lotes —listado por finca y ficha individual— se
+resuelve directamente en las páginas servidor de `app/fincas/...` con `.from("lotes")`;
+y existe la action `getLotesPorFinca` que devuelve solo `id` y `codigo` para
+alimentar desplegables en formularios como labores o alertas.
 
-• Material genético e insumos en el modelo de datos: el esquema de base prevé
-  categorías de catálogo (por ejemplo insumo y material genético, junto con otras
-  como plaga o enfermedad). Eso apoya la idea de un diccionario o catálogo maestro:
-  listas normalizadas para evitar que cada usuario escriba lo mismo de formas
-  distintas. Parte de esa estructura ya está en las tablas de referencia; la
-  interfaz puede ir incorporando su uso según prioridad del sprint.
+Sobre labores agronómicas: `registrarLabor` inserta en `labores_agronomicas` el
+tipo de labor, la fecha de ejecución, el lote, la finca y el usuario que la
+registró (`created_by`), más el canal de origen (`source`).
 
-• Diccionario: en la práctica corresponde a ese catálogo de ítems por categoría,
-  pensado para estandarizar términos técnicos del cultivo y del manejo fitosanitario.
+Sobre cosecha: `reportarCosecha` inserta en la tabla de cosechas el peso bruto de
+racimos, calcula automáticamente el rendimiento en toneladas por hectárea usando el
+área del lote y retorna ese valor calculado junto al id del registro.
 
-EN PALABRAS DE EQUIPO
----------------------
-Omar aportó la definición inicial de qué entidades y agrupaciones son necesarias
-para que Lotes y los catálogos (insumos, material genético, resto del diccionario)
-tengan un comportamiento predecible: qué campos existen, cómo se relacionan con
-fincas y con el resto del dominio, y cómo se podría exponer el acceso a datos
-(Server Actions ahora; API HTTP más adelante si el producto lo requiere). Ese
-trabajo de definición evita que cada desarrollador interprete el negocio de una
-manera distinta y facilita que la base de datos y la interfaz hablen el mismo idioma.
+Sobre alertas fitosanitarias: `crearAlertaFitosanitaria` inserta una alerta con
+severidad, descripción, finca, lote y opcionalmente un ítem del diccionario de
+referencia (`catalogo_item_id`). Si la severidad es crítica, también marca el campo
+`lote_estado_alerta` en true dentro del mismo insert.
 
-NOTA HONESTA PARA LA DEFENSA
-----------------------------
-Si en la entrega actual algunas pantallas aún usan texto libre donde el catálogo
-podría reemplazarlo, eso no invalida la definición: suele ser una decisión de
-prioridad de implementación; el modelo prepara el terreno para unificar datos en
-ciclos siguientes.
+Sobre el diccionario: `getCatalogoFitosanidad` es la única action de lectura sobre
+`catalogo_items` implementada; retorna los ítems activos de categorías `plaga` y
+`enfermedad` para poblar el selector en el formulario de alertas. No hay aún CRUD
+de administración sobre el catálogo (altas, edición o desactivación de ítems) ni
+actions que expongan las categorías `insumo` o `material_genetico` del catálogo en
+pantalla.
+
+Sobre usuarios: `crearUsuarioConRol` usa el cliente admin (service role) para crear
+un usuario en Supabase Auth y asignarle rol y finca en `profiles`, operación
+restringida al rol administrador.
+
+El material genético en lote, aunque el esquema de base contempla `catalogo_items`
+con la categoría `material_genetico`, por ahora se guarda como texto libre en la
+columna `material_genetico` de la tabla `lotes`; ese es el estado actual del código
+y la UI. Su normalización hacia el catálogo es una mejora pendiente para siguientes
+iteraciones.
 
 ================================================================================
-Fin del texto — listo para informes o presentaciones académicas.
+Fin
 ================================================================================

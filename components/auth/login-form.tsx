@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ function normalizeRedirectTo(path: string | undefined): string {
 }
 
 export function LoginForm({ redirectTo }: LoginFormProps) {
-  const router = useRouter();
   const afterLogin = normalizeRedirectTo(redirectTo);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,8 +48,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
       setError(signError.message);
       return;
     }
-    router.refresh();
-    router.push(afterLogin);
+    window.location.assign(afterLogin);
   }
 
   return (
