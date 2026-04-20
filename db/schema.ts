@@ -54,6 +54,7 @@ export const fincas = pgTable(
     ubicacion: text("ubicacion"),
     areaHa: numeric("area_ha", { precision: 12, scale: 4 }).notNull(),
     propietario: text("propietario"),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

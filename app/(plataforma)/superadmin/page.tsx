@@ -1,28 +1,57 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { MapPinned, ShieldCheck, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 async function getSuperadminStats() {
   const supabase = await createClient();
 
-  const [{ count: totalUsuarios }, { count: totalFincas }, { count: admins }] =
-    await Promise.all([
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
-      supabase.from("fincas").select("id", { count: "exact", head: true }),
-      supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("role", "admin"),
-    ]);
+  const [
+    { count: totalUsuarios },
+    { count: totalFincas },
+    { count: fincasActivas },
+    { count: admins },
+  ] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }).neq("role", "superadmin"),
+    supabase.from("fincas").select("id", { count: "exact", head: true }),
+    supabase.from("fincas").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin"),
+  ]);
 
   return {
     totalUsuarios: totalUsuarios ?? 0,
     totalFincas: totalFincas ?? 0,
+    fincasActivas: fincasActivas ?? 0,
     admins: admins ?? 0,
   };
 }
+
+const quickActions = [
+  {
+    href: "/superadmin/administradores",
+    icon: ShieldCheck,
+    label: "Administradores",
+    description: "Gestiona las cuentas con acceso de administrador.",
+    cta: "Gestionar",
+  },
+  {
+    href: "/superadmin/usuarios",
+    icon: Users,
+    label: "Todos los usuarios",
+    description: "Visualiza y gestiona todas las cuentas de la plataforma.",
+    cta: "Gestionar",
+  },
+  {
+    href: "/superadmin/fincas",
+    icon: MapPinned,
+    label: "Fincas",
+    description: "Administra las fincas registradas en el sistema.",
+    cta: "Gestionar",
+  },
+];
 
 export default async function SuperadminDashboardPage() {
   const stats = await getSuperadminStats();
@@ -38,30 +67,15 @@ export default async function SuperadminDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="surface-panel border-border/60">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Usuarios totales
+              Usuarios registrados
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-foreground">
-              {stats.totalUsuarios}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="surface-panel border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fincas registradas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-foreground">
-              {stats.totalFincas}
-            </p>
+            <p className="text-3xl font-semibold text-foreground">{stats.totalUsuarios}</p>
           </CardContent>
         </Card>
 
@@ -72,30 +86,55 @@ export default async function SuperadminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-foreground">
-              {stats.admins}
-            </p>
+            <p className="text-3xl font-semibold text-foreground">{stats.admins}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="surface-panel border-border/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Fincas activas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-foreground">{stats.fincasActivas}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="surface-panel border-border/60">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Fincas totales
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-foreground">{stats.totalFincas}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="surface-panel rounded-2xl p-5">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-            <Users className="size-5" />
-          </div>
-          <div>
-            <p className="font-semibold text-foreground">Administradores del sistema</p>
-            <p className="text-sm text-muted-foreground">
-              Gestiona las cuentas con acceso de administrador.
-            </p>
-          </div>
-          <Link
-            href="/superadmin/administradores"
-            className="ml-auto rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Ver administradores
-          </Link>
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Acciones rápidas
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {quickActions.map((action) => (
+            <div key={action.href} className="surface-panel flex items-center gap-3 rounded-2xl border border-border/60 p-4">
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary shrink-0">
+                <action.icon className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-foreground text-sm">{action.label}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{action.description}</p>
+              </div>
+              <Link
+                href={action.href}
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                {action.cta}
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
     </div>

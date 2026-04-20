@@ -75,3 +75,62 @@ export async function actualizarFinca(
 
   return actionOk({ id: data.id });
 }
+
+// ─── Inactivar finca (logical archive) ───────────────────────────────────────
+
+export async function inactivarFinca(
+  fincaId: string
+): Promise<ActionResult<void>> {
+  if (!fincaId) return actionError("ID de finca inválido.");
+
+  const session = await getSessionProfile();
+  if (!session?.profile || !isSuperAdmin(session.profile)) {
+    return actionError("Solo el superadministrador puede archivar fincas.");
+  }
+
+  const supabase = await createClient();
+
+  // Guard: cannot archive if there are active users assigned to this finca
+  const { count } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("finca_id", fincaId)
+    .eq("is_active", true);
+
+  if (count && count > 0) {
+    return actionError(
+      `No es posible archivar esta finca porque tiene ${count} usuario(s) activo(s) asignado(s). Inactívelos primero.`
+    );
+  }
+
+  const { error } = await supabase
+    .from("fincas")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("id", fincaId);
+
+  if (error) return actionError(error.message);
+  return actionOk(undefined);
+}
+
+// ─── Reactivar finca ─────────────────────────────────────────────────────────
+
+export async function reactivarFinca(
+  fincaId: string
+): Promise<ActionResult<void>> {
+  if (!fincaId) return actionError("ID de finca inválido.");
+
+  const session = await getSessionProfile();
+  if (!session?.profile || !isSuperAdmin(session.profile)) {
+    return actionError("Solo el superadministrador puede reactivar fincas.");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("fincas")
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .eq("id", fincaId);
+
+  if (error) return actionError(error.message);
+  return actionOk(undefined);
+}

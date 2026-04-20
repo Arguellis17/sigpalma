@@ -21,7 +21,7 @@ async function getData() {
         .select(
           "id, full_name, role, is_active, finca_id, documento_identidad, created_at, fincas(nombre)"
         )
-        .eq("role", "admin")
+        .neq("role", "superadmin")
         .order("created_at", { ascending: false }),
       adminClient.auth.admin.listUsers({ perPage: 1000 }),
     ]);
@@ -45,7 +45,7 @@ async function getData() {
   return { fincas: fincas ?? [], usuarios };
 }
 
-export default async function AdministradoresPage() {
+export default async function SuperadminUsuariosPage() {
   const { fincas, usuarios } = await getData();
-  return <UsuariosClient fincas={fincas} usuarios={usuarios} scope="admin-only" />;
+  return <UsuariosClient fincas={fincas} usuarios={usuarios} scope="all" />;
 }

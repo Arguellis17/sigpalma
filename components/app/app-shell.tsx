@@ -95,6 +95,8 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           items: [
             { href: "/superadmin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/superadmin/administradores", label: "Administradores", icon: ShieldCheck },
+            { href: "/superadmin/usuarios", label: "Usuarios", icon: Users },
+            { href: "/superadmin/fincas", label: "Fincas", icon: MapPinned },
           ],
         },
       ];
@@ -229,6 +231,18 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Administradores",
       description: "Gestión de cuentas con rol de Administrador.",
+    };
+  }
+  if (pathname === "/superadmin/usuarios") {
+    return {
+      title: "Usuarios",
+      description: "Gestión global de todas las cuentas del sistema.",
+    };
+  }
+  if (pathname === "/superadmin/fincas") {
+    return {
+      title: "Fincas",
+      description: "Gestión global de fincas registradas en el sistema.",
     };
   }
   if (pathname === "/admin/usuarios") {

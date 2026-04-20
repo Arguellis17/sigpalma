@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Pencil, Plus, Search, UserMinus } from "lucide-react";
+import { KeyRound, Pencil, Plus, Search, UserCheck, UserMinus } from "lucide-react";
 import {
   crearUsuarioConRol,
   actualizarUsuario,
   inactivarUsuario,
+  reactivarUsuario,
   restablecerContrasena,
 } from "@/app/actions/usuarios";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ type UsuarioRow = {
 type Props = {
   fincas: Finca[];
   usuarios: UsuarioRow[];
+  /** "all" shows admin/agronomo/operario; "admin-only" restricts to admin role */
+  scope?: "all" | "admin-only";
 };
 
 const roleLabels: Record<string, string> = {
@@ -54,27 +57,29 @@ type ActiveSheet =
   | { type: "resetPassword"; usuario: UsuarioRow }
   | null;
 
-export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
+export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all" }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [usuarios, setUsuarios] = useState(initialUsuarios);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const [sheet, setSheet] = useState<ActiveSheet>(null);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmInactivar, setConfirmInactivar] = useState<UsuarioRow | null>(null);
 
   const filtered = useMemo(() => {
+    let list = showInactive ? usuarios : usuarios.filter((u) => u.is_active);
     const q = search.trim().toLowerCase();
-    if (!q) return usuarios;
-    return usuarios.filter(
+    if (!q) return list;
+    return list.filter(
       (u) =>
         u.full_name?.toLowerCase().includes(q) ||
         u.email?.toLowerCase().includes(q) ||
         u.role?.toLowerCase().includes(q) ||
         u.finca_nombre?.toLowerCase().includes(q)
     );
-  }, [usuarios, search]);
+  }, [usuarios, search, showInactive]);
 
   function closeSheet() {
     setSheet(null);
@@ -170,23 +175,53 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
     setConfirmInactivar(null);
   }
 
+  // ── Reactivar ────────────────────────────────────────────────────────────────
+  async function handleReactivar(usuario: UsuarioRow) {
+    const result = await reactivarUsuario(usuario.id);
+    if (!result.success) {
+      toast(result.error, "error");
+    } else {
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === usuario.id ? { ...u, is_active: true } : u))
+      );
+      toast("Usuario reactivado.", "success");
+    }
+  }
+
   return (
     <div className="fade-up-enter space-y-5">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar usuario…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
-          />
+        <div className="flex flex-1 flex-wrap gap-2">
+          <div className="relative max-w-xs flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuario…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInactive((v) => !v)}
+            className={`inline-flex min-h-10 items-center rounded-xl border px-3 text-sm transition-colors ${
+              showInactive
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-border/70 bg-background/80 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {showInactive ? "Ocultar inactivos" : "Ver inactivos"}
+          </button>
         </div>
-        <Button onClick={() => setSheet({ type: "create" })} className="min-h-10 shrink-0">
-          <Plus className="mr-1.5 size-4" />
+        <button
+          type="button"
+          onClick={() => setSheet({ type: "create" })}
+          className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          <Plus className="size-4" />
           Nuevo usuario
-        </Button>
+        </button>
       </div>
 
       {/* User list */}
@@ -228,7 +263,11 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
                     <Button size="sm" variant="ghost" className="text-xs text-destructive hover:text-destructive" onClick={() => setConfirmInactivar(u)}>
                       <UserMinus className="mr-1 size-3" /> Inactivar
                     </Button>
-                  ) : null}
+                  ) : (
+                    <Button size="sm" variant="ghost" className="text-xs text-primary hover:text-primary" onClick={() => handleReactivar(u)}>
+                      <UserCheck className="mr-1 size-3" /> Reactivar
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -278,7 +317,11 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
                           <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive hover:text-destructive" onClick={() => setConfirmInactivar(u)}>
                             <UserMinus className="size-3.5" />
                           </Button>
-                        ) : null}
+                        ) : (
+                          <Button size="sm" variant="ghost" className="h-8 px-2 text-primary hover:text-primary" onClick={() => handleReactivar(u)}>
+                            <UserCheck className="size-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -294,7 +337,7 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Nuevo usuario</DialogTitle>
-            <DialogDescription>Crea una cuenta con rol de Agrónomo u Operario.</DialogDescription>
+            <DialogDescription>Crea una cuenta con rol de {scope === "admin-only" ? "Administrador" : "Agrónomo u Operario"}.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
             <div className="space-y-1.5">
@@ -313,13 +356,19 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios }: Props) {
               <div className="space-y-1.5">
                 <Label htmlFor="cu-role">Rol <span className="text-destructive">*</span></Label>
                 <select id="cu-role" name="role" required className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="agronomo">Agrónomo</option>
-                  <option value="operario">Operario</option>
+                  {scope === "admin-only" ? (
+                    <option value="admin">Administrador</option>
+                  ) : (
+                    <>
+                      <option value="agronomo">Agrónomo</option>
+                      <option value="operario">Operario</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="cu-finca">Finca asignada <span className="text-destructive">*</span></Label>
-                <select id="cu-finca" name="finca_id" required className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
+                <Label htmlFor="cu-finca">Finca asignada {scope !== "admin-only" && <span className="text-destructive">*</span>}</Label>
+                <select id="cu-finca" name="finca_id" required={scope !== "admin-only"} className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
                   <option value="">Seleccione…</option>
                   {fincas.map((f) => (
                     <option key={f.id} value={f.id}>{f.nombre}</option>

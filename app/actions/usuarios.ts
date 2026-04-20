@@ -319,6 +319,46 @@ export async function listarUsuarios(): Promise<
   return actionOk(rows);
 }
 
+// ─── HU02: Reactivar usuario ─────────────────────────────────────────────────
+
+export async function reactivarUsuario(
+  userId: string
+): Promise<ActionResult<void>> {
+  if (!userId) return actionError("ID inválido.");
+
+  const session = await getSessionProfile();
+  if (!session?.profile || !isAdmin(session.profile)) {
+    return actionError("Acción no permitida.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("role, finca_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) return actionError("Usuario no encontrado.");
+
+  if (!isSuperAdmin(session.profile)) {
+    if (target.role === "admin" || target.role === "superadmin") {
+      return actionError("No tienes permisos para reactivar este usuario.");
+    }
+    if (target.finca_id !== session.profile.finca_id) {
+      return actionError("Solo puedes reactivar usuarios de tu finca.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .eq("id", userId);
+
+  if (error) return actionError(error.message);
+  return actionOk(undefined);
+}
+
 // ─── Resolver identificador de login (correo o cédula) ────────────────────────────
 // Called from the login form BEFORE signInWithPassword.
 // Uses a SECURITY DEFINER function in Postgres to read auth.users safely.
