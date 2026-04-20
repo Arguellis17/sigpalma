@@ -90,8 +90,15 @@ export async function requireRole(
     redirect("/auth/login");
   }
 
-  if (!hasRole(session.profile, allowedRoles)) {
-    redirect(redirectPath ?? getRoleDashboardPath(session.profile?.role));
+  const profile = session.profile;
+  // Inactive or missing profile must not use getRoleDashboardPath: e.g. inactive agronomo
+  // would otherwise redirect to /tecnico and loop forever (307 chain).
+  if (!profile?.is_active) {
+    redirect("/auth/login");
+  }
+
+  if (!allowedRoles.includes(profile.role)) {
+    redirect(redirectPath ?? getRoleDashboardPath(profile.role));
   }
 
   return session;

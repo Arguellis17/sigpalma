@@ -44,3 +44,15 @@ export const registrarAnalisisSueloSchema = z
 export type RegistrarAnalisisSueloInput = z.infer<
   typeof registrarAnalisisSueloSchema
 >;
+
+export const actualizarAnalisisSueloSchema = registrarAnalisisSueloSchema.extend({
+  id: z.string().uuid("Identificador de análisis inválido."),
+});
+
+export type ActualizarAnalisisSueloInput = z.infer<
+  typeof actualizarAnalisisSueloSchema
+>;
+
+export const anularAnalisisSueloSchema = z.object({
+  id: z.string().uuid("Identificador de análisis inválido."),
+});

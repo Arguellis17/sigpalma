@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { registrarAnalisisSuelo } from "@/app/actions/suelo";
+import {
+  actualizarAnalisisSuelo,
+  registrarAnalisisSuelo,
+} from "@/app/actions/suelo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,18 +13,42 @@ import { Textarea } from "@/components/ui/textarea";
 type Finca = { id: string; nombre: string };
 type Lote = { id: string; codigo: string };
 
+export type AnalisisSueloFormRecord = {
+  id: string;
+  finca_id: string;
+  lote_id: string;
+  fecha_analisis: string;
+  ph: number | null;
+  humedad_pct: number | null;
+  compactacion: number | null;
+  notas: string | null;
+};
+
 type Props = {
   fincas: Finca[];
   lotesPorFinca: Record<string, Lote[]>;
+  /** Full-page shell vs compact dialog body */
+  layout?: "page" | "dialog";
+  /** When set, form runs in edit mode and calls `actualizarAnalisisSuelo`. */
+  record?: AnalisisSueloFormRecord | null;
+  onSuccess: () => void;
+  onCancel: () => void;
 };
 
-export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
-  const router = useRouter();
+export function AnalisisSueloForm({
+  fincas,
+  lotesPorFinca,
+  layout = "page",
+  record = null,
+  onSuccess,
+  onCancel,
+}: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fincaId, setFincaId] = useState(fincas[0]?.id ?? "");
+  const [fincaId, setFincaId] = useState(record?.finca_id ?? fincas[0]?.id ?? "");
 
   const lotes = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
+  const isEdit = Boolean(record);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,7 +61,7 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
     const humedadRaw = fd.get("humedad_pct");
     const compactacionRaw = fd.get("compactacion");
 
-    const result = await registrarAnalisisSuelo({
+    const payload = {
       finca_id: fd.get("finca_id"),
       lote_id: fd.get("lote_id"),
       fecha_analisis: fd.get("fecha_analisis"),
@@ -43,23 +69,28 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
       humedad_pct: humedadRaw ? Number(humedadRaw) : null,
       compactacion: compactacionRaw ? Number(compactacionRaw) : null,
       notas: fd.get("notas") || null,
-    });
+    };
+
+    const result = isEdit && record
+      ? await actualizarAnalisisSuelo({ id: record.id, ...payload })
+      : await registrarAnalisisSuelo(payload);
 
     setPending(false);
 
     if (!result.success) {
       setError(result.error);
     } else {
-      router.push("/tecnico/suelo");
-      router.refresh();
+      onSuccess();
     }
   }
 
+  const shellClass =
+    layout === "page"
+      ? "surface-panel mx-auto flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6"
+      : "flex flex-col gap-4";
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="surface-panel mx-auto flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6"
-    >
+    <form onSubmit={handleSubmit} className={shellClass}>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="finca_id">Finca *</Label>
@@ -83,9 +114,11 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
         <div className="space-y-1.5">
           <Label htmlFor="lote_id">Lote *</Label>
           <select
+            key={`${fincaId}-${record?.id ?? "new"}`}
             id="lote_id"
             name="lote_id"
             required
+            defaultValue={record?.lote_id ?? ""}
             className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Seleccione un lote…</option>
@@ -105,7 +138,11 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
           name="fecha_analisis"
           type="date"
           required
-          defaultValue={new Date().toISOString().split("T")[0]}
+          defaultValue={
+            record?.fecha_analisis
+              ? record.fecha_analisis.slice(0, 10)
+              : new Date().toISOString().split("T")[0]
+          }
         />
       </div>
 
@@ -125,6 +162,7 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
             max={14}
             placeholder="Ej. 5.5"
             className="rounded-xl"
+            defaultValue={record?.ph != null ? String(record.ph) : undefined}
           />
         </div>
 
@@ -139,6 +177,7 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
             max={100}
             placeholder="Ej. 45"
             className="rounded-xl"
+            defaultValue={record?.humedad_pct != null ? String(record.humedad_pct) : undefined}
           />
         </div>
 
@@ -152,6 +191,7 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
             min={0}
             placeholder="Ej. 2.5"
             className="rounded-xl"
+            defaultValue={record?.compactacion != null ? String(record.compactacion) : undefined}
           />
         </div>
       </div>
@@ -161,9 +201,10 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
         <Textarea
           id="notas"
           name="notas"
-          rows={3}
+          rows={layout === "dialog" ? 2 : 3}
           placeholder="Observaciones del análisis, condiciones del suelo, recomendaciones…"
           className="rounded-xl"
+          defaultValue={record?.notas ?? undefined}
         />
       </div>
 
@@ -174,15 +215,15 @@ export function AnalisisSueloForm({ fincas, lotesPorFinca }: Props) {
       ) : null}
 
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push("/tecnico/suelo")}
-        >
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : "Registrar análisis"}
+          {pending
+            ? "Guardando…"
+            : isEdit
+              ? "Guardar cambios"
+              : "Registrar análisis"}
         </Button>
       </div>
     </form>

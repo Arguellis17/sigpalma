@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import {
+  actualizarAnalisisSueloSchema,
+  anularAnalisisSueloSchema,
   registrarAnalisisSueloSchema,
   type RegistrarAnalisisSueloInput,
 } from "@/lib/validations/suelo";
@@ -56,6 +58,85 @@ export async function registrarAnalisisSuelo(
     .single();
 
   if (error || !data) return actionError(error?.message ?? "No se pudo registrar el análisis.");
+  return actionOk({ id: data.id });
+}
+
+export async function actualizarAnalisisSuelo(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = actualizarAnalisisSueloSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const input = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile) {
+    return actionError("Sesión no encontrada.");
+  }
+
+  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
+  if (!allowedRoles.includes(session.profile.role ?? "")) {
+    return actionError("No tienes permiso para editar análisis de suelo.");
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("analisis_suelo")
+    .update({
+      finca_id: input.finca_id,
+      lote_id: input.lote_id,
+      fecha_analisis: input.fecha_analisis,
+      ph: input.ph ?? null,
+      humedad_pct: input.humedad_pct ?? null,
+      compactacion:
+        input.compactacion !== null && input.compactacion !== undefined
+          ? String(input.compactacion)
+          : null,
+      nutrientes: input.nutrientes ?? null,
+      notas: input.notas?.trim() ?? null,
+      archivo_url: input.archivo_url ?? null,
+    })
+    .eq("id", input.id)
+    .eq("is_voided", false)
+    .select("id")
+    .single();
+
+  if (error || !data) return actionError(error?.message ?? "No se pudo actualizar el análisis.");
+  return actionOk({ id: data.id });
+}
+
+export async function anularAnalisisSuelo(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = anularAnalisisSueloSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const { id } = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile) {
+    return actionError("Sesión no encontrada.");
+  }
+
+  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
+  if (!allowedRoles.includes(session.profile.role ?? "")) {
+    return actionError("No tienes permiso para anular análisis de suelo.");
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("analisis_suelo")
+    .update({ is_voided: true })
+    .eq("id", id)
+    .eq("is_voided", false)
+    .select("id")
+    .single();
+
+  if (error || !data) return actionError(error?.message ?? "No se pudo anular el análisis.");
   return actionOk({ id: data.id });
 }
 
