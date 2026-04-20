@@ -27,6 +27,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -318,6 +319,11 @@ export function AppShell({ children, session }: AppShellProps) {
         <SidebarHeader className="p-3">
           <Link
             href={session.role ? `/${session.role === "agronomo" ? "tecnico" : session.role}` : "/"}
+            title={
+              session.role
+                ? `SIG-Palma · ${roleLabels[session.role]}`
+                : "SIG-Palma"
+            }
             className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3 transition-[padding,gap] group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:gap-0 group-data-[collapsible=icon]/sidebar:px-2 group-data-[collapsible=icon]/sidebar:py-2"
           >
             <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 group-data-[collapsible=icon]/sidebar:size-9">
@@ -337,6 +343,11 @@ export function AppShell({ children, session }: AppShellProps) {
               <p className="truncate text-xs text-sidebar-foreground/70">
                 Gestión técnica y trazabilidad
               </p>
+              {session.role ? (
+                <p className="mt-1 truncate text-xs font-bold text-sidebar-foreground">
+                  {roleLabels[session.role]}
+                </p>
+              ) : null}
             </div>
           </Link>
         </SidebarHeader>
@@ -394,9 +405,6 @@ export function AppShell({ children, session }: AppShellProps) {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {session.role ? (
-                <Badge variant="secondary">{roleLabels[session.role]}</Badge>
-              ) : null}
               <Badge variant={session.isActive ? "outline" : "destructive"}>
                 {session.isActive ? "Activa" : "Inactiva"}
               </Badge>
@@ -404,7 +412,11 @@ export function AppShell({ children, session }: AppShellProps) {
           </div>
 
           <SignOutButton
-            className="w-full justify-start overflow-hidden group-data-[collapsible=icon]/sidebar:size-8 group-data-[collapsible=icon]/sidebar:min-w-0 group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:px-0"
+            variant="destructive"
+            className={cn(
+              "mt-2 w-full justify-start overflow-hidden border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground",
+              "group-data-[collapsible=icon]/sidebar:mt-2 group-data-[collapsible=icon]/sidebar:size-8 group-data-[collapsible=icon]/sidebar:min-w-0 group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:px-0"
+            )}
             labelClassName="group-data-[collapsible=icon]/sidebar:hidden"
           />
         </SidebarFooter>
