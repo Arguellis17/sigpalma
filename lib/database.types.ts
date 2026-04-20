@@ -16,6 +16,7 @@ export type Database = {
           ubicacion: string | null;
           area_ha: string;
           propietario: string | null;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -25,6 +26,7 @@ export type Database = {
           ubicacion?: string | null;
           area_ha: number | string;
           propietario?: string | null;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -34,6 +36,7 @@ export type Database = {
           ubicacion?: string | null;
           area_ha?: number | string;
           propietario?: string | null;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
