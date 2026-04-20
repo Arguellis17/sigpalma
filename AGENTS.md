@@ -66,17 +66,17 @@ Utiliza la siguiente terminología para el modelado de bases de datos y la nomen
 ## CodeCortex — Project Knowledge (auto-updated)
 
 ### Architecture
-**sigpalma** — javascript, bash, python, typescript, tsx — 17 files, 470 symbols
-- **Modules (1):** supabase (110loc)
-- **Key deps:** @supabase/ssr, next, clsx, tailwind-merge, eslint, +1 more
+**sigpalma** — tsx, typescript, javascript — 86 files, 716 symbols
+- **Modules (4):** validations (239loc), supabase (184loc), auth (99loc), campo (27loc)
+- **Key deps:** react, @/app, @/lib, @/components, next, +15 more
 
 ### Risk Map
 **High-risk files:**
-- `.gitignore` — 1 changes, stable
-- `AGENTS.md` — 1 changes, stable
-- `CLAUDE.md` — 1 changes, stable
-- `README.md` — 1 changes, stable
-- `app/favicon.ico` — 1 changes, stable
+- `components/auth/login-form.tsx` — 2 changes, stable
+- `...ello-repositorio-y-esquema-de-base-de-datos.txt` — 2 changes, stable
+- `...pauldi-despliegue-y-configuracion-en-vercel.txt` — 2 changes, stable
+- `.../jhojan-postgres-drizzle-y-migraciones.txt` — 2 changes, stable
+- `...cion-api-lotes-insumos-material-diccionario.txt` — 2 changes, stable
 
 ### Before Editing
 Check `.codecortex/hotspots.md` for risk-ranked files before editing.

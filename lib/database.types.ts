@@ -128,6 +128,11 @@ export type Database = {
           nombre: string;
           descripcion: string | null;
           activo: boolean;
+          subcategoria: string | null;
+          unidad_medida: string | null;
+          proveedor: string | null;
+          anio_adquisicion: number | null;
+          sintomas: string | null;
           created_at: string;
         };
         Insert: {
@@ -136,6 +141,11 @@ export type Database = {
           nombre: string;
           descripcion?: string | null;
           activo?: boolean;
+          subcategoria?: string | null;
+          unidad_medida?: string | null;
+          proveedor?: string | null;
+          anio_adquisicion?: number | null;
+          sintomas?: string | null;
           created_at?: string;
         };
         Update: {
@@ -144,9 +154,83 @@ export type Database = {
           nombre?: string;
           descripcion?: string | null;
           activo?: boolean;
+          subcategoria?: string | null;
+          unidad_medida?: string | null;
+          proveedor?: string | null;
+          anio_adquisicion?: number | null;
+          sintomas?: string | null;
           created_at?: string;
         };
         Relationships: [];
+      };
+      analisis_suelo: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          fecha_analisis: string;
+          ph: string | null;
+          humedad_pct: string | null;
+          compactacion: string | null;
+          nutrientes: Json | null;
+          archivo_url: string | null;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          fecha_analisis: string;
+          ph?: number | string | null;
+          humedad_pct?: number | string | null;
+          compactacion?: string | null;
+          nutrientes?: Json | null;
+          archivo_url?: string | null;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          fecha_analisis?: string;
+          ph?: number | string | null;
+          humedad_pct?: number | string | null;
+          compactacion?: string | null;
+          nutrientes?: Json | null;
+          archivo_url?: string | null;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "analisis_suelo_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "analisis_suelo_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "lotes";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       labores_agronomicas: {
         Row: {
@@ -290,10 +374,11 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      is_superadmin: { Args: Record<string, never>; Returns: boolean };
       current_user_finca_id: { Args: Record<string, never>; Returns: string | null };
     };
     Enums: {
-      user_role: "admin" | "agronomo" | "operario";
+      user_role: "superadmin" | "admin" | "agronomo" | "operario";
       registro_source: "web" | "mobile" | "api";
       catalogo_categoria:
         | "plaga"

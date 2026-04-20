@@ -19,6 +19,7 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
 
 const roleLabels = {
+  superadmin: "Superadministrador",
   admin: "Administrador",
   agronomo: "Agrónomo",
   operario: "Operario",

@@ -22,6 +22,7 @@ type UserRole = Database["public"]["Enums"]["user_role"];
 type FincaOption = { id: string; nombre: string };
 
 const roleLabels: Record<UserRole, string> = {
+  superadmin: "Superadministrador",
   admin: "Administrador",
   agronomo: "Agrónomo",
   operario: "Operario",

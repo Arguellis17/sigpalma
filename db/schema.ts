@@ -8,6 +8,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -18,6 +19,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
+  "superadmin",
   "admin",
   "agronomo",
   "operario",
@@ -113,6 +115,14 @@ export const catalogoItems = pgTable(
     nombre: text("nombre").notNull(),
     descripcion: text("descripcion"),
     activo: boolean("activo").notNull().default(true),
+    // insumos
+    subcategoria: text("subcategoria"),
+    unidadMedida: text("unidad_medida"),
+    // material_genetico
+    proveedor: text("proveedor"),
+    anioAdquisicion: integer("anio_adquisicion"),
+    // plaga / enfermedad
+    sintomas: text("sintomas"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -161,6 +171,32 @@ export const cosechasRff = pgTable("cosechas_rff", {
   madurezFrutosCaidosMin: integer("madurez_frutos_caidos_min"),
   madurezFrutosCaidosMax: integer("madurez_frutos_caidos_max"),
   observacionesCalidad: text("observaciones_calidad"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const analisisSuelo = pgTable("analisis_suelo", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  fechaAnalisis: date("fecha_analisis").notNull(),
+  ph: numeric("ph", { precision: 4, scale: 2 }),
+  humedadPct: numeric("humedad_pct", { precision: 5, scale: 2 }),
+  compactacion: text("compactacion"),
+  nutrientes: jsonb("nutrientes"),
+  archivoUrl: text("archivo_url"),
+  notas: text("notas"),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),

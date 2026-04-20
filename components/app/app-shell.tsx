@@ -4,14 +4,18 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
-  Blocks,
   ChevronRight,
+  FlaskConical,
+  Layers,
   LayoutDashboard,
   Leaf,
   MapPinned,
+  Package,
   ShieldCheck,
+  Sprout,
   Tractor,
   Users,
+  Wheat,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Badge } from "@/components/ui/badge";
@@ -41,14 +45,17 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
+type UserRole = "superadmin" | "admin" | "agronomo" | "operario";
+
 type AppShellProps = {
   children: React.ReactNode;
   session: {
     email: string | null;
     fullName: string | null;
-    role: "admin" | "agronomo" | "operario" | null;
+    role: UserRole | null;
     isActive: boolean;
     isAdmin: boolean;
+    isSuperAdmin: boolean;
   };
 };
 
@@ -56,6 +63,11 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<React.ComponentProps<"svg">>;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
 };
 
 type BreadcrumbEntry = {
@@ -72,204 +84,234 @@ type PageMeta = {
   };
 };
 
-const roleLabels = {
+const roleLabels: Record<UserRole, string> = {
+  superadmin: "Super Administrador",
   admin: "Administrador",
   agronomo: "Agrónomo",
   operario: "Operario",
-} as const;
+};
+
+function buildNavGroups(role: UserRole | null): NavGroup[] {
+  switch (role) {
+    case "superadmin":
+      return [
+        {
+          label: "Sistema",
+          items: [
+            { href: "/superadmin", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/superadmin/administradores", label: "Administradores", icon: ShieldCheck },
+          ],
+        },
+      ];
+
+    case "admin":
+      return [
+        {
+          label: "General",
+          items: [
+            { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/admin/usuarios", label: "Usuarios", icon: Users },
+            { href: "/admin/fincas", label: "Fincas", icon: MapPinned },
+          ],
+        },
+        {
+          label: "Catálogos",
+          items: [
+            { href: "/admin/catalogos/insumos", label: "Insumos", icon: Package },
+            { href: "/admin/catalogos/material-genetico", label: "Material genético", icon: Sprout },
+            { href: "/admin/catalogos/fitosanitario", label: "Fitosanitario", icon: FlaskConical },
+          ],
+        },
+      ];
+
+    case "agronomo":
+      return [
+        {
+          label: "Técnico",
+          items: [
+            { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
+          ],
+        },
+      ];
+
+    case "operario":
+      return [
+        {
+          label: "Operaciones",
+          items: [
+            { href: "/operario", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/operario/labores", label: "Labores", icon: Tractor },
+            { href: "/operario/cosecha", label: "Cosecha", icon: Wheat },
+          ],
+        },
+      ];
+
+    default:
+      return [];
+  }
+}
 
 function isRouteActive(pathname: string, href: string) {
-  if (href === "/") {
-    return pathname === "/";
+  const exactDashboards = ["/superadmin", "/admin", "/tecnico", "/operario"];
+  if (exactDashboards.includes(href)) {
+    return pathname === href;
   }
-
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function humanizeSegment(segment: string) {
-  if (segment === "campo") return "Campo";
-  if (segment === "labor") return "Labor";
-  if (segment === "cosecha") return "Cosecha";
-  if (segment === "alerta") return "Alerta";
-  if (segment === "fincas") return "Fincas";
-  if (segment === "lotes") return "Lotes";
-  if (segment === "nueva") return "Nueva finca";
-  if (segment === "nuevo") return "Nuevo lote";
-  if (segment === "editar") return "Editar";
-  if (segment.length > 16) return "Detalle";
-  return segment.charAt(0).toUpperCase() + segment.slice(1);
+const breadcrumbLabels: Record<string, string> = {
+  superadmin: "Dashboard",
+  admin: "Dashboard",
+  tecnico: "Dashboard",
+  operario: "Dashboard",
+  administradores: "Administradores",
+  usuarios: "Usuarios",
+  fincas: "Fincas",
+  lotes: "Lotes",
+  catalogos: "Catálogos",
+  insumos: "Insumos",
+  "material-genetico": "Material genético",
+  fitosanitario: "Fitosanitario",
+  suelo: "Análisis de suelo",
+  labores: "Labores",
+  cosecha: "Cosecha",
+  nueva: "Nueva finca",
+  nuevo: "Nuevo lote",
+  editar: "Editar",
+  nuevo_usuario: "Nuevo usuario",
+};
+
+function humanizeSegment(segment: string): string {
+  return (
+    breadcrumbLabels[segment] ??
+    (segment.length > 20
+      ? "Detalle"
+      : segment.charAt(0).toUpperCase() + segment.slice(1))
+  );
 }
 
 function buildBreadcrumbs(pathname: string): BreadcrumbEntry[] {
-  if (pathname === "/") {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) return [{ label: "Dashboard" }];
+
+  // The first segment is the role section — it becomes the root crumb with href
+  const rootSegment = segments[0];
+  const rootHref = `/${rootSegment}`;
+
+  if (segments.length === 1) {
     return [{ label: "Dashboard" }];
   }
 
-  const segments = pathname.split("/").filter(Boolean);
-  const crumbs: BreadcrumbEntry[] = [{ href: "/", label: "Dashboard" }];
+  const crumbs: BreadcrumbEntry[] = [
+    { href: rootHref, label: "Dashboard" },
+  ];
 
-  segments.forEach((segment, index) => {
-    const href = `/${segments.slice(0, index + 1).join("/")}`;
-    const isLast = index === segments.length - 1;
-    const previous = segments[index - 1];
-
-    let label = humanizeSegment(segment);
-
-    if (previous === "fincas" && segment.length > 16) {
-      label = "Detalle";
-    }
-
-    if (previous === "lotes" && segment.length > 16) {
-      label = "Detalle lote";
-    }
-
+  segments.slice(1).forEach((segment, index) => {
+    const href = `/${segments.slice(0, index + 2).join("/")}`;
+    const isLast = index === segments.length - 2;
+    const label = humanizeSegment(segment);
     crumbs.push(isLast ? { label } : { href, label });
   });
 
   return crumbs;
 }
 
-function getPageMeta(pathname: string, isAdmin: boolean): PageMeta {
-  if (pathname === "/") {
+function getPageMeta(pathname: string): PageMeta {
+  if (/^\/(superadmin|admin|tecnico|operario)$/.test(pathname)) {
     return {
       title: "Dashboard",
-      description:
-        "Resumen de fincas, lotes, labores y alertas visibles según el perfil actual.",
-      action: {
-        href: "/campo/labor",
-        label: "Registrar labor",
-      },
+      description: "Vista general de actividad y métricas del sistema.",
     };
   }
-
-  if (pathname === "/campo") {
+  if (pathname === "/superadmin/administradores") {
     return {
-      title: "Campo",
-      description:
-        "Accesos rápidos para registrar labores, cosechas y alertas desde la operación diaria.",
-      action: {
-        href: "/campo/labor",
-        label: "Nueva labor",
-      },
+      title: "Administradores",
+      description: "Gestión de cuentas con rol de Administrador.",
+      action: { href: "/superadmin/administradores/nuevo", label: "Nuevo administrador" },
     };
   }
-
-  if (pathname === "/campo/labor") {
+  if (pathname === "/admin/usuarios") {
     return {
-      title: "Registrar labor",
-      description: "Captura labores agronómicas por lote con validación y sesión protegida.",
+      title: "Usuarios",
+      description: "Creación, edición e inactivación de cuentas.",
+      action: { href: "/admin/usuarios/nuevo", label: "Nuevo usuario" },
     };
   }
-
-  if (pathname === "/campo/cosecha") {
-    return {
-      title: "Registrar cosecha",
-      description: "Registra RFF, peso, racimos y observaciones por lote.",
-    };
-  }
-
-  if (pathname === "/campo/alerta") {
-    return {
-      title: "Registrar alerta",
-      description: "Reporta incidencias fitosanitarias para seguimiento técnico.",
-    };
-  }
-
-  if (pathname === "/fincas") {
+  if (pathname === "/admin/fincas") {
     return {
       title: "Fincas",
-      description:
-        "Inventario de fincas visibles por RLS y acceso a lotes, edición e historial.",
-      action: isAdmin
-        ? {
-            href: "/fincas/nueva",
-            label: "Nueva finca",
-          }
-        : undefined,
+      description: "Inventario de fincas y acceso a sus lotes.",
+      action: { href: "/admin/fincas/nueva", label: "Nueva finca" },
     };
   }
-
-  if (pathname === "/fincas/nueva") {
+  if (pathname.endsWith("/editar")) {
+    return { title: "Editar", description: "Edición de registro." };
+  }
+  if (pathname.includes("/lotes/") && !pathname.endsWith("/lotes")) {
+    return { title: "Detalle de lote", description: "Historial operativo del lote." };
+  }
+  if (pathname.startsWith("/admin/fincas/") && !pathname.endsWith("/fincas")) {
+    return { title: "Detalle de finca", description: "Lotes e historial de la finca." };
+  }
+  if (pathname === "/admin/catalogos/insumos") {
     return {
-      title: "Nueva finca",
-      description: "Crea una unidad productiva y habilita su estructura base.",
+      title: "Insumos",
+      description: "Catálogo de fertilizantes, herbicidas y otros insumos.",
+      action: { href: "/admin/catalogos/insumos/nuevo", label: "Nuevo insumo" },
     };
   }
-
-  if (pathname.startsWith("/fincas/") && pathname.includes("/lotes/") && pathname.endsWith("/editar")) {
+  if (pathname === "/admin/catalogos/material-genetico") {
     return {
-      title: "Editar lote",
-      description: "Actualiza la configuración productiva y técnica del lote.",
+      title: "Material genético",
+      description: "Catálogo de variedades y semillas.",
+      action: { href: "/admin/catalogos/material-genetico/nuevo", label: "Nuevo material" },
     };
   }
-
-  if (pathname.startsWith("/fincas/") && pathname.includes("/lotes/") && pathname.endsWith("/nuevo")) {
+  if (pathname === "/admin/catalogos/fitosanitario") {
     return {
-      title: "Nuevo lote",
-      description: "Registra un nuevo lote dentro de la finca seleccionada.",
+      title: "Fitosanitario",
+      description: "Catálogo de plagas, enfermedades y productos fitosanitarios.",
+      action: { href: "/admin/catalogos/fitosanitario/nuevo", label: "Nuevo elemento" },
     };
   }
-
-  if (pathname.startsWith("/fincas/") && pathname.includes("/lotes/")) {
+  if (pathname === "/tecnico/suelo") {
     return {
-      title: "Detalle de lote",
-      description: "Consulta historial operativo, cosechas y alertas del lote.",
+      title: "Análisis de suelo",
+      description: "Registro de pH, humedad, compactación y nutrientes por lote.",
+      action: { href: "/tecnico/suelo/nuevo", label: "Nuevo análisis" },
     };
   }
-
-  if (pathname.startsWith("/fincas/") && pathname.endsWith("/editar")) {
+  if (pathname === "/operario/labores") {
     return {
-      title: "Editar finca",
-      description: "Ajusta los datos base de la finca y su contexto administrativo.",
+      title: "Labores",
+      description: "Registro de labores agronómicas diarias.",
+      action: { href: "/operario/labores/nueva", label: "Nueva labor" },
     };
   }
-
-  if (pathname.startsWith("/fincas/")) {
+  if (pathname === "/operario/cosecha") {
     return {
-      title: "Detalle de finca",
-      description: "Revisa la ficha de la finca y navega hacia sus lotes e historial.",
+      title: "Cosecha",
+      description: "Registro de racimos RFF por lote.",
+      action: { href: "/operario/cosecha/nueva", label: "Registrar cosecha" },
     };
   }
-
-  return {
-    title: "SIG-Palma",
-    description: "Panel operativo del sistema.",
-  };
+  return { title: "SIG-Palma", description: "Panel operativo del sistema." };
 }
 
 export function AppShell({ children, session }: AppShellProps) {
   const pathname = usePathname();
 
-  const isAuthRoute = pathname.startsWith("/auth");
-
-  const navItems = useMemo<NavItem[]>(
-    () => [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/campo", label: "Campo", icon: Tractor },
-      { href: "/fincas", label: "Fincas", icon: MapPinned },
-      ...(session.isAdmin
-        ? [{ href: "/auth/register", label: "Usuarios", icon: Users }]
-        : []),
-    ],
-    [session.isAdmin]
-  );
-
-  const pageMeta = useMemo(
-    () => getPageMeta(pathname, session.isAdmin),
-    [pathname, session.isAdmin]
-  );
+  const navGroups = useMemo(() => buildNavGroups(session.role), [session.role]);
+  const pageMeta = useMemo(() => getPageMeta(pathname), [pathname]);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname), [pathname]);
-
-  if (isAuthRoute) {
-    return <>{children}</>;
-  }
 
   return (
     <SidebarProvider defaultOpen>
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="p-3">
           <Link
-            href="/"
+            href={session.role ? `/${session.role === "agronomo" ? "tecnico" : session.role}` : "/"}
             className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3"
           >
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -287,33 +329,34 @@ export function AppShell({ children, session }: AppShellProps) {
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Navegación</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const active = isRouteActive(pathname, item.href);
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={item.label}
-                        size="lg"
-                      >
-                        <Link href={item.href}>
-                          <Icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {navGroups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isRouteActive(pathname, item.href);
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.label}
+                          size="lg"
+                        >
+                          <Link href={item.href}>
+                            <Icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
         <SidebarFooter className="p-3 pt-0">
@@ -338,11 +381,11 @@ export function AppShell({ children, session }: AppShellProps) {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                {session.role ? roleLabels[session.role] : "Sin rol"}
-              </Badge>
+              {session.role ? (
+                <Badge variant="secondary">{roleLabels[session.role]}</Badge>
+              ) : null}
               <Badge variant={session.isActive ? "outline" : "destructive"}>
-                {session.isActive ? "Activa" : "Pendiente"}
+                {session.isActive ? "Activa" : "Inactiva"}
               </Badge>
             </div>
           </div>
@@ -366,7 +409,6 @@ export function AppShell({ children, session }: AppShellProps) {
                   <BreadcrumbList>
                     {breadcrumbs.map((crumb, index) => {
                       const isLast = index === breadcrumbs.length - 1;
-
                       return (
                         <div key={`${crumb.label}-${index}`} className="contents">
                           <BreadcrumbItem>
@@ -389,23 +431,12 @@ export function AppShell({ children, session }: AppShellProps) {
                   </BreadcrumbList>
                 </Breadcrumb>
 
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-foreground sm:text-lg">
-                    {pageMeta.title}
-                  </p>
-                  <p className="hidden truncate text-sm text-muted-foreground lg:block">
-                    {pageMeta.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="hidden items-center gap-2 lg:flex">
-                {session.role ? (
-                  <Badge variant="outline">{roleLabels[session.role]}</Badge>
-                ) : null}
-                {session.email ? (
-                  <Badge variant="secondary">{session.email}</Badge>
-                ) : null}
+                <p className="truncate text-base font-semibold text-foreground sm:text-lg">
+                  {pageMeta.title}
+                </p>
+                <p className="hidden truncate text-sm text-muted-foreground lg:block">
+                  {pageMeta.description}
+                </p>
               </div>
 
               {pageMeta.action ? (
@@ -424,3 +455,4 @@ export function AppShell({ children, session }: AppShellProps) {
     </SidebarProvider>
   );
 }
+
