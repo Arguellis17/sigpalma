@@ -1,29 +1,34 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { MapPinned, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FlaskConical, MapPinned, Package, Sprout, Users } from "lucide-react";
 
 async function getAdminStats(fincaId: string | null) {
   const supabase = await createClient();
 
-  const [{ count: usuarios }, { count: fincas }, { count: lotes }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id", { count: "exact", head: true })
-      .neq("role", "superadmin"),
-    fincaId
-      ? supabase.from("fincas").select("id", { count: "exact", head: true }).eq("id", fincaId)
-      : supabase.from("fincas").select("id", { count: "exact", head: true }),
-    fincaId
-      ? supabase.from("lotes").select("id", { count: "exact", head: true }).eq("finca_id", fincaId)
-      : supabase.from("lotes").select("id", { count: "exact", head: true }),
-  ]);
+  const [{ count: usuarios }, { count: fincas }, { count: lotes }, { count: catalogos }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .neq("role", "superadmin"),
+      fincaId
+        ? supabase.from("fincas").select("id", { count: "exact", head: true }).eq("id", fincaId)
+        : supabase.from("fincas").select("id", { count: "exact", head: true }),
+      fincaId
+        ? supabase.from("lotes").select("id", { count: "exact", head: true }).eq("finca_id", fincaId)
+        : supabase.from("lotes").select("id", { count: "exact", head: true }),
+      supabase
+        .from("catalogo_items")
+        .select("id", { count: "exact", head: true })
+        .eq("activo", true),
+    ]);
 
   return {
     usuarios: usuarios ?? 0,
     fincas: fincas ?? 0,
     lotes: lotes ?? 0,
+    catalogos: catalogos ?? 0,
   };
 }
 
@@ -32,10 +37,50 @@ export default async function AdminDashboardPage() {
   const fincaId = session?.profile?.finca_id ?? null;
   const stats = await getAdminStats(fincaId);
 
+  const statCards = [
+    { label: "Usuarios", value: stats.usuarios, href: "/admin/usuarios" },
+    { label: "Fincas", value: stats.fincas, href: "/admin/fincas" },
+    { label: "Lotes", value: stats.lotes, href: "/admin/fincas" },
+    { label: "Ítems de catálogo", value: stats.catalogos, href: "/admin/catalogos/insumos" },
+  ];
+
+  const quickLinks = [
+    {
+      href: "/admin/usuarios",
+      icon: Users,
+      title: "Usuarios",
+      description: "Crear, editar e inactivar cuentas.",
+    },
+    {
+      href: "/admin/fincas",
+      icon: MapPinned,
+      title: "Fincas",
+      description: "Registrar y editar fincas y lotes.",
+    },
+    {
+      href: "/admin/catalogos/insumos",
+      icon: Package,
+      title: "Insumos",
+      description: "Fertilizantes, herbicidas y otros insumos.",
+    },
+    {
+      href: "/admin/catalogos/material-genetico",
+      icon: Sprout,
+      title: "Material genético",
+      description: "Variedades y semillas de palma.",
+    },
+    {
+      href: "/admin/catalogos/fitosanitario",
+      icon: FlaskConical,
+      title: "Fitosanitario",
+      description: "Plagas, enfermedades y agroquímicos.",
+    },
+  ];
+
   return (
     <div className="fade-up-enter space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           Panel de administración
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -43,58 +88,51 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="surface-panel border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-foreground">{stats.usuarios}</p>
-          </CardContent>
-        </Card>
-        <Card className="surface-panel border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fincas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-foreground">{stats.fincas}</p>
-          </CardContent>
-        </Card>
-        <Card className="surface-panel border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Lotes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold text-foreground">{stats.lotes}</p>
-          </CardContent>
-        </Card>
+      {/* Stat cards — clickable */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {statCards.map((s) => (
+          <Link
+            key={s.label}
+            href={s.href}
+            className="surface-panel group flex flex-col rounded-2xl p-4 transition-transform hover:-translate-y-0.5 sm:p-5"
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {s.label}
+            </p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
+              {s.value}
+            </p>
+          </Link>
+        ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Link href="/admin/usuarios" className="surface-panel group rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-              <Users className="size-5" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Usuarios</p>
-              <p className="text-sm text-muted-foreground">Crear, editar e inactivar cuentas.</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link href="/admin/fincas" className="surface-panel group rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-              <MapPinned className="size-5" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Fincas</p>
-              <p className="text-sm text-muted-foreground">Registrar y editar fincas y lotes.</p>
-            </div>
-          </div>
-        </Link>
+      {/* Quick links */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Accesos rápidos
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="surface-panel group flex items-center gap-3 rounded-2xl p-4 transition-transform hover:-translate-y-0.5 sm:p-5"
+              >
+                <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-foreground">{link.title}</p>
+                  <p className="truncate text-sm text-muted-foreground">{link.description}</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+

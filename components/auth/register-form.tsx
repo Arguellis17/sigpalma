@@ -21,8 +21,9 @@ type UserRole = Database["public"]["Enums"]["user_role"];
 
 type FincaOption = { id: string; nombre: string };
 
-const roleLabels: Record<UserRole, string> = {
-  superadmin: "Superadministrador",
+const allowedRoles = ["admin", "agronomo", "operario"] as const;
+
+const roleLabels: Record<(typeof allowedRoles)[number], string> = {
   admin: "Administrador",
   agronomo: "Agrónomo",
   operario: "Operario",
@@ -42,7 +43,7 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<UserRole>("operario");
+  const [role, setRole] = useState<(typeof allowedRoles)[number]>("operario");
   const [fincaId, setFincaId] = useState<string>("");
 
   function onSubmit(e: React.FormEvent) {
@@ -55,8 +56,7 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
         password,
         full_name: fullName,
         role,
-        finca_id:
-          role === "admin" ? null : fincaId || null,
+        finca_id: fincaId || null,
       });
       if (!result.success) {
         setError(result.error);
@@ -72,7 +72,7 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
     });
   }
 
-  const showFinca = role !== "admin";
+  const showFinca = true;
 
   return (
     <Card className="surface-panel fade-up-enter w-full max-w-md rounded-[2rem] border-0 py-0 shadow-none">
@@ -89,8 +89,8 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
           </div>
         </div>
         <CardDescription>
-          Cree una cuenta con correo, contraseña y rol. Los perfiles distintos de
-          administrador deben salir con finca asignada.
+          Cree una cuenta con correo, contraseña y rol. Todo usuario distinto del
+          superadministrador debe salir con una finca asignada.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
@@ -150,10 +150,10 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
               name="role"
               required
               value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
+              onChange={(e) => setRole(e.target.value as (typeof allowedRoles)[number])}
               className={selectClassName}
             >
-              {(Object.keys(roleLabels) as UserRole[]).map((r) => (
+              {allowedRoles.map((r) => (
                 <option key={r} value={r}>
                   {roleLabels[r]}
                 </option>

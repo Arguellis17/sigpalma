@@ -27,15 +27,25 @@ async function listarAdmins() {
   }));
 }
 
+async function listarFincas() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("fincas")
+    .select("id, nombre")
+    .order("nombre", { ascending: true });
+
+  return data ?? [];
+}
+
 export default async function AdministradoresPage() {
-  const admins = await listarAdmins();
+  const [admins, fincas] = await Promise.all([listarAdmins(), listarFincas()]);
 
   return (
     <div className="fade-up-enter space-y-6">
       <div className="surface-panel rounded-2xl p-5 sm:p-6">
         <h3 className="mb-4 font-semibold text-foreground">Nuevo administrador</h3>
         <div className="max-w-md">
-          <CrearAdminForm />
+          <CrearAdminForm fincas={fincas} />
         </div>
       </div>
 

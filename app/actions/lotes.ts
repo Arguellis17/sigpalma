@@ -26,13 +26,39 @@ export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string
   }
 
   const { profile } = session;
-  if (profile.role === "agronomo") {
+  if (profile.role === "admin" || profile.role === "agronomo") {
     if (!profile.finca_id || profile.finca_id !== input.finca_id) {
       return actionError("Solo puede crear lotes en su finca asignada.");
     }
   }
 
   const supabase = await createClient();
+
+  // RN11: Validate that lote area doesn't exceed remaining finca capacity
+  const { data: finca } = await supabase
+    .from("fincas")
+    .select("area_ha")
+    .eq("id", input.finca_id)
+    .maybeSingle();
+
+  if (finca) {
+    const { data: existingLotes } = await supabase
+      .from("lotes")
+      .select("area_ha")
+      .eq("finca_id", input.finca_id);
+    const usedArea = (existingLotes ?? []).reduce(
+      (sum, l) => sum + Number(l.area_ha ?? 0),
+      0
+    );
+    const totalFincaArea = Number(finca.area_ha ?? 0);
+    if (usedArea + input.area_ha > totalFincaArea) {
+      const remaining = (totalFincaArea - usedArea).toFixed(4);
+      return actionError(
+        `El área del lote supera la capacidad disponible de la finca. Disponible: ${remaining} ha.`
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("lotes")
     .insert({
@@ -42,6 +68,7 @@ export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string
       anio_siembra: input.anio_siembra,
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
+      pendiente_pct: input.pendiente_pct ?? null,
     })
     .select("id")
     .single();
@@ -68,7 +95,7 @@ export async function actualizarLote(
   }
 
   const { profile } = session;
-  if (profile.role === "agronomo") {
+  if (profile.role === "admin" || profile.role === "agronomo") {
     if (!profile.finca_id || profile.finca_id !== input.finca_id) {
       return actionError("Solo puede editar lotes de su finca asignada.");
     }
@@ -93,6 +120,7 @@ export async function actualizarLote(
       anio_siembra: input.anio_siembra,
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
+      pendiente_pct: input.pendiente_pct ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)

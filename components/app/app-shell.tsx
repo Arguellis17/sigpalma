@@ -27,7 +27,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -78,10 +77,6 @@ type BreadcrumbEntry = {
 type PageMeta = {
   title: string;
   description: string;
-  action?: {
-    href: string;
-    label: string;
-  };
 };
 
 const roleLabels: Record<UserRole, string> = {
@@ -176,18 +171,24 @@ const breadcrumbLabels: Record<string, string> = {
   suelo: "Análisis de suelo",
   labores: "Labores",
   cosecha: "Cosecha",
-  nueva: "Nueva finca",
-  nuevo: "Nuevo lote",
   editar: "Editar",
   nuevo_usuario: "Nuevo usuario",
 };
 
-function humanizeSegment(segment: string): string {
+// UUID pattern
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function humanizeSegment(segment: string, prevSegment?: string): string {
+  if (UUID_RE.test(segment)) {
+    if (prevSegment === "fincas") return "Finca";
+    if (prevSegment === "lotes") return "Lote";
+    if (prevSegment === "usuarios") return "Usuario";
+    if (prevSegment === "administradores") return "Administrador";
+    return "Detalle";
+  }
   return (
     breadcrumbLabels[segment] ??
-    (segment.length > 20
-      ? "Detalle"
-      : segment.charAt(0).toUpperCase() + segment.slice(1))
+    (segment.charAt(0).toUpperCase() + segment.slice(1))
   );
 }
 
@@ -195,7 +196,6 @@ function buildBreadcrumbs(pathname: string): BreadcrumbEntry[] {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) return [{ label: "Dashboard" }];
 
-  // The first segment is the role section — it becomes the root crumb with href
   const rootSegment = segments[0];
   const rootHref = `/${rootSegment}`;
 
@@ -210,7 +210,8 @@ function buildBreadcrumbs(pathname: string): BreadcrumbEntry[] {
   segments.slice(1).forEach((segment, index) => {
     const href = `/${segments.slice(0, index + 2).join("/")}`;
     const isLast = index === segments.length - 2;
-    const label = humanizeSegment(segment);
+    const prevSegment = segments[index]; // segments[index] is one before current in slice(1)
+    const label = humanizeSegment(segment, prevSegment);
     crumbs.push(isLast ? { label } : { href, label });
   });
 
@@ -228,72 +229,63 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Administradores",
       description: "Gestión de cuentas con rol de Administrador.",
-      action: { href: "/superadmin/administradores/nuevo", label: "Nuevo administrador" },
     };
   }
   if (pathname === "/admin/usuarios") {
     return {
       title: "Usuarios",
       description: "Creación, edición e inactivación de cuentas.",
-      action: { href: "/admin/usuarios/nuevo", label: "Nuevo usuario" },
     };
   }
   if (pathname === "/admin/fincas") {
     return {
       title: "Fincas",
       description: "Inventario de fincas y acceso a sus lotes.",
-      action: { href: "/admin/fincas/nueva", label: "Nueva finca" },
     };
   }
   if (pathname.endsWith("/editar")) {
     return { title: "Editar", description: "Edición de registro." };
   }
   if (pathname.includes("/lotes/") && !pathname.endsWith("/lotes")) {
-    return { title: "Detalle de lote", description: "Historial operativo del lote." };
+    return { title: "Lote", description: "Detalle del lote de cultivo." };
   }
   if (pathname.startsWith("/admin/fincas/") && !pathname.endsWith("/fincas")) {
-    return { title: "Detalle de finca", description: "Lotes e historial de la finca." };
+    return { title: "Finca", description: "Gestión de lotes e historial de la finca." };
   }
   if (pathname === "/admin/catalogos/insumos") {
     return {
       title: "Insumos",
       description: "Catálogo de fertilizantes, herbicidas y otros insumos.",
-      action: { href: "/admin/catalogos/insumos/nuevo", label: "Nuevo insumo" },
     };
   }
   if (pathname === "/admin/catalogos/material-genetico") {
     return {
       title: "Material genético",
       description: "Catálogo de variedades y semillas.",
-      action: { href: "/admin/catalogos/material-genetico/nuevo", label: "Nuevo material" },
     };
   }
   if (pathname === "/admin/catalogos/fitosanitario") {
     return {
       title: "Fitosanitario",
       description: "Catálogo de plagas, enfermedades y productos fitosanitarios.",
-      action: { href: "/admin/catalogos/fitosanitario/nuevo", label: "Nuevo elemento" },
     };
   }
   if (pathname === "/tecnico/suelo") {
     return {
       title: "Análisis de suelo",
       description: "Registro de pH, humedad, compactación y nutrientes por lote.",
-      action: { href: "/tecnico/suelo/nuevo", label: "Nuevo análisis" },
     };
   }
   if (pathname === "/operario/labores") {
     return {
       title: "Labores",
       description: "Registro de labores agronómicas diarias.",
-      action: { href: "/operario/labores/nueva", label: "Nueva labor" },
     };
   }
   if (pathname === "/operario/cosecha") {
     return {
       title: "Cosecha",
       description: "Registro de racimos RFF por lote.",
-      action: { href: "/operario/cosecha/nueva", label: "Registrar cosecha" },
     };
   }
   return { title: "SIG-Palma", description: "Panel operativo del sistema." };
@@ -431,19 +423,13 @@ export function AppShell({ children, session }: AppShellProps) {
                   </BreadcrumbList>
                 </Breadcrumb>
 
-                <p className="truncate text-base font-semibold text-foreground sm:text-lg">
+                <p className="truncate text-base font-semibold text-foreground sm:text-lg md:hidden">
                   {pageMeta.title}
                 </p>
                 <p className="hidden truncate text-sm text-muted-foreground lg:block">
                   {pageMeta.description}
                 </p>
               </div>
-
-              {pageMeta.action ? (
-                <Button asChild className="hidden sm:inline-flex">
-                  <Link href={pageMeta.action.href}>{pageMeta.action.label}</Link>
-                </Button>
-              ) : null}
             </div>
           </header>
 

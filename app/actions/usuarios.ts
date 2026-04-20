@@ -29,6 +29,15 @@ export async function crearUsuarioConRol(
     return actionError("Solo un administrador puede crear usuarios.");
   }
 
+  if (!isSuperAdmin(session.profile)) {
+    if (!session.profile.finca_id) {
+      return actionError("El administrador actual no tiene finca asignada.");
+    }
+    if (input.finca_id !== session.profile.finca_id) {
+      return actionError("Solo puede crear usuarios dentro de su finca asignada.");
+    }
+  }
+
   // Enforce hierarchy: admin cannot create other admins
   if (!isSuperAdmin(session.profile)) {
     const allowed: readonly string[] = rolesAsignablesPorAdmin;
@@ -57,6 +66,11 @@ export async function crearUsuarioConRol(
     password: input.password,
     email_confirm: true,
     user_metadata: { full_name: input.full_name.trim() },
+    app_metadata: {
+      role: input.role,
+      finca_id: input.finca_id ?? null,
+      documento_identidad: null,
+    },
   });
 
   if (createErr || !created.user) {
@@ -64,7 +78,7 @@ export async function crearUsuarioConRol(
   }
 
   const userId = created.user.id;
-  const fincaId = input.role === "admin" ? null : (input.finca_id ?? null);
+  const fincaId = input.finca_id ?? null;
 
   const { error: profileErr } = await admin
     .from("profiles")
@@ -99,11 +113,43 @@ export async function actualizarUsuario(
     return actionError("Acción no permitida.");
   }
 
+  if (!isSuperAdmin(session.profile)) {
+    const adminFincaId = session.profile.finca_id;
+    if (!adminFincaId) {
+      return actionError("El administrador actual no tiene finca asignada.");
+    }
+
+    const supabase = await createClient();
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("role, finca_id")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+
+    if (!target) {
+      return actionError("Usuario no encontrado.");
+    }
+
+    if (target.role === "admin" || target.role === "superadmin") {
+      return actionError("No tiene permisos para editar este usuario.");
+    }
+
+    if (target.finca_id !== adminFincaId) {
+      return actionError("Solo puede editar usuarios de su propia finca.");
+    }
+
+    if (parsed.data.finca_id !== undefined && parsed.data.finca_id !== adminFincaId) {
+      return actionError("No puede mover usuarios a otra finca.");
+    }
+  }
+
   const supabase = await createClient();
-  type ProfileUpdate = { full_name?: string; finca_id?: string | null };
+  type ProfileUpdate = { full_name?: string; finca_id?: string | null; documento_identidad?: string | null };
   const updates: ProfileUpdate = {};
   if (parsed.data.full_name !== undefined) updates.full_name = parsed.data.full_name.trim();
   if (parsed.data.finca_id !== undefined) updates.finca_id = parsed.data.finca_id;
+  if (parsed.data.documento_identidad !== undefined)
+    updates.documento_identidad = parsed.data.documento_identidad || null;
 
   const { error } = await supabase
     .from("profiles")
@@ -136,7 +182,7 @@ export async function inactivarUsuario(
   // Check role of target — admins cannot deactivate other admins or superadmins
   const { data: target } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, finca_id")
     .eq("id", userId)
     .maybeSingle();
 
@@ -145,6 +191,9 @@ export async function inactivarUsuario(
   if (!isSuperAdmin(session.profile)) {
     if (target.role === "admin" || target.role === "superadmin") {
       return actionError("No tienes permisos para inactivar este usuario.");
+    }
+    if (target.finca_id !== session.profile.finca_id) {
+      return actionError("Solo puedes inactivar usuarios de tu finca.");
     }
   }
 
@@ -170,6 +219,27 @@ export async function restablecerContrasena(
   const session = await getSessionProfile();
   if (!session?.profile || !isAdmin(session.profile)) {
     return actionError("Acción no permitida.");
+  }
+
+  if (!isSuperAdmin(session.profile)) {
+    const supabase = await createClient();
+    const { data: target } = await supabase
+      .from("profiles")
+      .select("role, finca_id")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+
+    if (!target) {
+      return actionError("Usuario no encontrado.");
+    }
+
+    if (target.role === "admin" || target.role === "superadmin") {
+      return actionError("No tiene permisos para restablecer esta cuenta.");
+    }
+
+    if (target.finca_id !== session.profile.finca_id) {
+      return actionError("Solo puede restablecer usuarios de su finca.");
+    }
   }
 
   let admin;
@@ -212,11 +282,20 @@ export async function listarUsuarios(): Promise<
   const supabase = await createClient();
   const adminClient = createAdminClient();
 
+  let profilesQuery = supabase
+    .from("profiles")
+    .select("id, full_name, role, is_active, finca_id, created_at, fincas(nombre)")
+    .order("created_at", { ascending: false });
+
+  if (!isSuperAdmin(session.profile)) {
+    if (!session.profile.finca_id) {
+      return actionError("El administrador actual no tiene finca asignada.");
+    }
+    profilesQuery = profilesQuery.eq("finca_id", session.profile.finca_id).neq("role", "admin");
+  }
+
   const [{ data, error }, { data: authUsersData }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, role, is_active, finca_id, created_at, fincas(nombre)")
-      .order("created_at", { ascending: false }),
+    profilesQuery,
     adminClient.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -238,5 +317,30 @@ export async function listarUsuarios(): Promise<
   }));
 
   return actionOk(rows);
+}
+
+// ─── Resolver identificador de login (correo o cédula) ────────────────────────────
+// Called from the login form BEFORE signInWithPassword.
+// Uses a SECURITY DEFINER function in Postgres to read auth.users safely.
+export async function resolveLoginIdentifier(
+  identifier: string
+): Promise<ActionResult<{ email: string }>> {
+  if (!identifier || identifier.trim().length < 3) {
+    return actionError("Identificador inválido.");
+  }
+
+  // Use a fresh anon client (no user session yet)
+  const { createClient: createServerClient } = await import("@/lib/supabase/server");
+  const supabase = await createServerClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("resolve_login_identifier", {
+    p_identifier: identifier.trim(),
+  });
+
+  if (error) return actionError("Error al verificar el identificador.");
+  if (!data) return actionError("No se encontró una cuenta con ese correo o cédula.");
+
+  return actionOk({ email: data as string });
 }
 

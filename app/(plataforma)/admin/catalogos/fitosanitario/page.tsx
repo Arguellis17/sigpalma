@@ -5,9 +5,8 @@ async function getFitosanitario() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("catalogo_items")
-    .select("id, nombre, descripcion, subcategoria, unidad_medida, proveedor, anio_adquisicion, sintomas, activo")
+    .select("id, nombre, descripcion, subcategoria, unidad_medida, proveedor, anio_adquisicion, sintomas, activo, categoria")
     .in("categoria", ["plaga", "enfermedad", "otro"])
-    .eq("activo", true)
     .order("categoria", { ascending: true })
     .order("nombre", { ascending: true });
   return data ?? [];
@@ -20,6 +19,7 @@ export default async function CatalogoFitosanitarioPage() {
       categoria="plaga"
       items={items}
       showSintomas
+      allowCategorySelect
       unidadLabel="Unidad de medida"
     />
   );

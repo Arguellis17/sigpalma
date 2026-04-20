@@ -1,19 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { crearUsuarioConRol } from "@/app/actions/usuarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+type FincaOption = { id: string; nombre: string };
+
 type Props = {
+  fincas: FincaOption[];
   onSuccess?: (id: string) => void;
   onCancel?: () => void;
 };
 
-const initialState = { success: false, error: null as string | null, data: null as { id: string } | null };
-
-export function CrearAdminForm({ onSuccess, onCancel }: Props) {
+export function CrearAdminForm({ fincas, onSuccess, onCancel }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -29,7 +30,7 @@ export function CrearAdminForm({ onSuccess, onCancel }: Props) {
       password: fd.get("password"),
       full_name: fd.get("full_name"),
       role: "admin",
-      finca_id: null,
+      finca_id: fd.get("finca_id") || null,
     });
 
     setPending(false);
@@ -64,6 +65,26 @@ export function CrearAdminForm({ onSuccess, onCancel }: Props) {
           minLength={8}
           placeholder="Mínimo 8 caracteres"
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="finca_id">Finca asignada</Label>
+        <select
+          id="finca_id"
+          name="finca_id"
+          required
+          className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Seleccione una finca…</option>
+          {fincas.map((finca) => (
+            <option key={finca.id} value={finca.id}>
+              {finca.nombre}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Cada administrador queda asociado a una finca específica.
+        </p>
       </div>
 
       {error ? (

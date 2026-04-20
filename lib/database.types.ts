@@ -46,6 +46,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"];
           finca_id: string | null;
           is_active: boolean;
+          documento_identidad: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -55,6 +56,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"];
           finca_id?: string | null;
           is_active?: boolean;
+          documento_identidad?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -64,6 +66,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"];
           finca_id?: string | null;
           is_active?: boolean;
+          documento_identidad?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -86,6 +89,7 @@ export type Database = {
           anio_siembra: number;
           material_genetico: string | null;
           densidad_palmas_ha: string | null;
+          pendiente_pct: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -97,6 +101,7 @@ export type Database = {
           anio_siembra: number;
           material_genetico?: string | null;
           densidad_palmas_ha?: number | string | null;
+          pendiente_pct?: number | string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -108,6 +113,7 @@ export type Database = {
           anio_siembra?: number;
           material_genetico?: string | null;
           densidad_palmas_ha?: number | string | null;
+          pendiente_pct?: number | string | null;
           created_at?: string;
           updated_at?: string;
         };

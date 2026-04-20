@@ -14,20 +14,10 @@ export const crearUsuarioAdminSchema = z
     finca_id: z.string().uuid().nullable().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.role === "admin") {
-      if (data.finca_id) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Los administradores no llevan finca asignada.",
-          path: ["finca_id"],
-        });
-      }
-      return;
-    }
     if (!data.finca_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Seleccione la finca para agrónomo u operario.",
+        message: "Seleccione la finca para el usuario.",
         path: ["finca_id"],
       });
     }
@@ -39,6 +29,7 @@ export const actualizarUsuarioSchema = z.object({
   id: z.string().uuid("ID inválido."),
   full_name: z.string().min(1, "Indique el nombre.").max(200).optional(),
   finca_id: z.string().uuid().nullable().optional(),
+  documento_identidad: z.string().max(30).nullable().optional(),
 });
 
 export type ActualizarUsuarioInput = z.infer<typeof actualizarUsuarioSchema>;

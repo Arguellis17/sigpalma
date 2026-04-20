@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getSessionProfile, isAdmin } from "@/lib/auth/session-profile";
+import { getSessionProfile, isSuperAdmin } from "@/lib/auth/session-profile";
 import {
   crearFincaSchema,
   actualizarFincaSchema,
@@ -18,8 +18,8 @@ export async function crearFinca(raw: unknown): Promise<ActionResult<{ id: strin
   const input: CrearFincaInput = parsed.data;
 
   const session = await getSessionProfile();
-  if (!session?.profile || !isAdmin(session.profile)) {
-    return actionError("Solo el administrador puede crear fincas.");
+  if (!session?.profile || !isSuperAdmin(session.profile)) {
+    return actionError("Solo el superadministrador puede crear fincas.");
   }
 
   const supabase = await createClient();
@@ -51,8 +51,8 @@ export async function actualizarFinca(
   const input: ActualizarFincaInput = parsed.data;
 
   const session = await getSessionProfile();
-  if (!session?.profile || !isAdmin(session.profile)) {
-    return actionError("Solo el administrador puede editar fincas.");
+  if (!session?.profile || !isSuperAdmin(session.profile)) {
+    return actionError("Solo el superadministrador puede editar fincas.");
   }
 
   const supabase = await createClient();

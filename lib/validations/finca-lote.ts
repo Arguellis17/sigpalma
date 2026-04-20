@@ -24,6 +24,11 @@ export const crearLoteSchema = z.object({
       v === "" || v === null || v === undefined ? undefined : v,
     z.coerce.number().positive().max(500).optional()
   ),
+  pendiente_pct: z.preprocess(
+    (v) =>
+      v === "" || v === null || v === undefined ? undefined : v,
+    z.coerce.number().min(0).max(100).optional()
+  ),
 });
 
 export const actualizarFincaSchema = crearFincaSchema.extend({

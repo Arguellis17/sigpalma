@@ -97,6 +97,7 @@ export const lotes = pgTable(
       precision: 10,
       scale: 2,
     }),
+    pendientePct: numeric("pendiente_pct", { precision: 5, scale: 2 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, TreePalm } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { resolveLoginIdentifier } from "@/app/actions/usuarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +29,7 @@ function normalizeRedirectTo(path: string | undefined): string {
 
 export function LoginForm({ redirectTo }: LoginFormProps) {
   const afterLogin = normalizeRedirectTo(redirectTo);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,14 +39,24 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     e.preventDefault();
     setError(null);
     setPending(true);
+
+    // Step 1: resolve email from identifier (email or cédula)
+    const resolved = await resolveLoginIdentifier(identifier);
+    if (!resolved.success) {
+      setError(resolved.error);
+      setPending(false);
+      return;
+    }
+
+    // Step 2: sign in with the resolved email
     const supabase = createClient();
     const { error: signError } = await supabase.auth.signInWithPassword({
-      email,
+      email: resolved.data.email,
       password,
     });
     setPending(false);
     if (signError) {
-      setError(signError.message);
+      setError("Credenciales incorrectas. Verifica tu contraseña.");
       return;
     }
     window.location.assign(afterLogin);
@@ -66,22 +77,22 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
           </div>
         </div>
         <CardDescription>
-          Usa las credenciales de tu cuenta para acceder a los módulos de tu finca.
+          Ingresa con tu correo institucional o número de cédula.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
         <form onSubmit={onSubmit} className="flex flex-col gap-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo</Label>
+            <Label htmlFor="identifier">Correo o cédula</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
+              id="identifier"
+              name="identifier"
+              type="text"
+              autoComplete="username"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu.nombre@sigpalma.com"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="correo@sigpalma.com o 1000123456"
               className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             />
           </div>
@@ -109,7 +120,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               </button>
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Usa la cuenta asignada por tu organización.
+              Usa la contraseña asignada por tu administrador.
             </p>
           </div>
           {error ? (
