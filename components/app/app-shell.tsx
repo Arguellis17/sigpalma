@@ -53,6 +53,8 @@ type AppShellProps = {
     email: string | null;
     fullName: string | null;
     role: UserRole | null;
+    /** Finca asignada (admin, agrónomo, operario); null para superadmin sin finca */
+    fincaName: string | null;
     isActive: boolean;
     isAdmin: boolean;
     isSuperAdmin: boolean;
@@ -320,9 +322,13 @@ export function AppShell({ children, session }: AppShellProps) {
           <Link
             href={session.role ? `/${session.role === "agronomo" ? "tecnico" : session.role}` : "/"}
             title={
-              session.role
-                ? `SIG-Palma · ${roleLabels[session.role]}`
-                : "SIG-Palma"
+              [
+                "SIG-Palma",
+                session.fincaName ?? undefined,
+                session.role ? roleLabels[session.role] : undefined,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "SIG-Palma"
             }
             className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3 transition-[padding,gap] group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:gap-0 group-data-[collapsible=icon]/sidebar:px-2 group-data-[collapsible=icon]/sidebar:py-2"
           >
@@ -343,8 +349,18 @@ export function AppShell({ children, session }: AppShellProps) {
               <p className="truncate text-xs text-sidebar-foreground/70">
                 Gestión técnica y trazabilidad
               </p>
+              {session.fincaName ? (
+                <p className="mt-1 truncate text-xs font-semibold text-sidebar-foreground">
+                  {session.fincaName}
+                </p>
+              ) : null}
               {session.role ? (
-                <p className="mt-1 truncate text-xs font-bold text-sidebar-foreground">
+                <p
+                  className={cn(
+                    "truncate text-xs font-bold text-sidebar-foreground",
+                    session.fincaName ? "mt-0.5" : "mt-1"
+                  )}
+                >
                   {roleLabels[session.role]}
                 </p>
               ) : null}
