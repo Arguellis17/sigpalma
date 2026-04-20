@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { VariantProps } from "class-variance-authority";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { LogoutTransitionOverlay } from "@/components/auth/logout-transition-overlay";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 type SignOutButtonProps = {
@@ -22,24 +24,36 @@ export function SignOutButton({
   size = "lg",
 }: SignOutButtonProps) {
   const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push("/auth/login");
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.refresh();
+      router.push("/auth/login");
+    } catch {
+      setLoggingOut(false);
+    }
   }
 
   return (
-    <Button
-      type="button"
-      variant={variant}
-      size={size}
-      className={className ?? "min-h-12 min-w-[140px]"}
-      onClick={signOut}
-    >
-      <LogOut data-icon="inline-start" />
-      <span className={labelClassName}>{label}</span>
-    </Button>
+    <>
+      <LogoutTransitionOverlay open={loggingOut} />
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        className={className ?? "min-h-12 min-w-[140px]"}
+        onClick={signOut}
+        disabled={loggingOut}
+      >
+        <LogOut data-icon="inline-start" />
+        <span className={labelClassName}>{label}</span>
+      </Button>
+    </>
   );
 }

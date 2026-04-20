@@ -190,6 +190,54 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /*
+   * Scrollbar styling only where layout scroll happens. Do NOT use scrollbar-gutter: stable here:
+   * it reserves a permanent gutter (often looks like an empty strip / fake scrollbar) and stacks
+   * badly with Radix Dialog’s react-remove-scroll body padding → white gap when modals open.
+   * RemoveScroll’s padding-right alone prevents horizontal jump when the page scrollbar is hidden.
+   */
+  html,
+  [role="dialog"],
+  [data-slot="sheet-content"] {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--primary) 72%, var(--foreground) 6%) transparent;
+  }
+
+  html::-webkit-scrollbar,
+  [role="dialog"]::-webkit-scrollbar,
+  [data-slot="sheet-content"]::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  html::-webkit-scrollbar-track,
+  [role="dialog"]::-webkit-scrollbar-track,
+  [data-slot="sheet-content"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb,
+  [role="dialog"]::-webkit-scrollbar-thumb,
+  [data-slot="sheet-content"]::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--primary) 55%, transparent);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  html::-webkit-scrollbar-thumb:hover,
+  [role="dialog"]::-webkit-scrollbar-thumb:hover,
+  [data-slot="sheet-content"]::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklch, var(--primary) 78%, transparent);
+  }
+
+  html::-webkit-scrollbar-corner,
+  [role="dialog"]::-webkit-scrollbar-corner,
+  [data-slot="sheet-content"]::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);

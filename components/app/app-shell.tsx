@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
@@ -8,7 +9,6 @@ import {
   FlaskConical,
   Layers,
   LayoutDashboard,
-  Leaf,
   MapPinned,
   Package,
   ShieldCheck,
@@ -318,12 +318,19 @@ export function AppShell({ children, session }: AppShellProps) {
         <SidebarHeader className="p-3">
           <Link
             href={session.role ? `/${session.role === "agronomo" ? "tecnico" : session.role}` : "/"}
-            className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3"
+            className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3 transition-[padding,gap] group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:gap-0 group-data-[collapsible=icon]/sidebar:px-2 group-data-[collapsible=icon]/sidebar:py-2"
           >
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Leaf />
+            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 group-data-[collapsible=icon]/sidebar:size-9">
+              <Image
+                src="/logo.png"
+                alt="SIG-Palma"
+                width={72}
+                height={72}
+                className="size-[1.85rem] object-contain sm:size-8"
+                priority
+              />
             </div>
-            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <div className="min-w-0 group-data-[collapsible=icon]/sidebar:hidden">
               <p className="truncate text-sm font-semibold text-sidebar-foreground">
                 SIG-Palma
               </p>
@@ -366,7 +373,7 @@ export function AppShell({ children, session }: AppShellProps) {
         </SidebarContent>
 
         <SidebarFooter className="p-3 pt-0">
-          <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-3 group-data-[collapsible=icon]:hidden">
+          <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-3 group-data-[collapsible=icon]/sidebar:hidden">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-medium tracking-wide text-sidebar-foreground/60 uppercase">
@@ -397,8 +404,8 @@ export function AppShell({ children, session }: AppShellProps) {
           </div>
 
           <SignOutButton
-            className="w-full justify-start group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            labelClassName="group-data-[collapsible=icon]:hidden"
+            className="w-full justify-start overflow-hidden group-data-[collapsible=icon]/sidebar:size-8 group-data-[collapsible=icon]/sidebar:min-w-0 group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:px-0"
+            labelClassName="group-data-[collapsible=icon]/sidebar:hidden"
           />
         </SidebarFooter>
         <SidebarRail />
