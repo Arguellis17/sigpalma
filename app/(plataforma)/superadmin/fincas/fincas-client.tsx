@@ -229,7 +229,13 @@ export function SuperadminFincasClient({ fincas: initialFincas }: Props) {
               <DialogDescription>Modifica los datos de la finca.</DialogDescription>
             </DialogHeader>
             <FincaEditForm
-              finca={dialog.finca}
+              fincaId={dialog.finca.id}
+              initial={{
+                nombre: dialog.finca.nombre,
+                ubicacion: dialog.finca.ubicacion,
+                area_ha: dialog.finca.area_ha ?? "",
+                propietario: dialog.finca.propietario,
+              }}
               onSuccess={handleEdited}
               onCancel={() => setDialog(null)}
             />
