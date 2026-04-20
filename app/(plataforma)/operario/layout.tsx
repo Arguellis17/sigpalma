@@ -5,6 +5,6 @@ export default async function OperarioLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["superadmin", "admin", "agronomo", "operario"]);
+  await requireRole(["operario"]);
   return <>{children}</>;
 }

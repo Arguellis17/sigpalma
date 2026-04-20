@@ -5,6 +5,6 @@ export default async function TecnicoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["superadmin", "admin", "agronomo"]);
+  await requireRole(["agronomo"]);
   return <>{children}</>;
 }
