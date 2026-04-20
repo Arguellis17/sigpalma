@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { KeyRound, Pencil, Plus, Search, UserCheck, UserMinus } from "lucide-react";
 import {
   crearUsuarioConRol,
@@ -60,7 +61,7 @@ type ActiveSheet =
 export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all" }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const [usuarios, setUsuarios] = useState(initialUsuarios);
+  const [usuarios, setUsuarios] = useServerPropsState(initialUsuarios);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [sheet, setSheet] = useState<ActiveSheet>(null);

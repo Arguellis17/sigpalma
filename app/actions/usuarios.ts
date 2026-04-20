@@ -61,14 +61,21 @@ export async function crearUsuarioConRol(
     return actionError(msg);
   }
 
+  const fincaId = input.finca_id ?? null;
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: input.email.trim().toLowerCase(),
     password: input.password,
     email_confirm: true,
-    user_metadata: { full_name: input.full_name.trim() },
+    user_metadata: {
+      full_name: input.full_name.trim(),
+      // GoTrue aplica app_metadata después del INSERT; el trigger AFTER INSERT debe
+      // leer rol/finca desde user_metadata (sp_*) para que existan en raw_user_meta_data.
+      sp_role: input.role,
+      ...(fincaId ? { sp_finca_id: fincaId } : {}),
+    },
     app_metadata: {
       role: input.role,
-      finca_id: input.finca_id ?? null,
+      finca_id: fincaId,
       documento_identidad: null,
     },
   });
@@ -78,7 +85,6 @@ export async function crearUsuarioConRol(
   }
 
   const userId = created.user.id;
-  const fincaId = input.finca_id ?? null;
 
   const { error: profileErr } = await admin
     .from("profiles")

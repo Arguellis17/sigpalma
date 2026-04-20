@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { Archive, ArchiveRestore, MapPinned, Pencil, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ type Props = { fincas: Finca[] };
 export function SuperadminFincasClient({ fincas: initialFincas }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const [fincas, setFincas] = useState(initialFincas);
+  const [fincas, setFincas] = useServerPropsState(initialFincas);
   const [dialog, setDialog] = useState<ActiveDialog>(null);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);

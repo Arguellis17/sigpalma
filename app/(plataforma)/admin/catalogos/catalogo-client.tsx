@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search } from "lucide-react";
+import { useServerPropsState } from "@/hooks/use-server-props-state";
 import {
   crearItemCatalogo,
   actualizarItemCatalogo,
@@ -54,8 +56,9 @@ export function CatalogoClient({
   unidadLabel = "Unidad de medida",
   allowCategorySelect = false,
 }: Props) {
+  const router = useRouter();
   const { toast } = useToast();
-  const [items, setItems] = useState(initialItems);
+  const [items, setItems] = useServerPropsState(initialItems);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [sheet, setSheet] = useState<ActiveSheet>(null);
@@ -110,9 +113,7 @@ export function CatalogoClient({
     }
     toast("Ítem creado.", "success");
     closeSheet();
-    // Optimistically add to list (can't get full row from action)
-    // router.refresh() would be cleaner but this is fine for catalog
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
@@ -132,7 +133,7 @@ export function CatalogoClient({
     }
     toast("Ítem actualizado.", "success");
     closeSheet();
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleInactivar() {
