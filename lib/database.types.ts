@@ -42,6 +42,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      finca_audit_events: {
+        Row: {
+          id: string;
+          finca_id: string;
+          actor_id: string;
+          action_key: string;
+          titulo: string;
+          detalle: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          actor_id: string;
+          action_key: string;
+          titulo: string;
+          detalle?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          actor_id?: string;
+          action_key?: string;
+          titulo?: string;
+          detalle?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finca_audit_events_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           id: string;
@@ -50,6 +88,7 @@ export type Database = {
           finca_id: string | null;
           is_active: boolean;
           documento_identidad: string | null;
+          must_change_password: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -60,6 +99,7 @@ export type Database = {
           finca_id?: string | null;
           is_active?: boolean;
           documento_identidad?: string | null;
+          must_change_password?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +110,7 @@ export type Database = {
           finca_id?: string | null;
           is_active?: boolean;
           documento_identidad?: string | null;
+          must_change_password?: boolean;
           created_at?: string;
           updated_at?: string;
         };

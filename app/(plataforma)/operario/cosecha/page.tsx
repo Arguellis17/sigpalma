@@ -83,7 +83,7 @@ export default async function OperarioCosechaPage() {
   return (
     <div className="fade-up-enter space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Cosecha RFF</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Cosecha RFF</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Reporte de fruto fresco: peso, racimos y rendimiento estimado (t/ha) según área del lote.
         </p>

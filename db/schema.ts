@@ -81,6 +81,7 @@ export const profiles = pgTable("profiles", {
     onDelete: "set null",
   }),
   isActive: boolean("is_active").notNull().default(true),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

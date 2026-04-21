@@ -19,8 +19,10 @@ import {
   Tractor,
   Users,
   Wheat,
+  ScrollText,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -103,6 +105,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/superadmin/administradores", label: "Administradores", icon: ShieldCheck },
             { href: "/superadmin/usuarios", label: "Usuarios", icon: Users },
             { href: "/superadmin/fincas", label: "Fincas", icon: MapPinned },
+            { href: "/superadmin/auditoria", label: "Auditoría por finca", icon: ScrollText },
           ],
         },
       ];
@@ -115,6 +118,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/admin/usuarios", label: "Usuarios", icon: Users },
             { href: "/admin/fincas", label: "Fincas", icon: MapPinned },
+            { href: "/admin/auditoria", label: "Actividad de campo", icon: ScrollText },
           ],
         },
         {
@@ -420,7 +424,7 @@ export function AppShell({ children, session }: AppShellProps) {
   return (
     <SidebarProvider defaultOpen>
       <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader className="p-3">
+        <SidebarHeader>
           <Link
             href={session.role ? `/${session.role === "agronomo" ? "tecnico" : session.role}` : "/"}
             title={
@@ -432,9 +436,9 @@ export function AppShell({ children, session }: AppShellProps) {
                 .filter(Boolean)
                 .join(" · ") || "SIG-Palma"
             }
-            className="flex items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar px-3 py-3 transition-[padding,gap] group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:gap-0 group-data-[collapsible=icon]/sidebar:px-2 group-data-[collapsible=icon]/sidebar:py-2"
+            className="flex items-center gap-3 rounded-md border border-sidebar-border bg-sidebar px-3 py-3 transition-[padding,gap] group-data-[collapsible=icon]/sidebar:min-h-10 group-data-[collapsible=icon]/sidebar:w-full group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:gap-0 group-data-[collapsible=icon]/sidebar:border-0 group-data-[collapsible=icon]/sidebar:bg-transparent group-data-[collapsible=icon]/sidebar:px-0 group-data-[collapsible=icon]/sidebar:py-0"
           >
-            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 group-data-[collapsible=icon]/sidebar:size-9">
+            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-none bg-primary/10">
               <Image
                 src="/logo.png"
                 alt="SIG-Palma"
@@ -501,8 +505,8 @@ export function AppShell({ children, session }: AppShellProps) {
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="p-3 pt-0">
-          <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-3 group-data-[collapsible=icon]/sidebar:hidden">
+        <SidebarFooter className="pt-0">
+          <div className="rounded-md border border-sidebar-border bg-sidebar-accent/50 p-3 group-data-[collapsible=icon]/sidebar:hidden">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-medium tracking-wide text-sidebar-foreground/60 uppercase">
@@ -533,7 +537,7 @@ export function AppShell({ children, session }: AppShellProps) {
             variant="destructive"
             className={cn(
               "mt-2 w-full justify-start overflow-hidden border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:text-destructive-foreground",
-              "group-data-[collapsible=icon]/sidebar:mt-2 group-data-[collapsible=icon]/sidebar:size-8 group-data-[collapsible=icon]/sidebar:min-w-0 group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:px-0"
+              "group-data-[collapsible=icon]/sidebar:mt-2 group-data-[collapsible=icon]/sidebar:size-10 group-data-[collapsible=icon]/sidebar:min-w-0 group-data-[collapsible=icon]/sidebar:justify-center group-data-[collapsible=icon]/sidebar:px-0"
             )}
             labelClassName="group-data-[collapsible=icon]/sidebar:hidden"
           />
@@ -554,7 +558,7 @@ export function AppShell({ children, session }: AppShellProps) {
             <div className="flex h-16 w-full items-center gap-3 px-3 sm:px-4 lg:px-5">
               <SidebarTrigger className="shrink-0" />
 
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 pr-1">
                 <Breadcrumb className="hidden md:block">
                   <BreadcrumbList>
                     {breadcrumbs.map((crumb, index) => {
@@ -581,13 +585,15 @@ export function AppShell({ children, session }: AppShellProps) {
                   </BreadcrumbList>
                 </Breadcrumb>
 
-                <p className="truncate text-base font-semibold text-foreground sm:text-lg md:hidden">
+                <p className="truncate text-base font-bold text-foreground sm:text-lg md:hidden">
                   {pageMeta.title}
                 </p>
                 <p className="hidden truncate text-sm text-muted-foreground lg:block">
                   {pageMeta.description}
                 </p>
               </div>
+
+              <ThemeToggle className="shrink-0" />
             </div>
           </header>
 

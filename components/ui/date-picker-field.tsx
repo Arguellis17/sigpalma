@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale/es";
+import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -84,6 +84,7 @@ export function DatePickerField({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           key={value}
+          locale={es}
           mode="single"
           captionLayout="dropdown"
           fromYear={2000}

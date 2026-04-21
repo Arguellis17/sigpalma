@@ -34,10 +34,24 @@ export const actualizarUsuarioSchema = z.object({
 
 export type ActualizarUsuarioInput = z.infer<typeof actualizarUsuarioSchema>;
 
+/** Solo ID: la contraseña temporal la genera el servidor (RN07). */
 export const restablecerContrasenaSchema = z.object({
   id: z.string().uuid("ID inválido."),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
 });
 
 export type RestablecerContrasenaInput = z.infer<typeof restablecerContrasenaSchema>;
+
+export const cambiarContrasenaObligatoriaSchema = z
+  .object({
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+    confirm_password: z.string().min(1, "Confirme la contraseña."),
+  })
+  .refine((d) => d.password === d.confirm_password, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirm_password"],
+  });
+
+export type CambiarContrasenaObligatoriaInput = z.infer<
+  typeof cambiarContrasenaObligatoriaSchema
+>;
 

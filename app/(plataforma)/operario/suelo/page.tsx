@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { Button } from "@/components/ui/button";
+import { AnalisisPdfViewerButton } from "@/components/suelo/analisis-pdf-viewer-button";
 
 export default async function OperarioSueloConsultaPage() {
   const session = await getSessionProfile();
@@ -40,7 +40,7 @@ export default async function OperarioSueloConsultaPage() {
     humedad_pct: r.humedad_pct,
     compactacion: r.compactacion,
     notas: r.notas,
-    archivo_url: r.archivo_url,
+    tienePdf: Boolean(r.archivo_url),
     lote_codigo: loteMap.get(r.lote_id) ?? "—",
   }));
 
@@ -48,7 +48,7 @@ export default async function OperarioSueloConsultaPage() {
     <div className="fade-up-enter space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
             Análisis de suelo
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -93,16 +93,8 @@ export default async function OperarioSueloConsultaPage() {
                       {r.humedad_pct ?? "—"}
                     </td>
                     <td className="px-4 py-3">
-                      {r.archivo_url ? (
-                        <Button asChild variant="link" className="h-auto p-0 text-xs">
-                          <a
-                            href={r.archivo_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Ver PDF
-                          </a>
-                        </Button>
+                      {r.tienePdf ? (
+                        <AnalisisPdfViewerButton analisisId={r.id} variant="link" />
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

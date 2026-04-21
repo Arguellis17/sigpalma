@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  actualizarAnalisisSuelo,
-  registrarAnalisisSuelo,
+  actualizarAnalisisSueloDesdeFormulario,
+  registrarAnalisisSueloDesdeFormulario,
 } from "@/app/actions/suelo";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PdfLaboratorioDropzone } from "@/components/suelo/pdf-laboratorio-dropzone";
 
 type Finca = { id: string; nombre: string };
 type Lote = { id: string; codigo: string };
@@ -30,6 +31,8 @@ export type AnalisisSueloFormRecord = {
   humedad_pct: number | null;
   compactacion: number | null;
   notas: string | null;
+  /** Path en Storage (bucket evidencia-tecnica), no URL pública. */
+  archivo_url?: string | null;
 };
 
 const SELECT_NONE = "__none__";
@@ -40,7 +43,7 @@ type Props = {
   lotesPorFinca: Record<string, Lote[]>;
   /** Full-page shell vs compact dialog body */
   layout?: "page" | "dialog";
-  /** When set, form runs in edit mode and calls `actualizarAnalisisSuelo`. */
+  /** When set, form runs in edit mode (multipart + PDF opcional). */
   record?: AnalisisSueloFormRecord | null;
   onSuccess: () => void;
   onCancel: () => void;
@@ -93,23 +96,10 @@ export function AnalisisSueloForm({
 
     const fd = new FormData(e.currentTarget);
 
-    const phRaw = fd.get("ph");
-    const humedadRaw = fd.get("humedad_pct");
-    const compactacionRaw = fd.get("compactacion");
-
-    const payload = {
-      finca_id: fd.get("finca_id"),
-      lote_id: fd.get("lote_id"),
-      fecha_analisis: fd.get("fecha_analisis"),
-      ph: phRaw ? Number(phRaw) : null,
-      humedad_pct: humedadRaw ? Number(humedadRaw) : null,
-      compactacion: compactacionRaw ? Number(compactacionRaw) : null,
-      notas: fd.get("notas") || null,
-    };
-
-    const result = isEdit && record
-      ? await actualizarAnalisisSuelo({ id: record.id, ...payload })
-      : await registrarAnalisisSuelo(payload);
+    const result =
+      isEdit && record
+        ? await actualizarAnalisisSueloDesdeFormulario(fd)
+        : await registrarAnalisisSueloDesdeFormulario(fd);
 
     setPending(false);
 
@@ -126,7 +116,10 @@ export function AnalisisSueloForm({
       : "flex flex-col gap-4";
 
   return (
-    <form onSubmit={handleSubmit} className={shellClass}>
+    <form onSubmit={handleSubmit} className={shellClass} encType="multipart/form-data">
+      {isEdit && record ? (
+        <input type="hidden" name="id" value={record.id} />
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="finca_id">Finca *</Label>
@@ -253,6 +246,12 @@ export function AnalisisSueloForm({
           defaultValue={record?.notas ?? undefined}
         />
       </div>
+
+      <PdfLaboratorioDropzone
+        hasExistingFile={Boolean(isEdit && record?.archivo_url)}
+        disabled={pending}
+        compact={layout === "dialog"}
+      />
 
       {error ? (
         <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">

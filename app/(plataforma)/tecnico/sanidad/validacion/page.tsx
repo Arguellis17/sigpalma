@@ -64,7 +64,7 @@ export default async function TecnicoSanidadValidacionPage() {
   return (
     <div className="fade-up-enter space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
           Validación de monitoreos
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

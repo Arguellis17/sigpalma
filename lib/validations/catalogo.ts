@@ -31,11 +31,24 @@ const baseItemCatalogoSchema = z.object({
   sintomas: z.string().max(2000).nullable().optional(),
 });
 
-export const crearItemCatalogoSchema = baseItemCatalogoSchema.extend({
-  categoria: z.enum(categoriasCatalogo, {
-    error: "Seleccione la categoría.",
-  }),
-});
+export const crearItemCatalogoSchema = baseItemCatalogoSchema
+  .extend({
+    categoria: z.enum(categoriasCatalogo, {
+      message: "Seleccione la categoría.",
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.categoria === "material_genetico") {
+      const p = data.proveedor?.trim() ?? "";
+      if (!p) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Indique el proveedor o vivero certificado (obligatorio para material genético).",
+          path: ["proveedor"],
+        });
+      }
+    }
+  });
 
 export type CrearItemCatalogoInput = z.infer<typeof crearItemCatalogoSchema>;
 

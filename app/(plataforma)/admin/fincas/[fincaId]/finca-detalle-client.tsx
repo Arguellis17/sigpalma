@@ -69,7 +69,7 @@ export function FincaDetalleClient({ finca, lotes, canEditFinca }: Props) {
               <MapPinned className="size-5" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-foreground">{finca.nombre}</h2>
+              <h2 className="text-xl font-bold text-foreground">{finca.nombre}</h2>
               {finca.ubicacion ? (
                 <p className="mt-0.5 text-sm text-muted-foreground">{finca.ubicacion}</p>
               ) : null}

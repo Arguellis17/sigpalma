@@ -76,6 +76,7 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
   const [sheet, setSheet] = useState<ActiveSheet>(null);
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [tempPasswordShown, setTempPasswordShown] = useState<string | null>(null);
   const [confirmInactivar, setConfirmInactivar] = useState<UsuarioRow | null>(null);
   const [createRole, setCreateRole] = useState<"admin" | "agronomo" | "operario">(
     scope === "admin-only" ? "admin" : "agronomo"
@@ -112,7 +113,14 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
   function closeSheet() {
     setSheet(null);
     setFormError(null);
+    setTempPasswordShown(null);
   }
+
+  useEffect(() => {
+    if (sheet?.type !== "resetPassword") {
+      setTempPasswordShown(null);
+    }
+  }, [sheet]);
 
   // ── Create ──────────────────────────────────────────────────────────────────
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -160,30 +168,23 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
     router.refresh();
   }
 
-  // ── Reset password ───────────────────────────────────────────────────────────
-  async function handleResetPassword(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  // ── Reset password (RN07: temporal + cambio obligatorio) ──────────────────
+  async function handleGenerateTemporaryPassword() {
     if (sheet?.type !== "resetPassword") return;
     setFormError(null);
-    const fd = new FormData(e.currentTarget);
-    const pw = String(fd.get("password") ?? "");
-    const pw2 = String(fd.get("confirm_password") ?? "");
-    if (pw !== pw2) {
-      setFormError("Las contraseñas no coinciden.");
-      return;
-    }
     setPending(true);
-    const result = await restablecerContrasena({
-      id: sheet.usuario.id,
-      password: pw,
-    });
+    const result = await restablecerContrasena({ id: sheet.usuario.id });
     setPending(false);
     if (!result.success) {
       setFormError(result.error);
       return;
     }
-    toast("Contraseña restablecida.", "success");
-    closeSheet();
+    setTempPasswordShown(result.data.temporary_password);
+    toast(
+      "Contraseña temporal generada. Comuníquela al usuario; deberá elegir una nueva al entrar.",
+      "success"
+    );
+    router.refresh();
   }
 
   // ── Inactivar ────────────────────────────────────────────────────────────────
@@ -508,28 +509,44 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
             <DialogTitle>Restablecer contraseña</DialogTitle>
             <DialogDescription>
               {sheet?.type === "resetPassword"
-                ? `Nueva contraseña para ${sheet.usuario.full_name ?? sheet.usuario.email ?? "el usuario"}.`
+                ? `Se generará una contraseña temporal para ${sheet.usuario.full_name ?? sheet.usuario.email ?? "el usuario"}. En el próximo inicio de sesión deberá elegir una contraseña nueva.`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           {sheet?.type === "resetPassword" ? (
-            <form onSubmit={handleResetPassword} className="flex flex-col gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="rp-password">Nueva contraseña <span className="text-destructive">*</span></Label>
-                <Input id="rp-password" name="password" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="rp-confirm">Confirmar contraseña <span className="text-destructive">*</span></Label>
-                <Input id="rp-confirm" name="confirm_password" type="password" required minLength={8} placeholder="Repetir contraseña" className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" />
-              </div>
+            <div className="flex flex-col gap-4">
+              {tempPasswordShown ? (
+                <div className="space-y-2 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Contraseña temporal (cópiela ahora)
+                  </p>
+                  <p className="break-all font-mono text-base font-semibold tracking-wide text-foreground">
+                    {tempPasswordShown}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Esta ventana es la única vez que verá la contraseña completa en el sistema.
+                  </p>
+                </div>
+              ) : null}
               {formError ? (
                 <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive" role="alert">{formError}</p>
               ) : null}
               <div className="flex justify-end gap-2 pt-1">
-                <Button type="button" variant="ghost" onClick={closeSheet} disabled={pending}>Cancelar</Button>
-                <Button type="submit" disabled={pending} className="min-h-11">{pending ? "Guardando…" : "Restablecer"}</Button>
+                <Button type="button" variant="ghost" onClick={closeSheet} disabled={pending}>
+                  {tempPasswordShown ? "Cerrar" : "Cancelar"}
+                </Button>
+                {!tempPasswordShown ? (
+                  <Button
+                    type="button"
+                    disabled={pending}
+                    className="min-h-11"
+                    onClick={handleGenerateTemporaryPassword}
+                  >
+                    {pending ? "Generando…" : "Generar contraseña temporal"}
+                  </Button>
+                ) : null}
               </div>
-            </form>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

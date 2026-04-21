@@ -8,6 +8,7 @@ import {
   type ReportarCosechaInput,
 } from "@/lib/validations/operativo";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { registrarEventoFinca } from "./audit";
 
 export type ReportarCosechaResult = {
   id: string;
@@ -34,7 +35,7 @@ export async function reportarCosecha(
 
   const { data: lote, error: loteErr } = await supabase
     .from("lotes")
-    .select("id, area_ha")
+    .select("id, area_ha, codigo")
     .eq("id", input.lote_id)
     .eq("finca_id", input.finca_id)
     .maybeSingle();
@@ -74,6 +75,21 @@ export async function reportarCosecha(
 
   const pesoT = input.peso_kg / 1000;
   const rendimiento_ton_ha = pesoT / areaHa;
+
+  await registrarEventoFinca({
+    fincaId: input.finca_id,
+    actionKey: "cosecha.registrar",
+    titulo: "Registro de cosecha (RFF)",
+    detalle: {
+      registroId: data.id,
+      loteCodigo: lote.codigo,
+      fecha: input.fecha,
+      pesoKg: input.peso_kg,
+      racimos: input.conteo_racimos,
+      rendimientoTonHa: Math.round(rendimiento_ton_ha * 1000) / 1000,
+      observacionesCalidad: input.observaciones_calidad ?? null,
+    },
+  });
 
   return actionOk({
     id: data.id,
@@ -127,11 +143,30 @@ export async function anularCosecha(
     .update({ is_voided: true })
     .eq("id", id)
     .eq("is_voided", false)
-    .select("id")
+    .select("id, finca_id, lote_id, fecha, peso_kg")
     .single();
 
   if (error || !data) {
     return actionError(error?.message ?? "No se pudo anular el registro.");
   }
+
+  const { data: lote } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", data.lote_id)
+    .maybeSingle();
+
+  await registrarEventoFinca({
+    fincaId: data.finca_id,
+    actionKey: "cosecha.anular",
+    titulo: "Anulación de registro de cosecha",
+    detalle: {
+      registroId: data.id,
+      loteCodigo: lote?.codigo ?? data.lote_id,
+      fecha: data.fecha,
+      pesoKg: data.peso_kg,
+    },
+  });
+
   return actionOk({ id: data.id });
 }

@@ -11,7 +11,7 @@ async function getAnalisis(fincaId: string | null): Promise<AnalisisSueloListRow
   let query = supabase
     .from("analisis_suelo")
     .select(
-      "id, ph, humedad_pct, compactacion, notas, created_at, fecha_analisis, lote_id, finca_id, fincas(nombre), lotes(codigo)"
+      "id, ph, humedad_pct, compactacion, notas, archivo_url, created_at, fecha_analisis, lote_id, finca_id, fincas(nombre), lotes(codigo)"
     )
     .eq("is_voided", false)
     .order("created_at", { ascending: false })

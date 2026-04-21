@@ -210,8 +210,27 @@ export function CatalogoClient({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="ci-prov">Proveedor</Label>
-          <Input id="ci-prov" name="proveedor" defaultValue={item?.proveedor ?? ""} className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" />
+          <Label htmlFor="ci-prov">
+            {categoria === "material_genetico" ? (
+              <>
+                Proveedor certificado <span className="text-destructive">*</span>
+              </>
+            ) : (
+              "Proveedor"
+            )}
+          </Label>
+          <Input
+            id="ci-prov"
+            name="proveedor"
+            required={categoria === "material_genetico"}
+            defaultValue={item?.proveedor ?? ""}
+            className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
+            placeholder={
+              categoria === "material_genetico"
+                ? "Vivero o proveedor certificado (obligatorio)…"
+                : "Opcional…"
+            }
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ci-anio">Año adquisición</Label>

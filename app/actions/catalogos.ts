@@ -69,6 +69,15 @@ export async function actualizarItemCatalogo(
   const supabase = await createClient();
   const { id, ...rest } = parsed.data;
 
+  const { data: existing, error: exErr } = await supabase
+    .from("catalogo_items")
+    .select("categoria, proveedor")
+    .eq("id", id)
+    .maybeSingle();
+  if (exErr || !existing) {
+    return actionError(exErr?.message ?? "Ítem no encontrado.");
+  }
+
   const updates: Partial<CatalogoItemRow> = {};
   if (rest.nombre !== undefined) updates.nombre = rest.nombre.trim();
   if (rest.descripcion !== undefined) updates.descripcion = rest.descripcion?.trim() ?? null;
@@ -77,6 +86,16 @@ export async function actualizarItemCatalogo(
   if (rest.proveedor !== undefined) updates.proveedor = rest.proveedor?.trim() ?? null;
   if (rest.anio_adquisicion !== undefined) updates.anio_adquisicion = rest.anio_adquisicion ?? null;
   if (rest.sintomas !== undefined) updates.sintomas = rest.sintomas?.trim() ?? null;
+
+  if (existing.categoria === "material_genetico") {
+    const nextProv =
+      updates.proveedor !== undefined ? updates.proveedor : existing.proveedor;
+    if (!nextProv || !String(nextProv).trim()) {
+      return actionError(
+        "El proveedor o vivero certificado es obligatorio para material genético."
+      );
+    }
+  }
 
   const { error } = await supabase
     .from("catalogo_items")

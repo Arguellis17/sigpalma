@@ -8,6 +8,7 @@ import {
   type RegistrarLaborInput,
 } from "@/lib/validations/operativo";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { registrarEventoFinca } from "./audit";
 
 export async function registrarLabor(
   raw: unknown
@@ -27,6 +28,13 @@ export async function registrarLabor(
     return actionError("Sesión no válida. Inicie sesión nuevamente.");
   }
 
+  const { data: loteRow } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", input.lote_id)
+    .eq("finca_id", input.finca_id)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from("labores_agronomicas")
     .insert({
@@ -44,6 +52,19 @@ export async function registrarLabor(
   if (error) {
     return actionError(error.message);
   }
+
+  await registrarEventoFinca({
+    fincaId: input.finca_id,
+    actionKey: "labor.registrar",
+    titulo: "Registro de labor agronómica",
+    detalle: {
+      registroId: data.id,
+      loteCodigo: loteRow?.codigo ?? input.lote_id,
+      tipoLabor: input.tipo,
+      fechaEjecucion: input.fecha_ejecucion,
+      notas: input.notas ?? null,
+    },
+  });
 
   return actionOk({ id: data.id });
 }
@@ -94,11 +115,30 @@ export async function anularLabor(
     .update({ is_voided: true })
     .eq("id", id)
     .eq("is_voided", false)
-    .select("id")
+    .select("id, finca_id, lote_id, tipo, fecha_ejecucion")
     .single();
 
   if (error || !data) {
     return actionError(error?.message ?? "No se pudo anular la labor.");
   }
+
+  const { data: lote } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", data.lote_id)
+    .maybeSingle();
+
+  await registrarEventoFinca({
+    fincaId: data.finca_id,
+    actionKey: "labor.anular",
+    titulo: "Anulación de labor agronómica",
+    detalle: {
+      registroId: data.id,
+      loteCodigo: lote?.codigo ?? data.lote_id,
+      tipoLabor: data.tipo,
+      fechaEjecucion: data.fecha_ejecucion,
+    },
+  });
+
   return actionOk({ id: data.id });
 }

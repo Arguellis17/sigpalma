@@ -11,6 +11,7 @@ import {
   type ValidarAlertaFitosanitariaInput,
 } from "@/lib/validations/sanidad";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { registrarEventoFinca } from "./audit";
 
 function canEmitirOrdenes(profile: {
   role: string;
@@ -155,6 +156,32 @@ export async function validarAlertaFitosanitaria(
     );
   }
 
+  const { data: loteInfo } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", alerta.lote_id)
+    .maybeSingle();
+
+  const decisionLabels: Record<string, string> = {
+    validado: "Validada",
+    rechazado: "Rechazada",
+    invalidado: "Invalidada (datos insuficientes)",
+  };
+  const decisionLabel = decisionLabels[input.decision] ?? input.decision;
+
+  await registrarEventoFinca({
+    fincaId: alerta.finca_id,
+    actionKey: "sanidad.validar_alerta",
+    titulo: `Validación técnica de alerta: ${decisionLabel}`,
+    detalle: {
+      alertaId: input.alerta_id,
+      loteCodigo: loteInfo?.codigo ?? alerta.lote_id,
+      decision: input.decision,
+      diagnostico: input.validacion_diagnostico.trim(),
+      ordenCreadaId: ordenId,
+    },
+  });
+
   return actionOk({ orden_id: ordenId });
 }
 
@@ -191,6 +218,30 @@ export async function cancelarOrdenControl(
     .eq("id", orden.id);
 
   if (error) return actionError(error.message);
+
+  const { data: ordenFull } = await supabase
+    .from("ordenes_control")
+    .select("finca_id, lote_id, id")
+    .eq("id", orden.id)
+    .maybeSingle();
+
+  if (ordenFull) {
+    const { data: loteInfo } = await supabase
+      .from("lotes")
+      .select("codigo")
+      .eq("id", ordenFull.lote_id)
+      .maybeSingle();
+    await registrarEventoFinca({
+      fincaId: ordenFull.finca_id,
+      actionKey: "sanidad.cancelar_orden",
+      titulo: "Cancelación de orden de control fitosanitario",
+      detalle: {
+        ordenId: ordenFull.id,
+        loteCodigo: loteInfo?.codigo ?? ordenFull.lote_id,
+      },
+    });
+  }
+
   return actionOk({ ok: true });
 }
 
@@ -249,7 +300,7 @@ export async function registrarAplicacionFitosanitaria(
 
   const { data: insumo, error: ierr } = await supabase
     .from("catalogo_items")
-    .select("id, categoria, subcategoria, unidad_medida")
+    .select("id, nombre, categoria, subcategoria, unidad_medida")
     .eq("id", insumoId)
     .maybeSingle();
   if (ierr || !insumo) {
@@ -280,6 +331,33 @@ export async function registrarAplicacionFitosanitaria(
   if (insertErr || !row) {
     return actionError(insertErr?.message ?? "No se pudo registrar la aplicación.");
   }
+
+  const { data: loteInfo } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", orden.lote_id)
+    .maybeSingle();
+
+  await registrarEventoFinca({
+    fincaId: orden.finca_id,
+    actionKey: "sanidad.aplicacion_fitosanitaria",
+    titulo: "Aplicación fitosanitaria registrada",
+    detalle: {
+      aplicacionId: row.id,
+      ordenId: orden.id,
+      loteCodigo: loteInfo?.codigo ?? orden.lote_id,
+      insumoNombre: insumo.nombre,
+      fechaAplicacion: input.fecha_aplicacion,
+      cantidad: input.cantidad_aplicada,
+      unidad: input.unidad_medida?.trim() || insumo.unidad_medida || null,
+      eppConfirmado: input.epp_confirmado,
+      notas: input.notas?.trim() ?? null,
+      coordenadas:
+        input.latitud != null && input.longitud != null
+          ? `${input.latitud}, ${input.longitud}`
+          : null,
+    },
+  });
 
   return actionOk({ id: row.id });
 }

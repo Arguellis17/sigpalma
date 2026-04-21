@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Layers, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { anularAnalisisSuelo } from "@/app/actions/suelo";
+import { AnalisisPdfViewerButton } from "@/components/suelo/analisis-pdf-viewer-button";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export type AnalisisSueloListRow = {
   humedad_pct: string | null;
   compactacion: string | null;
   notas: string | null;
+  archivo_url: string | null;
   created_at: string;
   fincas: { nombre?: string } | null;
   lotes: { codigo?: string } | null;
@@ -61,6 +63,7 @@ function rowToFormRecord(row: AnalisisSueloListRow): AnalisisSueloFormRecord {
     humedad_pct: parseFormNumber(row.humedad_pct),
     compactacion: parseFormNumber(row.compactacion),
     notas: row.notas,
+    archivo_url: row.archivo_url,
   };
 }
 
@@ -198,6 +201,9 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                   <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{a.notas}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {a.archivo_url ? (
+                    <AnalisisPdfViewerButton analisisId={a.id} variant="outline" />
+                  ) : null}
                   <Button
                     size="sm"
                     variant="outline"
@@ -231,6 +237,7 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                     <th className="px-4 py-3">Humedad</th>
                     <th className="px-4 py-3">Compact.</th>
                     <th className="px-4 py-3">Notas</th>
+                    <th className="px-4 py-3">PDF</th>
                     <th className="px-4 py-3">Registro</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
@@ -261,6 +268,13 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                       </td>
                       <td className="max-w-[180px] truncate px-4 py-3 text-muted-foreground">
                         {a.notas ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {a.archivo_url ? (
+                          <AnalisisPdfViewerButton analisisId={a.id} variant="link" />
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {formatDate(a.created_at)}

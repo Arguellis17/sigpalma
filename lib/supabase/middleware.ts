@@ -23,18 +23,30 @@ const dashboardMap: Record<string, string> = {
   operario: "/operario",
 };
 
-/** Role only if profile exists and is active (matches server `requireRole` / layout guards). */
-async function getActiveDashboardRole(
+const CHANGE_PASSWORD_PATH = "/auth/cambiar-contrasena";
+
+type SessionGate = {
+  activeRole: string | null;
+  mustChangePassword: boolean;
+};
+
+/** Role + bandera RN07 (must_change_password en profiles). */
+async function getSessionGate(
   supabase: ReturnType<typeof createServerClient<Database>>,
   userId: string
-): Promise<string | null> {
+): Promise<SessionGate> {
   const { data } = await supabase
     .from("profiles")
-    .select("role, is_active")
+    .select("role, is_active, must_change_password")
     .eq("id", userId)
     .maybeSingle();
-  if (!data?.is_active) return null;
-  return data.role;
+  if (!data?.is_active) {
+    return { activeRole: null, mustChangePassword: false };
+  }
+  return {
+    activeRole: data.role,
+    mustChangePassword: Boolean(data.must_change_password),
+  };
 }
 
 function redirectPreservingAuthCookies(
@@ -134,8 +146,24 @@ export async function updateSession(request: NextRequest) {
         : user;
 
   let activeRole: string | null = null;
+  let mustChangePassword = false;
   if (effectiveUser) {
-    activeRole = await getActiveDashboardRole(supabase, effectiveUser.id);
+    const gate = await getSessionGate(supabase, effectiveUser.id);
+    activeRole = gate.activeRole;
+    mustChangePassword = gate.mustChangePassword;
+  }
+
+  if (
+    effectiveUser &&
+    mustChangePassword &&
+    pathname !== CHANGE_PASSWORD_PATH &&
+    !pathname.startsWith("/api")
+  ) {
+    return redirectPreservingAuthCookies(
+      request,
+      CHANGE_PASSWORD_PATH,
+      supabaseResponse
+    );
   }
 
   if (!effectiveUser && !isPublicAuthPath(pathname)) {
@@ -169,6 +197,13 @@ export async function updateSession(request: NextRequest) {
       }
       return redirectPreservingAuthCookies(request, "/auth/login", supabaseResponse);
     }
+    if (mustChangePassword) {
+      return redirectPreservingAuthCookies(
+        request,
+        CHANGE_PASSWORD_PATH,
+        supabaseResponse
+      );
+    }
     const dest = dashboardMap[activeRole] ?? "/operario";
     return redirectPreservingAuthCookies(request, dest, supabaseResponse);
   }
@@ -181,6 +216,16 @@ export async function updateSession(request: NextRequest) {
         /* ignore */
       }
       return supabaseResponse;
+    }
+    if (mustChangePassword) {
+      if (pathname === CHANGE_PASSWORD_PATH) {
+        return supabaseResponse;
+      }
+      return redirectPreservingAuthCookies(
+        request,
+        CHANGE_PASSWORD_PATH,
+        supabaseResponse
+      );
     }
     const dest = dashboardMap[activeRole] ?? "/operario";
     return redirectPreservingAuthCookies(request, dest, supabaseResponse);

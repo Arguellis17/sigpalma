@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, isAdmin, isSuperAdmin } from "@/lib/auth/session-profile";
 import {
+  cambiarContrasenaObligatoriaSchema,
   crearUsuarioAdminSchema,
   actualizarUsuarioSchema,
   restablecerContrasenaSchema,
@@ -12,6 +13,17 @@ import {
   type CrearUsuarioAdminInput,
 } from "@/lib/validations/usuario";
 import { actionError, actionOk, type ActionResult } from "./types";
+
+function generateTemporaryPassword(): string {
+  const alphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  let out = "";
+  for (let i = 0; i < 16; i++) {
+    out += alphabet[bytes[i]! % alphabet.length];
+  }
+  return out;
+}
 
 // ─── HU01: Crear usuario ──────────────────────────────────────────────────────
 
@@ -216,7 +228,7 @@ export async function inactivarUsuario(
 
 export async function restablecerContrasena(
   raw: unknown
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<{ temporary_password: string }>> {
   const parsed = restablecerContrasenaSchema.safeParse(raw);
   if (!parsed.success) {
     return actionError(parsed.error.issues.map((i) => i.message).join("; "));
@@ -248,6 +260,8 @@ export async function restablecerContrasena(
     }
   }
 
+  const temporaryPassword = generateTemporaryPassword();
+
   let admin;
   try {
     admin = createAdminClient();
@@ -257,10 +271,81 @@ export async function restablecerContrasena(
   }
 
   const { error } = await admin.auth.admin.updateUserById(parsed.data.id, {
-    password: parsed.data.password,
+    password: temporaryPassword,
   });
 
   if (error) return actionError(error.message);
+
+  const supabase = await createClient();
+  const { error: perr } = await supabase
+    .from("profiles")
+    .update({
+      must_change_password: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.id);
+
+  if (perr) {
+    return actionError(
+      `Contraseña actualizada en Auth, pero no se pudo marcar el cambio obligatorio: ${perr.message}`
+    );
+  }
+
+  return actionOk({ temporary_password: temporaryPassword });
+}
+
+/** Tras RN07: el usuario autenticado establece su nueva contraseña y se limpia la bandera. */
+export async function cambiarContrasenaObligatoria(
+  raw: unknown
+): Promise<ActionResult<void>> {
+  const parsed = cambiarContrasenaObligatoriaSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+  if (userErr || !user) {
+    return actionError("Sesión no válida. Inicie sesión nuevamente.");
+  }
+
+  const { data: prof, error: pfetch } = await supabase
+    .from("profiles")
+    .select("must_change_password, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (pfetch || !prof?.is_active) {
+    return actionError("No se pudo verificar su perfil.");
+  }
+  if (!prof.must_change_password) {
+    return actionError("Su cuenta no requiere cambio de contraseña en este momento.");
+  }
+
+  const { error: authErr } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (authErr) {
+    return actionError(authErr.message);
+  }
+
+  const { error: updErr } = await supabase
+    .from("profiles")
+    .update({
+      must_change_password: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.id);
+
+  if (updErr) {
+    return actionError(
+      `Contraseña actualizada, pero no se pudo actualizar el perfil: ${updErr.message}`
+    );
+  }
+
   return actionOk(undefined);
 }
 
