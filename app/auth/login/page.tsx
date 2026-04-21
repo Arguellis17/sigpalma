@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: Props) {
   return (
     <div className="w-full max-w-6xl">
       <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
-        <div className="surface-panel order-2 overflow-hidden rounded-[2.5rem] border border-border/70 p-0 shadow-[0_24px_80px_rgba(12,29,18,0.12)] lg:order-1">
+        <div className="surface-panel order-2 overflow-hidden rounded-[2.5rem] border border-border/70 p-0 shadow-[0_24px_80px_rgba(12,29,18,0.12)] dark:shadow-[0_28px_90px_rgba(0,0,0,0.55)] lg:order-1">
           <div className="relative min-h-[28rem] overflow-hidden lg:min-h-[40rem]">
             <Image
               src="/aceitepalma.jpg"
