@@ -7,7 +7,22 @@ import type {
   FincaAuditActionKey,
   FincaAuditEventListRow,
 } from "@/lib/audit/finca-audit";
+import {
+  offsetFromPage,
+  sanitizeIlikeFragment,
+} from "@/lib/list-query";
+import {
+  type AuditoriaListQuery,
+  withClampedPage,
+} from "@/lib/audit/audit-list-query";
 import { actionError, actionOk, type ActionResult } from "./types";
+
+export type FincaAuditListPayload = {
+  rows: FincaAuditEventListRow[];
+  total: number;
+  /** Query efectiva (p. ej. página ajustada si estaba fuera de rango). */
+  query: AuditoriaListQuery;
+};
 
 /**
  * Registra un evento de auditoría legible. No debe interrumpir el flujo principal.
@@ -37,9 +52,9 @@ export async function registrarEventoFinca(params: {
   }
 }
 
-export async function listarEventosAuditoriaFinca(
+async function assertCanReadAuditoriaFinca(
   fincaId: string
-): Promise<ActionResult<FincaAuditEventListRow[]>> {
+): Promise<ActionResult<{ supabase: Awaited<ReturnType<typeof createClient>> }>> {
   if (!fincaId) {
     return actionError("Indique la finca.");
   }
@@ -59,12 +74,55 @@ export async function listarEventosAuditoriaFinca(
   }
 
   const supabase = await createClient();
-  const { data: events, error } = await supabase
+  return actionOk({ supabase });
+}
+
+/**
+ * Lista paginada y ordenada por columnas permitidas (`finca_audit_events`).
+ * Filtro `q`: búsqueda parcial insensible a mayúsculas en `titulo`.
+ */
+export async function listarEventosAuditoriaFinca(
+  fincaId: string,
+  query: AuditoriaListQuery
+): Promise<ActionResult<FincaAuditListPayload>> {
+  const auth = await assertCanReadAuditoriaFinca(fincaId);
+  if (!auth.success) return auth;
+
+  const supabase = auth.data.supabase;
+  const safeQ = sanitizeIlikeFragment(query.q);
+
+  let countQ = supabase
+    .from("finca_audit_events")
+    .select("id", { count: "exact", head: true })
+    .eq("finca_id", fincaId);
+
+  if (safeQ.length > 0) {
+    countQ = countQ.ilike("titulo", `%${safeQ}%`);
+  }
+
+  const { count: rawCount, error: countError } = await countQ;
+  if (countError) {
+    return actionError(countError.message);
+  }
+
+  const total = rawCount ?? 0;
+  const qResolved = withClampedPage(query, total);
+  const ascending = qResolved.dir === "asc";
+  const from = offsetFromPage(qResolved.page, qResolved.pageSize);
+  const to = from + qResolved.pageSize - 1;
+
+  let dataQ = supabase
     .from("finca_audit_events")
     .select("id, created_at, action_key, titulo, detalle, actor_id")
-    .eq("finca_id", fincaId)
-    .order("created_at", { ascending: false })
-    .limit(500);
+    .eq("finca_id", fincaId);
+
+  if (safeQ.length > 0) {
+    dataQ = dataQ.ilike("titulo", `%${safeQ}%`);
+  }
+
+  const { data: events, error } = await dataQ
+    .order(qResolved.sort, { ascending })
+    .range(from, to);
 
   if (error) {
     return actionError(error.message);
@@ -94,5 +152,5 @@ export async function listarEventosAuditoriaFinca(
     actor_full_name: nameById.get(r.actor_id) ?? null,
   }));
 
-  return actionOk(enriched);
+  return actionOk({ rows: enriched, total, query: qResolved });
 }

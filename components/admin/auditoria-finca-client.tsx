@@ -1,16 +1,28 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { listarEventosAuditoriaFinca } from "@/app/actions/audit";
+import { useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { FincaAuditEventListRow } from "@/lib/audit/finca-audit";
+import {
+  AUDIT_PAGE_SIZES,
+  type AuditPageSize,
+  type AuditSortKey,
+  type AuditoriaListQuery,
+  auditoriaListToQueryString,
+  nextSortToggle,
+} from "@/lib/audit/audit-list-query";
+import { sanitizeIlikeFragment } from "@/lib/list-query";
+import { SortableTableHead } from "@/components/data/sortable-table-head";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,6 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Json } from "@/lib/database.types";
 
 const DETALLE_LABELS: Record<string, string> = {
@@ -31,7 +51,7 @@ const DETALLE_LABELS: Record<string, string> = {
   fecha: "Fecha",
   fechaAnalisis: "Fecha del análisis",
   fechaEjecucion: "Fecha de ejecución",
-  fechaAplicacion: "Fecha de aplicación",
+  fechaAplicacion: "Fecha de la aplicación",
   pesoKg: "Peso (kg)",
   racimos: "Cantidad de racimos",
   rendimientoTonHa: "Rendimiento (t/ha)",
@@ -70,7 +90,9 @@ function detalleEntries(detalle: Json): { key: string; label: string; value: str
   const o = detalle as Record<string, unknown>;
   return Object.entries(o).map(([key, value]) => ({
     key,
-    label: DETALLE_LABELS[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()),
+    label:
+      DETALLE_LABELS[key] ??
+      key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()),
     value: formatValue(value),
   }));
 }
@@ -78,35 +100,89 @@ function detalleEntries(detalle: Json): { key: string; label: string; value: str
 type FincaOption = { id: string; nombre: string };
 
 type Props = {
-  initialEvents: FincaAuditEventListRow[];
-  initialFincaId: string;
-  /** Si se pasa, muestra selector de finca (superadmin). */
+  rows: FincaAuditEventListRow[];
+  total: number;
+  query: AuditoriaListQuery;
+  fincaId: string;
   fincas?: FincaOption[];
 };
 
 export function AuditoriaFincaClient({
-  initialEvents,
-  initialFincaId,
+  rows,
+  total,
+  query,
+  fincaId,
   fincas,
 }: Props) {
-  const [events, setEvents] = useState(initialEvents);
-  const [fincaId, setFincaId] = useState(initialFincaId);
-  const [detail, setDetail] = useState<FincaAuditEventListRow | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
   const [pending, startTransition] = useTransition();
+  const [detail, setDetail] = useState<FincaAuditEventListRow | null>(null);
+  const [draftQ, setDraftQ] = useState(query.q);
 
-  const rows = useMemo(() => events, [events]);
+  useEffect(() => {
+    setDraftQ(query.q);
+  }, [query.q]);
 
-  function loadFinca(nextId: string) {
-    setFincaId(nextId);
-    startTransition(async () => {
-      const res = await listarEventosAuditoriaFinca(nextId);
-      if (res.success) {
-        setEvents(res.data);
-      } else {
-        setEvents([]);
-      }
+  function pushQueryString(qs: string) {
+    startTransition(() => {
+      router.push(`${pathname}?${qs}`);
     });
   }
+
+  function patchListQuery(
+    patch: Partial<AuditoriaListQuery> & { fincaId?: string }
+  ) {
+    const next: AuditoriaListQuery = {
+      page: patch.page ?? query.page,
+      pageSize: (patch.pageSize ?? query.pageSize) as AuditPageSize,
+      sort: patch.sort ?? query.sort,
+      dir: patch.dir ?? query.dir,
+      q: patch.q !== undefined ? sanitizeIlikeFragment(patch.q) : query.q,
+    };
+    const fincaForUrl =
+      patch.fincaId !== undefined
+        ? patch.fincaId
+        : fincas && fincas.length > 0
+          ? fincaId
+          : undefined;
+    pushQueryString(
+      auditoriaListToQueryString(
+        next,
+        fincaForUrl ? { fincaId: fincaForUrl } : undefined
+      )
+    );
+  }
+
+  function onSortToggle(columnId: AuditSortKey) {
+    const { sort, dir } = nextSortToggle(query.sort, query.dir, columnId);
+    patchListQuery({ sort, dir, page: 1 });
+  }
+
+  function loadFinca(nextId: string) {
+    const next: AuditoriaListQuery = {
+      ...query,
+      page: 1,
+    };
+    pushQueryString(
+      auditoriaListToQueryString(next, { fincaId: nextId })
+    );
+  }
+
+  function applySearch() {
+    const safe = sanitizeIlikeFragment(draftQ);
+    patchListQuery({ q: safe, page: 1 });
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / query.pageSize) || 1);
+  const from =
+    total === 0 ? 0 : (query.page - 1) * query.pageSize + 1;
+  const to = Math.min(query.page * query.pageSize, total);
+
+  const emptyMessage =
+    query.q.length > 0
+      ? "No hay eventos que coincidan con la búsqueda."
+      : "No hay actividad registrada para esta finca todavía.";
 
   return (
     <div className="fade-up-enter space-y-5">
@@ -143,54 +219,162 @@ export function AuditoriaFincaClient({
         ) : null}
       </div>
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-md">
+          <Label htmlFor="audit-q" className="text-xs font-medium text-muted-foreground">
+            Buscar en título
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="audit-q"
+              value={draftQ}
+              onChange={(e) => setDraftQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applySearch();
+              }}
+              placeholder="Texto del evento…"
+              className="rounded-xl"
+              disabled={pending}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className="shrink-0 rounded-xl"
+              disabled={pending}
+              onClick={applySearch}
+            >
+              Buscar
+            </Button>
+          </div>
+        </div>
+        <div className="w-full max-w-[11rem] space-y-1.5">
+          <span className="block text-xs font-medium text-muted-foreground">
+            Por página
+          </span>
+          <Select
+            value={String(query.pageSize)}
+            onValueChange={(v) =>
+              patchListQuery({ pageSize: Number(v) as AuditPageSize, page: 1 })
+            }
+            disabled={pending}
+          >
+            <SelectTrigger className="rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AUDIT_PAGE_SIZES.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n} filas
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {pending ? (
         <p className="text-sm text-muted-foreground">Cargando eventos…</p>
       ) : null}
 
       {rows.length === 0 ? (
         <div className="surface-panel rounded-2xl py-12 text-center text-sm text-muted-foreground">
-          No hay actividad registrada para esta finca todavía.
+          {emptyMessage}
         </div>
       ) : (
         <div className="surface-panel overflow-hidden rounded-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-3">Fecha y hora</th>
-                  <th className="px-4 py-3">Quién</th>
-                  <th className="px-4 py-3">Acción</th>
-                  <th className="px-4 py-3 text-right">Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-border/40 last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3 tabular-nums text-foreground">
-                      {new Date(r.created_at).toLocaleString("es-CO", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">
-                      {r.actor_full_name?.trim() || "Usuario del sistema"}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{r.titulo}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg text-xs"
-                        onClick={() => setDetail(r)}
-                      >
-                        Ver todo
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow className="border-b border-border/60 hover:bg-transparent">
+                <SortableTableHead
+                  columnId="created_at"
+                  label="Fecha y hora"
+                  activeSort={query.sort}
+                  dir={query.dir}
+                  onToggle={onSortToggle}
+                />
+                <SortableTableHead
+                  columnId="actor_id"
+                  label="Quién"
+                  activeSort={query.sort}
+                  dir={query.dir}
+                  onToggle={onSortToggle}
+                />
+                <SortableTableHead
+                  columnId="titulo"
+                  label="Acción"
+                  activeSort={query.sort}
+                  dir={query.dir}
+                  onToggle={onSortToggle}
+                />
+                <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Detalle
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id} className="border-border/40">
+                  <TableCell className="whitespace-nowrap px-4 py-3 tabular-nums text-foreground">
+                    {new Date(r.created_at).toLocaleString("es-CO", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-foreground">
+                    {r.actor_full_name?.trim() || "Usuario del sistema"}
+                  </TableCell>
+                  <TableCell className="max-w-[min(24rem,55vw)] truncate px-4 py-3 text-foreground">
+                    {r.titulo}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg text-xs"
+                      onClick={() => setDetail(r)}
+                    >
+                      Ver todo
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {from}–{to}
+              </span>{" "}
+              de <span className="font-medium tabular-nums text-foreground">{total}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={pending || query.page <= 1}
+                onClick={() => patchListQuery({ page: query.page - 1 })}
+              >
+                Anterior
+              </Button>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                Página {query.page} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={pending || query.page >= totalPages}
+                onClick={() => patchListQuery({ page: query.page + 1 })}
+              >
+                Siguiente
+              </Button>
+            </div>
           </div>
         </div>
       )}

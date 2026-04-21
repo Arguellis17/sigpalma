@@ -1,9 +1,15 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AuditoriaFincaClient } from "@/components/admin/auditoria-finca-client";
 import { listarEventosAuditoriaFinca } from "@/app/actions/audit";
+import {
+  auditoriaListToQueryString,
+  auditoriaQueriesEqual,
+  parseAuditoriaListQuery,
+} from "@/lib/audit/audit-list-query";
 
 type Props = {
-  searchParams?: Promise<{ finca?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function SuperadminAuditoriaPage({ searchParams }: Props) {
@@ -16,8 +22,15 @@ export default async function SuperadminAuditoriaPage({ searchParams }: Props) {
     .order("nombre", { ascending: true });
 
   const list = fincas ?? [];
+  const fincaParamRaw = sp.finca;
+  const fincaParam =
+    typeof fincaParamRaw === "string"
+      ? fincaParamRaw
+      : Array.isArray(fincaParamRaw)
+        ? fincaParamRaw[0]
+        : undefined;
   const fincaId =
-    (sp.finca && list.some((f) => f.id === sp.finca) ? sp.finca : null) ??
+    (fincaParam && list.some((f) => f.id === fincaParam) ? fincaParam : null) ??
     list[0]?.id ??
     "";
 
@@ -29,7 +42,9 @@ export default async function SuperadminAuditoriaPage({ searchParams }: Props) {
     );
   }
 
-  const res = await listarEventosAuditoriaFinca(fincaId);
+  const listQuery = parseAuditoriaListQuery(sp);
+
+  const res = await listarEventosAuditoriaFinca(fincaId, listQuery);
   if (!res.success) {
     return (
       <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -38,10 +53,19 @@ export default async function SuperadminAuditoriaPage({ searchParams }: Props) {
     );
   }
 
+  const { rows, total, query: effective } = res.data;
+  if (!auditoriaQueriesEqual(effective, listQuery)) {
+    redirect(
+      `/superadmin/auditoria?${auditoriaListToQueryString(effective, { fincaId })}`
+    );
+  }
+
   return (
     <AuditoriaFincaClient
-      initialEvents={res.data}
-      initialFincaId={fincaId}
+      rows={rows}
+      total={total}
+      query={effective}
+      fincaId={fincaId}
       fincas={list.map((f) => ({ id: f.id, nombre: f.nombre }))}
     />
   );
