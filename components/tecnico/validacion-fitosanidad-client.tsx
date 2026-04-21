@@ -33,6 +33,8 @@ export type AlertaPendienteRow = {
   amenaza: string | null;
 };
 
+const SELECT_NONE = "__none__";
+
 type Props = {
   alertas: AlertaPendienteRow[];
   insumosFitosanitarios: InsumoFitosanitarioOption[];
@@ -238,17 +240,24 @@ export function ValidacionFitosanidadClient({
                         <Label htmlFor="vf-insumo">Producto</Label>
                         <Select
                           value={
-                            insumosFitosanitarios.length === 0 || !insumoId
-                              ? undefined
-                              : insumoId
+                            insumosFitosanitarios.some((p) => p.id === insumoId)
+                              ? insumoId
+                              : SELECT_NONE
                           }
-                          onValueChange={setInsumoId}
+                          onValueChange={(v) => {
+                            if (v !== SELECT_NONE) setInsumoId(v);
+                          }}
                           disabled={insumosFitosanitarios.length === 0}
                         >
                           <SelectTrigger id="vf-insumo" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
                             <SelectValue placeholder="Sin productos fitosanitarios en catálogo" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value={SELECT_NONE} disabled className="opacity-60">
+                              {insumosFitosanitarios.length === 0
+                                ? "Sin productos en catálogo"
+                                : "Seleccione un producto…"}
+                            </SelectItem>
                             {insumosFitosanitarios.map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {p.nombre}

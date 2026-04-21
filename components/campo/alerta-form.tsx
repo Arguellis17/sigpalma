@@ -25,6 +25,8 @@ type Props = {
   onSuccess?: () => void;
 };
 
+const LOTE_SELECT_IDLE = "__lote_idle__";
+
 const SEVERIDADES = [
   { value: "baja", label: "Baja" },
   { value: "media", label: "Media" },
@@ -117,8 +119,14 @@ export function AlertaForm({
       <div className="space-y-2">
         <Label htmlFor="a-lote">Lote</Label>
         <Select
-          value={loadingLotes || lotes.length === 0 || !loteId ? undefined : loteId}
-          onValueChange={setLoteId}
+          value={
+            !loadingLotes && lotes.length > 0 && lotes.some((l) => l.id === loteId)
+              ? loteId
+              : LOTE_SELECT_IDLE
+          }
+          onValueChange={(v) => {
+            if (v !== LOTE_SELECT_IDLE) setLoteId(v);
+          }}
           disabled={loadingLotes || lotes.length === 0}
         >
           <SelectTrigger id="a-lote" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
@@ -129,6 +137,13 @@ export function AlertaForm({
             />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={LOTE_SELECT_IDLE} disabled className="opacity-60">
+              {loadingLotes
+                ? "Cargando…"
+                : lotes.length === 0
+                  ? "Sin lotes"
+                  : "Seleccione un lote…"}
+            </SelectItem>
             {lotes.map((l) => (
               <SelectItem key={l.id} value={l.id}>
                 {l.codigo}

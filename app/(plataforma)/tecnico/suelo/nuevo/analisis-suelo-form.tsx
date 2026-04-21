@@ -32,6 +32,9 @@ export type AnalisisSueloFormRecord = {
   notas: string | null;
 };
 
+const SELECT_NONE = "__none__";
+const LOTE_SELECT_IDLE = "__lote_idle__";
+
 type Props = {
   fincas: Finca[];
   lotesPorFinca: Record<string, Lote[]>;
@@ -128,11 +131,17 @@ export function AnalisisSueloForm({
         <div className="space-y-1.5">
           <Label htmlFor="finca_id">Finca *</Label>
           <input type="hidden" name="finca_id" value={fincaId} required />
-          <Select value={fincaId || undefined} onValueChange={setFincaId}>
+          <Select
+            value={fincas.some((f) => f.id === fincaId) ? fincaId : SELECT_NONE}
+            onValueChange={(v) => setFincaId(v === SELECT_NONE ? "" : v)}
+          >
             <SelectTrigger id="finca_id" className="rounded-lg text-sm shadow-none">
               <SelectValue placeholder="Seleccione una finca…" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={SELECT_NONE} disabled className="opacity-60">
+                {fincas.length === 0 ? "Sin fincas" : "Seleccione una finca…"}
+              </SelectItem>
               {fincas.map((f) => (
                 <SelectItem key={f.id} value={f.id}>
                   {f.nombre}
@@ -145,11 +154,23 @@ export function AnalisisSueloForm({
         <div className="space-y-1.5">
           <Label htmlFor="lote_id">Lote *</Label>
           <input type="hidden" name="lote_id" value={loteId} required />
-          <Select value={loteId || undefined} onValueChange={setLoteId}>
+          <Select
+            value={
+              lotes.length > 0 && lotes.some((l) => l.id === loteId)
+                ? loteId
+                : LOTE_SELECT_IDLE
+            }
+            onValueChange={(v) => {
+              if (v !== LOTE_SELECT_IDLE) setLoteId(v);
+            }}
+          >
             <SelectTrigger id="lote_id" className="rounded-lg text-sm shadow-none">
               <SelectValue placeholder="Seleccione un lote…" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={LOTE_SELECT_IDLE} disabled className="opacity-60">
+                {lotes.length === 0 ? "Sin lotes" : "Seleccione un lote…"}
+              </SelectItem>
               {lotes.map((l) => (
                 <SelectItem key={l.id} value={l.id}>
                   Lote {l.codigo}

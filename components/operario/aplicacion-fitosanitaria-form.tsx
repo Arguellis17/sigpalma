@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { registrarAplicacionFitosanitaria } from "@/app/actions/fitosanidad";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
@@ -30,6 +30,13 @@ type Props = {
 export function AplicacionFitosanitariaForm({ ordenes }: Props) {
   const [ordenId, setOrdenId] = useState(ordenes[0]?.id ?? "");
   const [fecha, setFecha] = useState(() => todayLocalYmd());
+
+  useEffect(() => {
+    if (!ordenes.length) return;
+    if (!ordenes.some((o) => o.id === ordenId)) {
+      setOrdenId(ordenes[0].id);
+    }
+  }, [ordenes, ordenId]);
   const [cantidad, setCantidad] = useState("");
   const [unidad, setUnidad] = useState("");
   const [epp, setEpp] = useState(false);

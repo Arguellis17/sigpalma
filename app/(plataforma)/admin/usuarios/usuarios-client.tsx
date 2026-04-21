@@ -53,6 +53,8 @@ type Props = {
   scope?: "all" | "admin-only";
 };
 
+const SELECT_NONE = "__none__";
+
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
   agronomo: "Agrónomo",
@@ -411,11 +413,17 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
                   value={createFincaId}
                   required={scope !== "admin-only"}
                 />
-                <Select value={createFincaId || undefined} onValueChange={setCreateFincaId}>
+                <Select
+                  value={fincas.some((f) => f.id === createFincaId) ? createFincaId : SELECT_NONE}
+                  onValueChange={(v) => setCreateFincaId(v === SELECT_NONE ? "" : v)}
+                >
                   <SelectTrigger id="cu-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
                     <SelectValue placeholder="Seleccione…" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={SELECT_NONE} disabled className="opacity-60">
+                      Seleccione…
+                    </SelectItem>
                     {fincas.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.nombre}

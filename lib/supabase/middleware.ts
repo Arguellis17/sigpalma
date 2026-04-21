@@ -1,25 +1,86 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
-import type { Database } from '@/lib/database.types'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import type { Database } from "@/lib/database.types";
 
 function isPublicAuthPath(pathname: string) {
-  return pathname.startsWith('/auth') || pathname === '/login'
+  return pathname.startsWith("/auth") || pathname === "/login";
 }
 
 /** Refresh/session errors where cookies should be cleared to avoid a broken half-session. */
 function isStaleSessionAuthError(error: { code?: string } | null) {
-  const code = error?.code
+  const code = error?.code;
   return (
-    code === 'refresh_token_not_found' ||
-    code === 'invalid_refresh_token' ||
-    code === 'invalid_grant'
-  )
+    code === "refresh_token_not_found" ||
+    code === "invalid_refresh_token" ||
+    code === "invalid_grant"
+  );
+}
+
+const dashboardMap: Record<string, string> = {
+  superadmin: "/superadmin",
+  admin: "/admin",
+  agronomo: "/tecnico",
+  operario: "/operario",
+};
+
+/** Role only if profile exists and is active (matches server `requireRole` / layout guards). */
+async function getActiveDashboardRole(
+  supabase: ReturnType<typeof createServerClient<Database>>,
+  userId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!data?.is_active) return null;
+  return data.role;
+}
+
+function redirectPreservingAuthCookies(
+  request: NextRequest,
+  pathname: string,
+  cookieSource: NextResponse
+) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  const res = NextResponse.redirect(url);
+  cookieSource.cookies.getAll().forEach((c) => {
+    res.cookies.set(c.name, c.value);
+  });
+  return res;
+}
+
+function isPlatformRoute(pathname: string) {
+  return (
+    pathname.startsWith("/operario") ||
+    pathname.startsWith("/tecnico") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/superadmin")
+  );
+}
+
+/** If this role may not open this path, return the dashboard URL for that role. */
+function segmentRoleRedirect(pathname: string, role: string): string | null {
+  if (pathname.startsWith("/operario") && role !== "operario") {
+    return dashboardMap[role] ?? "/tecnico";
+  }
+  if (pathname.startsWith("/tecnico") && role !== "agronomo") {
+    return dashboardMap[role] ?? "/operario";
+  }
+  if (pathname.startsWith("/admin") && role !== "admin") {
+    return dashboardMap[role] ?? "/superadmin";
+  }
+  if (pathname.startsWith("/superadmin") && role !== "superadmin") {
+    return dashboardMap[role] ?? "/admin";
+  }
+  return null;
 }
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
-  })
+  });
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,89 +88,103 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request,
-          })
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
-          )
+          );
           if (headers) {
             for (const [key, value] of Object.entries(headers)) {
-              supabaseResponse.headers.set(key, value)
+              supabaseResponse.headers.set(key, value);
             }
           }
         },
       },
       auth: { debug: false },
     }
-  )
+  );
 
-  const { data, error } = await supabase.auth.getClaims()
+  // Use getUser() (same as RSC `getSessionProfile`) — getClaims() can still be "valid" while
+  // getUser() fails in dev (cookie refresh / timing), causing /operario ↔ /auth/login 307 loops.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (error && isStaleSessionAuthError(error)) {
+  if (authError && isStaleSessionAuthError(authError)) {
     try {
-      await supabase.auth.signOut({ scope: 'local' })
+      await supabase.auth.signOut({ scope: "local" });
     } catch {
       /* ignore */
     }
   }
 
-  const user = data?.claims
-  const pathname = request.nextUrl.pathname
+  const pathname = request.nextUrl.pathname;
 
-  // Unauthenticated: redirect to login (except public auth paths)
-  if (!user && !isPublicAuthPath(pathname)) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  const effectiveUser =
+    authError && isStaleSessionAuthError(authError)
+      ? null
+      : authError || !user
+        ? null
+        : user;
+
+  let activeRole: string | null = null;
+  if (effectiveUser) {
+    activeRole = await getActiveDashboardRole(supabase, effectiveUser.id);
   }
 
-  // Authenticated user hitting the root: redirect to role dashboard
-  if (user && pathname === '/') {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.sub as string)
-      .maybeSingle()
+  if (!effectiveUser && !isPublicAuthPath(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    return NextResponse.redirect(url);
+  }
 
-    const role = profileData?.role
-    const dashboardMap: Record<string, string> = {
-      superadmin: '/superadmin',
-      admin:      '/admin',
-      agronomo:   '/tecnico',
-      operario:   '/operario',
+  if (effectiveUser && isPlatformRoute(pathname) && !activeRole) {
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* ignore */
     }
-    const dest = role ? (dashboardMap[role] ?? '/operario') : '/operario'
-    const url = request.nextUrl.clone()
-    url.pathname = dest
-    return NextResponse.redirect(url)
+    return redirectPreservingAuthCookies(request, "/auth/login", supabaseResponse);
   }
 
-  // Authenticated user hitting /auth/* paths: redirect to their dashboard
-  if (user && isPublicAuthPath(pathname)) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.sub as string)
-      .maybeSingle()
-
-    const role = profileData?.role
-    const dashboardMap: Record<string, string> = {
-      superadmin: '/superadmin',
-      admin:      '/admin',
-      agronomo:   '/tecnico',
-      operario:   '/operario',
+  if (effectiveUser && activeRole) {
+    const wrongSegment = segmentRoleRedirect(pathname, activeRole);
+    if (wrongSegment) {
+      return redirectPreservingAuthCookies(request, wrongSegment, supabaseResponse);
     }
-    const dest = role ? (dashboardMap[role] ?? '/operario') : '/operario'
-    const url = request.nextUrl.clone()
-    url.pathname = dest
-    return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  if (effectiveUser && pathname === "/") {
+    if (!activeRole) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        /* ignore */
+      }
+      return redirectPreservingAuthCookies(request, "/auth/login", supabaseResponse);
+    }
+    const dest = dashboardMap[activeRole] ?? "/operario";
+    return redirectPreservingAuthCookies(request, dest, supabaseResponse);
+  }
+
+  if (effectiveUser && isPublicAuthPath(pathname)) {
+    if (!activeRole) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        /* ignore */
+      }
+      return supabaseResponse;
+    }
+    const dest = dashboardMap[activeRole] ?? "/operario";
+    return redirectPreservingAuthCookies(request, dest, supabaseResponse);
+  }
+
+  return supabaseResponse;
 }
-

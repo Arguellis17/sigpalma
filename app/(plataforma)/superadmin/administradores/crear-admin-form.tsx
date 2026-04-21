@@ -15,6 +15,8 @@ import {
 
 type FincaOption = { id: string; nombre: string };
 
+const SELECT_NONE = "__none__";
+
 type Props = {
   fincas: FincaOption[];
   onSuccess?: (id: string) => void;
@@ -79,11 +81,17 @@ export function CrearAdminForm({ fincas, onSuccess, onCancel }: Props) {
       <div className="space-y-1.5">
         <Label htmlFor="finca_id">Finca asignada</Label>
         <input type="hidden" name="finca_id" value={fincaId} required />
-        <Select value={fincaId || undefined} onValueChange={setFincaId}>
+        <Select
+          value={fincas.some((f) => f.id === fincaId) ? fincaId : SELECT_NONE}
+          onValueChange={(v) => setFincaId(v === SELECT_NONE ? "" : v)}
+        >
           <SelectTrigger id="finca_id" className="rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
             <SelectValue placeholder="Seleccione una finca…" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={SELECT_NONE} disabled className="opacity-60">
+              Seleccione una finca…
+            </SelectItem>
             {fincas.map((finca) => (
               <SelectItem key={finca.id} value={finca.id}>
                 {finca.nombre}

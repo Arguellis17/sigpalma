@@ -27,6 +27,8 @@ type UserRole = Database["public"]["Enums"]["user_role"];
 
 type FincaOption = { id: string; nombre: string };
 
+const SELECT_NONE = "__none__";
+
 const allowedRoles = ["admin", "agronomo", "operario"] as const;
 
 const roleLabels: Record<(typeof allowedRoles)[number], string> = {
@@ -167,11 +169,17 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
             <div className="space-y-2">
               <Label htmlFor="reg-finca">Finca</Label>
               <input type="hidden" name="finca_id" value={fincaId} required />
-              <Select value={fincaId || undefined} onValueChange={setFincaId}>
+              <Select
+                value={fincas.some((f) => f.id === fincaId) ? fincaId : SELECT_NONE}
+                onValueChange={(v) => setFincaId(v === SELECT_NONE ? "" : v)}
+              >
                 <SelectTrigger id="reg-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none md:text-sm">
                   <SelectValue placeholder="Seleccione…" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SELECT_NONE} disabled className="opacity-60">
+                    Seleccione…
+                  </SelectItem>
                   {fincas.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.nombre}
