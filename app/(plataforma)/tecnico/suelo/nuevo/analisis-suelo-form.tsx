@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   actualizarAnalisisSuelo,
   registrarAnalisisSuelo,
@@ -8,6 +8,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type Finca = { id: string; nombre: string };
@@ -46,9 +53,25 @@ export function AnalisisSueloForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fincaId, setFincaId] = useState(record?.finca_id ?? fincas[0]?.id ?? "");
+  const [loteId, setLoteId] = useState(record?.lote_id ?? "");
 
   const lotes = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
   const isEdit = Boolean(record);
+
+  useEffect(() => {
+    setLoteId((prev) => {
+      const list = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
+      if (list.some((l) => l.id === prev)) return prev;
+      if (
+        record &&
+        fincaId === record.finca_id &&
+        list.some((l) => l.id === record.lote_id)
+      ) {
+        return record.lote_id;
+      }
+      return "";
+    });
+  }, [fincaId, lotesPorFinca, record]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -94,40 +117,36 @@ export function AnalisisSueloForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="finca_id">Finca *</Label>
-          <select
-            id="finca_id"
-            name="finca_id"
-            required
-            value={fincaId}
-            onChange={(e) => setFincaId(e.target.value)}
-            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Seleccione una finca…</option>
-            {fincas.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.nombre}
-              </option>
-            ))}
-          </select>
+          <input type="hidden" name="finca_id" value={fincaId} required />
+          <Select value={fincaId || undefined} onValueChange={setFincaId}>
+            <SelectTrigger id="finca_id" className="rounded-lg text-sm shadow-none">
+              <SelectValue placeholder="Seleccione una finca…" />
+            </SelectTrigger>
+            <SelectContent>
+              {fincas.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="lote_id">Lote *</Label>
-          <select
-            key={`${fincaId}-${record?.id ?? "new"}`}
-            id="lote_id"
-            name="lote_id"
-            required
-            defaultValue={record?.lote_id ?? ""}
-            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Seleccione un lote…</option>
-            {lotes.map((l) => (
-              <option key={l.id} value={l.id}>
-                Lote {l.codigo}
-              </option>
-            ))}
-          </select>
+          <input type="hidden" name="lote_id" value={loteId} required />
+          <Select value={loteId || undefined} onValueChange={setLoteId}>
+            <SelectTrigger id="lote_id" className="rounded-lg text-sm shadow-none">
+              <SelectValue placeholder="Seleccione un lote…" />
+            </SelectTrigger>
+            <SelectContent>
+              {lotes.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  Lote {l.codigo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

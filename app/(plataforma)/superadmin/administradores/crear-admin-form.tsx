@@ -5,6 +5,13 @@ import { crearUsuarioConRol } from "@/app/actions/usuarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type FincaOption = { id: string; nombre: string };
 
@@ -17,6 +24,7 @@ type Props = {
 export function CrearAdminForm({ fincas, onSuccess, onCancel }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fincaId, setFincaId] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -39,6 +47,7 @@ export function CrearAdminForm({ fincas, onSuccess, onCancel }: Props) {
       setError(result.error);
     } else {
       formRef.current?.reset();
+      setFincaId("");
       onSuccess?.(result.data.id);
     }
   }
@@ -69,19 +78,19 @@ export function CrearAdminForm({ fincas, onSuccess, onCancel }: Props) {
 
       <div className="space-y-1.5">
         <Label htmlFor="finca_id">Finca asignada</Label>
-        <select
-          id="finca_id"
-          name="finca_id"
-          required
-          className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">Seleccione una finca…</option>
-          {fincas.map((finca) => (
-            <option key={finca.id} value={finca.id}>
-              {finca.nombre}
-            </option>
-          ))}
-        </select>
+        <input type="hidden" name="finca_id" value={fincaId} required />
+        <Select value={fincaId || undefined} onValueChange={setFincaId}>
+          <SelectTrigger id="finca_id" className="rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue placeholder="Seleccione una finca…" />
+          </SelectTrigger>
+          <SelectContent>
+            {fincas.map((finca) => (
+              <SelectItem key={finca.id} value={finca.id}>
+                {finca.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <p className="text-xs text-muted-foreground">
           Cada administrador queda asociado a una finca específica.
         </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Search } from "lucide-react";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
@@ -14,6 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -150,16 +157,31 @@ export function CatalogoClient({
     setConfirmInactivar(null);
   }
 
-  const ItemForm = ({ item }: { item?: ItemRow }) => (
+  const ItemForm = ({ item }: { item?: ItemRow }) => {
+    const [categoriaItem, setCategoriaItem] = useState<CategoriaCatalogo>(
+      (item?.categoria as CategoriaCatalogo) ?? "plaga"
+    );
+
+    useEffect(() => {
+      setCategoriaItem((item?.categoria as CategoriaCatalogo) ?? "plaga");
+    }, [item?.categoria, item?.id]);
+
+    return (
     <form onSubmit={item ? handleEdit : handleCreate} className="flex flex-col gap-4">
       {allowCategorySelect ? (
         <div className="space-y-1.5">
           <Label htmlFor="ci-cat">Categoría <span className="text-destructive">*</span></Label>
-          <select id="ci-cat" name="categoria_item" defaultValue={item?.categoria ?? "plaga"} className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="plaga">Plaga</option>
-            <option value="enfermedad">Enfermedad</option>
-            <option value="otro">Otro</option>
-          </select>
+          <input type="hidden" name="categoria_item" value={categoriaItem} />
+          <Select value={categoriaItem} onValueChange={(v) => setCategoriaItem(v as CategoriaCatalogo)}>
+            <SelectTrigger id="ci-cat" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="plaga">Plaga</SelectItem>
+              <SelectItem value="enfermedad">Enfermedad</SelectItem>
+              <SelectItem value="otro">Otro</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       ) : null}
       <div className="space-y-1.5">
@@ -214,7 +236,8 @@ export function CatalogoClient({
         <Button type="submit" disabled={pending} className="min-h-11">{pending ? "Guardando…" : item ? "Guardar cambios" : "Crear ítem"}</Button>
       </div>
     </form>
-  );
+    );
+  };
 
   return (
     <div className="fade-up-enter space-y-5">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { KeyRound, Pencil, Plus, Search, UserCheck, UserMinus } from "lucide-react";
@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +75,24 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmInactivar, setConfirmInactivar] = useState<UsuarioRow | null>(null);
+  const [createRole, setCreateRole] = useState<"admin" | "agronomo" | "operario">(
+    scope === "admin-only" ? "admin" : "agronomo"
+  );
+  const [createFincaId, setCreateFincaId] = useState("");
+  const [editFincaId, setEditFincaId] = useState("");
+
+  useEffect(() => {
+    if (sheet?.type === "create") {
+      setCreateRole(scope === "admin-only" ? "admin" : "agronomo");
+      setCreateFincaId("");
+    }
+  }, [sheet, scope]);
+
+  useEffect(() => {
+    if (sheet?.type === "edit") {
+      setEditFincaId(sheet.usuario.finca_id ?? "");
+    }
+  }, [sheet]);
 
   const filtered = useMemo(() => {
     let list = showInactive ? usuarios : usuarios.filter((u) => u.is_active);
@@ -356,25 +381,48 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="cu-role">Rol <span className="text-destructive">*</span></Label>
-                <select id="cu-role" name="role" required className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
-                  {scope === "admin-only" ? (
-                    <option value="admin">Administrador</option>
-                  ) : (
-                    <>
-                      <option value="agronomo">Agrónomo</option>
-                      <option value="operario">Operario</option>
-                    </>
-                  )}
-                </select>
+                <input type="hidden" name="role" value={createRole} required />
+                <Select
+                  value={createRole}
+                  onValueChange={(v) =>
+                    setCreateRole(v as "admin" | "agronomo" | "operario")
+                  }
+                >
+                  <SelectTrigger id="cu-role" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scope === "admin-only" ? (
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    ) : (
+                      <>
+                        <SelectItem value="agronomo">Agrónomo</SelectItem>
+                        <SelectItem value="operario">Operario</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="cu-finca">Finca asignada {scope !== "admin-only" && <span className="text-destructive">*</span>}</Label>
-                <select id="cu-finca" name="finca_id" required={scope !== "admin-only"} className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Seleccione…</option>
-                  {fincas.map((f) => (
-                    <option key={f.id} value={f.id}>{f.nombre}</option>
-                  ))}
-                </select>
+                <input
+                  type="hidden"
+                  name="finca_id"
+                  value={createFincaId}
+                  required={scope !== "admin-only"}
+                />
+                <Select value={createFincaId || undefined} onValueChange={setCreateFincaId}>
+                  <SelectTrigger id="cu-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                    <SelectValue placeholder="Seleccione…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fincas.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {formError ? (
@@ -403,12 +451,23 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="eu-finca">Finca asignada</Label>
-                <select id="eu-finca" name="finca_id" defaultValue={sheet.usuario.finca_id ?? ""} className="flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 text-base focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Sin finca</option>
-                  {fincas.map((f) => (
-                    <option key={f.id} value={f.id}>{f.nombre}</option>
-                  ))}
-                </select>
+                <input type="hidden" name="finca_id" value={editFincaId} />
+                <Select
+                  value={editFincaId || "__none__"}
+                  onValueChange={(v) => setEditFincaId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger id="eu-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                    <SelectValue placeholder="Sin finca" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sin finca</SelectItem>
+                    {fincas.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="eu-doc">Cédula / Documento de identidad</Label>
