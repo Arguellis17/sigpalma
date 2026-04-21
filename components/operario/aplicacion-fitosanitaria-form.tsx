@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { registrarAplicacionFitosanitaria } from "@/app/actions/fitosanidad";
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 export type OrdenPendienteRow = {
@@ -14,9 +22,6 @@ export type OrdenPendienteRow = {
   insumo_nombre: string;
   unidad_medida: string | null;
 };
-
-const selectClassName =
-  "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type Props = {
   ordenes: OrdenPendienteRow[];
@@ -105,18 +110,18 @@ export function AplicacionFitosanitariaForm({ ordenes }: Props) {
     >
       <div className="space-y-2">
         <Label htmlFor="orden">Orden de control</Label>
-        <select
-          id="orden"
-          value={ordenId}
-          onChange={(e) => setOrdenId(e.target.value)}
-          className={selectClassName}
-        >
-          {ordenes.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.lote_codigo} — {o.insumo_nombre} (orden {o.id.slice(0, 8)}…)
-            </option>
-          ))}
-        </select>
+        <Select value={ordenId} onValueChange={setOrdenId}>
+          <SelectTrigger id="orden" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue placeholder="Orden" />
+          </SelectTrigger>
+          <SelectContent>
+            {ordenes.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.lote_codigo} — {o.insumo_nombre} (orden {o.id.slice(0, 8)}…)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {selected ? (
           <p className="text-xs text-muted-foreground">
             Dosis recomendada por el técnico:{" "}
@@ -130,13 +135,11 @@ export function AplicacionFitosanitariaForm({ ordenes }: Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="fecha">Fecha de aplicación</Label>
-          <Input
+          <DatePickerField
             id="fecha"
-            type="date"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="min-h-12 rounded-2xl border-border/70 bg-background/80"
-            required
+            onChange={setFecha}
+            placeholder="Elegir fecha de aplicación…"
           />
         </div>
         <div className="space-y-2">

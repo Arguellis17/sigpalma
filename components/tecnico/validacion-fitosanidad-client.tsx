@@ -7,6 +7,13 @@ import type { InsumoFitosanitarioOption } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -30,9 +37,6 @@ type Props = {
   alertas: AlertaPendienteRow[];
   insumosFitosanitarios: InsumoFitosanitarioOption[];
 };
-
-const selectClassName =
-  "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ValidacionFitosanidadClient({
   alertas,
@@ -184,20 +188,22 @@ export function ValidacionFitosanidadClient({
               </p>
 
               <div className="space-y-2">
-                <Label>Decisión</Label>
-                <select
-                  className={selectClassName}
+                <Label htmlFor="vf-decision">Decisión</Label>
+                <Select
                   value={decision}
-                  onChange={(e) =>
-                    setDecision(
-                      e.target.value as "validado" | "rechazado" | "invalidado"
-                    )
+                  onValueChange={(v) =>
+                    setDecision(v as "validado" | "rechazado" | "invalidado")
                   }
                 >
-                  <option value="validado">Validado</option>
-                  <option value="rechazado">Rechazado</option>
-                  <option value="invalidado">Invalidado / datos erróneos</option>
-                </select>
+                  <SelectTrigger id="vf-decision" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="validado">Validado</SelectItem>
+                    <SelectItem value="rechazado">Rechazado</SelectItem>
+                    <SelectItem value="invalidado">Invalidado / datos erróneos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -229,23 +235,28 @@ export function ValidacionFitosanidadClient({
                   {emitirOrden ? (
                     <>
                       <div className="space-y-2">
-                        <Label>Producto</Label>
-                        <select
-                          className={selectClassName}
-                          value={insumoId}
-                          onChange={(e) => setInsumoId(e.target.value)}
+                        <Label htmlFor="vf-insumo">Producto</Label>
+                        <Select
+                          value={
+                            insumosFitosanitarios.length === 0 || !insumoId
+                              ? undefined
+                              : insumoId
+                          }
+                          onValueChange={setInsumoId}
+                          disabled={insumosFitosanitarios.length === 0}
                         >
-                          {insumosFitosanitarios.length === 0 ? (
-                            <option value="">Sin productos fitosanitarios en catálogo</option>
-                          ) : (
-                            insumosFitosanitarios.map((p) => (
-                              <option key={p.id} value={p.id}>
+                          <SelectTrigger id="vf-insumo" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                            <SelectValue placeholder="Sin productos fitosanitarios en catálogo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {insumosFitosanitarios.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
                                 {p.nombre}
                                 {p.subcategoria ? ` (${p.subcategoria})` : ""}
-                              </option>
-                            ))
-                          )}
-                        </select>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {insumosFitosanitarios.length === 0 ? (
                           <p className="text-xs text-amber-700">
                             Cree insumos con subcategoría Herbicida, Fungicida,

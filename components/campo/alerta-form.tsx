@@ -6,6 +6,13 @@ import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type FincaRow = { id: string; nombre: string };
@@ -24,9 +31,6 @@ const SEVERIDADES = [
   { value: "alta", label: "Alta" },
   { value: "critica", label: "Crítica (marca alerta en lote)" },
 ] as const;
-
-const selectClassName =
-  "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 export function AlertaForm({
   fincas,
@@ -97,73 +101,80 @@ export function AlertaForm({
     <form onSubmit={onSubmit} className={formClass}>
       <div className="space-y-2">
         <Label htmlFor="a-finca">Finca</Label>
-        <select
-          id="a-finca"
-          value={fincaId}
-          onChange={(e) => setFincaId(e.target.value)}
-          className={selectClassName}
-        >
-          {fincas.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nombre}
-            </option>
-          ))}
-        </select>
+        <Select value={fincaId} onValueChange={setFincaId}>
+          <SelectTrigger id="a-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue placeholder="Finca" />
+          </SelectTrigger>
+          <SelectContent>
+            {fincas.map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="a-lote">Lote</Label>
-        <select
-          id="a-lote"
-          value={loteId}
-          onChange={(e) => setLoteId(e.target.value)}
+        <Select
+          value={loadingLotes || lotes.length === 0 || !loteId ? undefined : loteId}
+          onValueChange={setLoteId}
           disabled={loadingLotes || lotes.length === 0}
-          className={selectClassName}
         >
-          {loadingLotes ? (
-            <option value="">Cargando…</option>
-          ) : lotes.length === 0 ? (
-            <option value="">Sin lotes</option>
-          ) : (
-            lotes.map((l) => (
-              <option key={l.id} value={l.id}>
+          <SelectTrigger id="a-lote" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue
+              placeholder={
+                loadingLotes ? "Cargando…" : lotes.length === 0 ? "Sin lotes" : "Lote"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {lotes.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
                 {l.codigo}
-              </option>
-            ))
-          )}
-        </select>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="plaga">Plaga / enfermedad (catálogo, opcional)</Label>
-        <select
-          id="plaga"
-          value={catalogoId}
-          onChange={(e) => setCatalogoId(e.target.value)}
-          className={selectClassName}
+        <Select
+          value={catalogoId || "__none__"}
+          onValueChange={(v) => setCatalogoId(v === "__none__" ? "" : v)}
         >
-          <option value="">— Sin seleccionar —</option>
-          {catalogo.map((c) => (
-            <option key={c.id} value={c.id}>
-              [{c.categoria}] {c.nombre}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="plaga" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue placeholder="— Sin seleccionar —" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— Sin seleccionar —</SelectItem>
+            {catalogo.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                [{c.categoria}] {c.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="severidad">Severidad</Label>
-        <select
-          id="severidad"
+        <Select
           value={severidad}
-          onChange={(e) =>
-            setSeveridad(e.target.value as (typeof SEVERIDADES)[number]["value"])
+          onValueChange={(v) =>
+            setSeveridad(v as (typeof SEVERIDADES)[number]["value"])
           }
-          className={selectClassName}
         >
-          {SEVERIDADES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="severidad" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SEVERIDADES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="desc">Descripción (opcional)</Label>

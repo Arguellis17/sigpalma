@@ -4,8 +4,16 @@ import { useState } from "react";
 import { registrarLabor } from "@/app/actions/labores";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 const TIPOS_SUGERIDOS = [
@@ -27,9 +35,6 @@ type Props = {
   /** Tras guardar con éxito (p. ej. cerrar modal y refrescar). */
   onSuccess?: () => void;
 };
-
-const selectClassName =
-  "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 export function LaborForm({
   fincas,
@@ -96,40 +101,45 @@ export function LaborForm({
     <form onSubmit={onSubmit} className={formClass}>
       <div className="space-y-2">
         <Label htmlFor="finca">Finca</Label>
-        <select
-          id="finca"
-          value={fincaId}
-          onChange={(e) => setFincaId(e.target.value)}
-          className={selectClassName}
-        >
-          {fincas.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nombre}
-            </option>
-          ))}
-        </select>
+        <Select value={fincaId} onValueChange={setFincaId}>
+          <SelectTrigger id="finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue placeholder="Finca" />
+          </SelectTrigger>
+          <SelectContent>
+            {fincas.map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="lote">Lote</Label>
-        <select
-          id="lote"
-          value={loteId}
-          onChange={(e) => setLoteId(e.target.value)}
+        <Select
+          value={loadingLotes || lotes.length === 0 || !loteId ? undefined : loteId}
+          onValueChange={setLoteId}
           disabled={loadingLotes || lotes.length === 0}
-          className={selectClassName}
         >
-          {loadingLotes ? (
-            <option value="">Cargando…</option>
-          ) : lotes.length === 0 ? (
-            <option value="">Sin lotes en esta finca</option>
-          ) : (
-            lotes.map((l) => (
-              <option key={l.id} value={l.id}>
+          <SelectTrigger id="lote" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+            <SelectValue
+              placeholder={
+                loadingLotes
+                  ? "Cargando…"
+                  : lotes.length === 0
+                    ? "Sin lotes en esta finca"
+                    : "Lote"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {lotes.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
                 {l.codigo}
-              </option>
-            ))
-          )}
-        </select>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="tipo">Tipo de labor</Label>
@@ -150,13 +160,11 @@ export function LaborForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="fecha">Fecha de ejecución</Label>
-        <Input
+        <DatePickerField
           id="fecha"
-          type="date"
           value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
-          className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
-          required
+          onChange={setFecha}
+          placeholder="Elegir fecha de ejecución…"
         />
       </div>
       <div className="space-y-2">

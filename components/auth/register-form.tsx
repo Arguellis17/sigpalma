@@ -8,13 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/database.types";
 
 type UserRole = Database["public"]["Enums"]["user_role"];
@@ -28,11 +34,6 @@ const roleLabels: Record<(typeof allowedRoles)[number], string> = {
   agronomo: "Agrónomo",
   operario: "Operario",
 };
-
-const selectClassName = cn(
-  "flex h-12 w-full min-w-0 rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base transition-colors outline-none",
-  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
-);
 
 export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
   const router = useRouter();
@@ -145,39 +146,39 @@ export function RegisterForm({ fincas }: { fincas: FincaOption[] }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="reg-role">Rol</Label>
-            <select
-              id="reg-role"
-              name="role"
-              required
+            <input type="hidden" name="role" value={role} required />
+            <Select
               value={role}
-              onChange={(e) => setRole(e.target.value as (typeof allowedRoles)[number])}
-              className={selectClassName}
+              onValueChange={(v) => setRole(v as (typeof allowedRoles)[number])}
             >
-              {allowedRoles.map((r) => (
-                <option key={r} value={r}>
-                  {roleLabels[r]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="reg-role" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none md:text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedRoles.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {roleLabels[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {showFinca ? (
             <div className="space-y-2">
               <Label htmlFor="reg-finca">Finca</Label>
-              <select
-                id="reg-finca"
-                name="finca_id"
-                required
-                value={fincaId}
-                onChange={(e) => setFincaId(e.target.value)}
-                className={selectClassName}
-              >
-                <option value="">Seleccione…</option>
-                {fincas.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nombre}
-                  </option>
-                ))}
-              </select>
+              <input type="hidden" name="finca_id" value={fincaId} required />
+              <Select value={fincaId || undefined} onValueChange={setFincaId}>
+                <SelectTrigger id="reg-finca" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none md:text-sm">
+                  <SelectValue placeholder="Seleccione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fincas.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {!fincas.length ? (
                 <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">
                   No hay fincas. Cree una finca antes de registrar agrónomos u
