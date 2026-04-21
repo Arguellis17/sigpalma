@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile, isSuperAdmin } from "@/lib/auth/session-profile";
 import {
+  anularRegistroCampoSchema,
   reportarCosechaSchema,
   type ReportarCosechaInput,
 } from "@/lib/validations/operativo";
@@ -77,4 +79,59 @@ export async function reportarCosecha(
     id: data.id,
     rendimiento_ton_ha,
   });
+}
+
+export async function anularCosecha(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = anularRegistroCampoSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const { id } = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile?.is_active) {
+    return actionError("Sesión no encontrada.");
+  }
+  const { profile } = session;
+  const role = profile.role;
+  if (
+    role !== "operario" &&
+    role !== "agronomo" &&
+    !isSuperAdmin(profile)
+  ) {
+    return actionError("No tienes permiso para anular cosechas.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: row, error: fetchErr } = await supabase
+    .from("cosechas_rff")
+    .select("id, finca_id, is_voided")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    return actionError(fetchErr?.message ?? "Cosecha no encontrada.");
+  }
+  if (row.is_voided) {
+    return actionError("Este registro ya está anulado.");
+  }
+  if (!isSuperAdmin(profile) && profile.finca_id !== row.finca_id) {
+    return actionError("No puede anular registros de otra finca.");
+  }
+
+  const { data, error } = await supabase
+    .from("cosechas_rff")
+    .update({ is_voided: true })
+    .eq("id", id)
+    .eq("is_voided", false)
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return actionError(error?.message ?? "No se pudo anular el registro.");
+  }
+  return actionOk({ id: data.id });
 }

@@ -1,5 +1,9 @@
-export { registrarLabor } from "./labores";
-export { reportarCosecha, type ReportarCosechaResult } from "./cosecha";
+export { registrarLabor, anularLabor } from "./labores";
+export {
+  reportarCosecha,
+  anularCosecha,
+  type ReportarCosechaResult,
+} from "./cosecha";
 export { crearAlertaFitosanitaria } from "./alertas";
 export {
   validarAlertaFitosanitaria,

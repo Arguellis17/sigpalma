@@ -13,12 +13,19 @@ type FincaRow = { id: string; nombre: string };
 type Props = {
   fincas: FincaRow[];
   defaultFincaId: string | null;
+  embedded?: boolean;
+  onSuccess?: () => void;
 };
 
 const selectClassName =
   "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
-export function CosechaForm({ fincas, defaultFincaId }: Props) {
+export function CosechaForm({
+  fincas,
+  defaultFincaId,
+  embedded = false,
+  onSuccess,
+}: Props) {
   const { fincaId, setFincaId, loteId, setLoteId, lotes, loadingLotes } =
     useFincaLoteOptions(fincas, defaultFincaId);
 
@@ -64,13 +71,17 @@ export function CosechaForm({ fincas, defaultFincaId }: Props) {
       setError(res.error);
       return;
     }
+    setPesoKg("");
+    setConteo("");
+    setObs("");
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
     setResultado({
       id: res.data.id,
       rendimiento: res.data.rendimiento_ton_ha,
     });
-    setPesoKg("");
-    setConteo("");
-    setObs("");
   }
 
   if (fincas.length === 0) {
@@ -82,8 +93,12 @@ export function CosechaForm({ fincas, defaultFincaId }: Props) {
     );
   }
 
+  const formClass = embedded
+    ? "flex max-w-none flex-col gap-5"
+    : "surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6";
+
   return (
-    <form onSubmit={onSubmit} className="surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6">
+    <form onSubmit={onSubmit} className={formClass}>
       <div className="space-y-2">
         <Label htmlFor="c-finca">Finca</Label>
         <select

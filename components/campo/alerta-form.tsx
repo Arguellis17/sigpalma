@@ -14,6 +14,8 @@ type Props = {
   fincas: FincaRow[];
   defaultFincaId: string | null;
   catalogo: CatalogoFitosanidadOption[];
+  embedded?: boolean;
+  onSuccess?: () => void;
 };
 
 const SEVERIDADES = [
@@ -26,7 +28,13 @@ const SEVERIDADES = [
 const selectClassName =
   "flex min-h-12 w-full rounded-2xl border border-border/70 bg-background/80 px-4 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
-export function AlertaForm({ fincas, defaultFincaId, catalogo }: Props) {
+export function AlertaForm({
+  fincas,
+  defaultFincaId,
+  catalogo,
+  embedded = false,
+  onSuccess,
+}: Props) {
   const { fincaId, setFincaId, loteId, setLoteId, lotes, loadingLotes } =
     useFincaLoteOptions(fincas, defaultFincaId);
 
@@ -60,12 +68,16 @@ export function AlertaForm({ fincas, defaultFincaId, catalogo }: Props) {
       setError(res.error);
       return;
     }
+    setDescripcion("");
+    if (onSuccess) {
+      onSuccess();
+      return;
+    }
     setMessage(
       res.data.lote_estado_alerta
         ? "Alerta crítica registrada: el lote queda marcado para seguimiento."
         : "Alerta fitosanitaria registrada."
     );
-    setDescripcion("");
   }
 
   if (fincas.length === 0) {
@@ -77,8 +89,12 @@ export function AlertaForm({ fincas, defaultFincaId, catalogo }: Props) {
     );
   }
 
+  const formClass = embedded
+    ? "flex max-w-none flex-col gap-5"
+    : "surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6";
+
   return (
-    <form onSubmit={onSubmit} className="surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6">
+    <form onSubmit={onSubmit} className={formClass}>
       <div className="space-y-2">
         <Label htmlFor="a-finca">Finca</Label>
         <select

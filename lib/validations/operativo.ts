@@ -41,6 +41,10 @@ export const alertaFitosanitariaSchema = z.object({
   source: registroSourceSchema.optional().default("web"),
 });
 
+export const anularRegistroCampoSchema = z.object({
+  id: uuid,
+});
+
 export type RegistrarLaborInput = z.infer<typeof registrarLaborSchema>;
 export type ReportarCosechaInput = z.infer<typeof reportarCosechaSchema>;
 export type AlertaFitosanitariaInput = z.infer<typeof alertaFitosanitariaSchema>;
