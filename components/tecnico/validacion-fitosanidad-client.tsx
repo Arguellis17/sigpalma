@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -163,6 +164,10 @@ export function ValidacionFitosanidadClient({
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Validación fitosanitaria (RF15)</DialogTitle>
+            <DialogDescription>
+              Registre el diagnóstico técnico y, si corresponde, emita una orden de
+              control con producto y dosis recomendada.
+            </DialogDescription>
           </DialogHeader>
           {current ? (
             <div className="space-y-4 text-sm">

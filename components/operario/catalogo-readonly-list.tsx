@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -132,6 +133,9 @@ export function CatalogoReadonlyList({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{detail?.nombre}</DialogTitle>
+            <DialogDescription>
+              Detalle del ítem del catálogo (solo consulta, sin edición).
+            </DialogDescription>
           </DialogHeader>
           {detail ? (
             <dl className="space-y-3 text-sm">
