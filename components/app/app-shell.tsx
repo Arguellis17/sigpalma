@@ -541,10 +541,17 @@ export function AppShell({ children, session }: AppShellProps) {
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="min-h-svh bg-transparent">
+      <SidebarInset
+        className={cn(
+          "min-h-svh bg-transparent",
+          // Tighter than default shadcn inset: no outer “card” margin, flush with sidebar column
+          "md:peer-data-[variant=inset]:!m-0 md:peer-data-[variant=inset]:!rounded-none md:peer-data-[variant=inset]:!shadow-none",
+          "md:peer-data-[variant=inset]:peer-data-[state=collapsed]:!m-0"
+        )}
+      >
         <div className="app-shell-bg min-h-svh">
           <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-            <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
+            <div className="flex h-16 w-full items-center gap-3 px-3 sm:px-4 lg:px-5">
               <SidebarTrigger className="shrink-0" />
 
               <div className="min-w-0 flex-1">
@@ -584,8 +591,8 @@ export function AppShell({ children, session }: AppShellProps) {
             </div>
           </header>
 
-          <div className="px-4 py-4 sm:px-6 sm:py-6">
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">{children}</div>
+          <div className="px-3 py-4 sm:px-4 sm:py-5 lg:px-5">
+            <div className="flex w-full min-w-0 flex-col gap-4">{children}</div>
           </div>
         </div>
       </SidebarInset>
