@@ -9,7 +9,8 @@ export default async function OperarioMiFincaPage() {
   if (!fincaId) {
     return (
       <p className="surface-panel rounded-2xl p-5 text-sm text-muted-foreground">
-        No tiene finca asignada. Contacte al administrador (HU03–HU04).
+        No tiene una finca asignada en el sistema. Solicite la asignación al administrador de su
+        organización.
       </p>
     );
   }
@@ -33,7 +34,7 @@ export default async function OperarioMiFincaPage() {
           Mi finca y lotes
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vista de solo lectura de la unidad asignada y sus lotes (HU03, HU04).
+          Vista de solo lectura de la unidad productiva asignada y de sus lotes.
         </p>
       </div>
 

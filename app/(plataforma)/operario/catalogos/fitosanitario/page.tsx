@@ -14,7 +14,7 @@ export default async function OperarioCatalogoFitosanitarioPage() {
   return (
     <CatalogoReadonlyList
       title="Catálogo fitosanitario (consulta)"
-      description="Plagas, enfermedades y amenazas estandarizadas (HU07). Solo lectura."
+      description="Referencia homologada de plagas, enfermedades y demás ítems fitosanitarios del catálogo corporativo. Modo consulta."
       rows={data ?? []}
       extraColumns={[{ key: "categoria", label: "Tipo" }]}
     />

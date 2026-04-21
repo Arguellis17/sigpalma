@@ -81,8 +81,8 @@ export default async function OperarioSanidadAlertasPage() {
           Alertas fitosanitarias
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Registre hallazgos en campo; el técnico los validará (RF15) y podrá emitir una orden de
-          aplicación.
+          Registre hallazgos en campo; el técnico validará el caso y, de ser necesario, emitirá una
+          orden de aplicación.
         </p>
       </div>
       <AlertasOperarioClient

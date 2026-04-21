@@ -13,7 +13,7 @@ export default async function OperarioCatalogoMaterialGeneticoPage() {
   return (
     <CatalogoReadonlyList
       title="Material genético (consulta)"
-      description="Variedades y material certificado disponible (HU06). Solo lectura."
+      description="Variedades y material genético activo registrado en el sistema. Modo consulta."
       rows={data ?? []}
       extraColumns={[{ key: "proveedor", label: "Proveedor" }]}
     />

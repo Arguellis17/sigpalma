@@ -164,7 +164,7 @@ export function AlertasOperarioClient({
           <DialogHeader>
             <DialogTitle>Nueva alerta fitosanitaria</DialogTitle>
             <DialogDescription>
-              Registre el hallazgo en campo; el técnico validará el caso (RF15).
+              Registre el hallazgo en campo; el técnico validará el caso y definirá el seguimiento.
             </DialogDescription>
           </DialogHeader>
           <AlertaForm

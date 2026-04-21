@@ -58,8 +58,8 @@ export default async function OperarioSanidadAplicacionesPage() {
           Aplicación fitosanitaria
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ejecute la orden emitida por el técnico tras validar el monitoreo (RF23 /
-          HU16 agroquímicos). Debe confirmar EPP.
+          Ejecute las órdenes de control autorizadas por el técnico tras la validación del
+          monitoreo. Confirme el uso del equipo de protección personal (EPP) antes de registrar.
         </p>
       </div>
       <AplicacionFitosanitariaForm ordenes={ordenes} />

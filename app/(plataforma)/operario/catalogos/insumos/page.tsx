@@ -13,7 +13,7 @@ export default async function OperarioCatalogoInsumosPage() {
   return (
     <CatalogoReadonlyList
       title="Insumos (consulta)"
-      description="Catálogo activo de insumos de su organización. Solo lectura; la gestión la realiza el administrador (HU05)."
+      description="Catálogo corporativo de insumos activos. Modo consulta; la administración del catálogo corresponde al administrador del sistema."
       rows={data ?? []}
     />
   );

@@ -102,8 +102,8 @@ export function AplicacionFitosanitariaForm({ ordenes }: Props) {
   if (ordenes.length === 0) {
     return (
       <p className="surface-panel rounded-2xl p-4 text-sm text-muted-foreground">
-        No hay órdenes de control autorizadas pendientes de aplicación. El técnico
-        debe validar una alerta y emitir una orden (RF15).
+        No hay órdenes de control autorizadas pendientes de aplicación. Cuando el técnico valide
+        el monitoreo y emita una orden en estado autorizado, podrá registrarla aquí.
       </p>
     );
   }
@@ -181,8 +181,8 @@ export function AplicacionFitosanitariaForm({ ordenes }: Props) {
           className="mt-1 size-4 rounded border-border"
         />
         <Label htmlFor="epp" className="cursor-pointer text-sm leading-relaxed">
-          Confirmo que se utilizó el equipo de protección personal (EPP) según ficha
-          técnica y normativa de la plantación (RN-11 / RF23).
+          Confirmo que se utilizó el equipo de protección personal (EPP) conforme a la ficha
+          técnica del producto y a los procedimientos de seguridad de la plantación.
         </Label>
       </div>
 

@@ -52,8 +52,7 @@ export default async function OperarioSueloConsultaPage() {
             Análisis de suelo
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Historial registrado por el técnico (RF16 / HU16 suelo). Solo consulta
-            en campo.
+            Resultados de análisis de suelo registrados por el técnico de campo. Solo consulta.
           </p>
         </div>
       </div>
