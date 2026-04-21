@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { registrarAplicacionFitosanitaria } from "@/app/actions/fitosanidad";
 import { Button } from "@/components/ui/button";
-import { DatePickerField } from "@/components/ui/date-picker-field";
+import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,9 +29,7 @@ type Props = {
 
 export function AplicacionFitosanitariaForm({ ordenes }: Props) {
   const [ordenId, setOrdenId] = useState(ordenes[0]?.id ?? "");
-  const [fecha, setFecha] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
+  const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [cantidad, setCantidad] = useState("");
   const [unidad, setUnidad] = useState("");
   const [epp, setEpp] = useState(false);

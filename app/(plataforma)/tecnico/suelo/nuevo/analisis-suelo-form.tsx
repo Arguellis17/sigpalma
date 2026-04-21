@@ -6,7 +6,7 @@ import {
   registrarAnalisisSuelo,
 } from "@/app/actions/suelo";
 import { Button } from "@/components/ui/button";
-import { DatePickerField } from "@/components/ui/date-picker-field";
+import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -56,9 +56,7 @@ export function AnalisisSueloForm({
   const [fincaId, setFincaId] = useState(record?.finca_id ?? fincas[0]?.id ?? "");
   const [loteId, setLoteId] = useState(record?.lote_id ?? "");
   const [fechaAnalisis, setFechaAnalisis] = useState(() =>
-    record?.fecha_analisis
-      ? record.fecha_analisis.slice(0, 10)
-      : new Date().toISOString().split("T")[0]
+    record?.fecha_analisis ? record.fecha_analisis.slice(0, 10) : todayLocalYmd()
   );
 
   const lotes = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
@@ -81,9 +79,7 @@ export function AnalisisSueloForm({
 
   useEffect(() => {
     setFechaAnalisis(
-      record?.fecha_analisis
-        ? record.fecha_analisis.slice(0, 10)
-        : new Date().toISOString().split("T")[0]
+      record?.fecha_analisis ? record.fecha_analisis.slice(0, 10) : todayLocalYmd()
     );
   }, [record?.id, record?.fecha_analisis]);
 

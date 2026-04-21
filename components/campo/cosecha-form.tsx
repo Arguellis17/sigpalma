@@ -4,7 +4,7 @@ import { useState } from "react";
 import { reportarCosecha } from "@/app/actions/cosecha";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import { Button } from "@/components/ui/button";
-import { DatePickerField } from "@/components/ui/date-picker-field";
+import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,9 +34,7 @@ export function CosechaForm({
   const { fincaId, setFincaId, loteId, setLoteId, lotes, loadingLotes } =
     useFincaLoteOptions(fincas, defaultFincaId);
 
-  const [fecha, setFecha] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
+  const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [pesoKg, setPesoKg] = useState("");
   const [conteo, setConteo] = useState("");
   const [minFrutos, setMinFrutos] = useState("");
