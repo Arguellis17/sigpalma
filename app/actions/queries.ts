@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { isInsumoFitosanitarioProducto } from "@/lib/catalogo-insumo-fitosanitario";
 import { actionError, actionOk, type ActionResult } from "./types";
 
 export type LoteOption = { id: string; codigo: string };
@@ -41,7 +42,7 @@ export async function getCatalogoFitosanidad(): Promise<
     .from("catalogo_items")
     .select("id, nombre, categoria")
     .eq("activo", true)
-    .in("categoria", ["plaga", "enfermedad"])
+    .in("categoria", ["plaga", "enfermedad", "otro"])
     .order("categoria")
     .order("nombre");
 
@@ -50,4 +51,44 @@ export async function getCatalogoFitosanidad(): Promise<
   }
 
   return actionOk((data ?? []) as CatalogoFitosanidadOption[]);
+}
+
+export type InsumoFitosanitarioOption = {
+  id: string;
+  nombre: string;
+  subcategoria: string | null;
+  unidad_medida: string | null;
+};
+
+/** Insumos activos clasificados como producto fitosanitario (RN65). */
+export async function getInsumosFitosanitariosActivos(): Promise<
+  ActionResult<InsumoFitosanitarioOption[]>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select("id, nombre, subcategoria, unidad_medida, categoria")
+    .eq("categoria", "insumo")
+    .eq("activo", true)
+    .order("nombre");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  const filtered = (data ?? []).filter((r) =>
+    isInsumoFitosanitarioProducto({
+      categoria: r.categoria,
+      subcategoria: r.subcategoria,
+    })
+  );
+
+  return actionOk(
+    filtered.map(({ id, nombre, subcategoria, unidad_medida }) => ({
+      id,
+      nombre,
+      subcategoria,
+      unidad_medida,
+    }))
+  );
 }

@@ -348,6 +348,10 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          validacion_estado: string;
+          validacion_diagnostico: string | null;
+          validado_por: string | null;
+          validado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -362,6 +366,10 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          validacion_estado?: string;
+          validacion_diagnostico?: string | null;
+          validado_por?: string | null;
+          validado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -374,6 +382,109 @@ export type Database = {
           created_by?: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+          validacion_estado?: string;
+          validacion_diagnostico?: string | null;
+          validado_por?: string | null;
+          validado_en?: string | null;
+        };
+        Relationships: [];
+      };
+      ordenes_control: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          alerta_id: string;
+          insumo_catalogo_id: string;
+          dosis_recomendada: string;
+          observaciones_tecnico: string | null;
+          estado: Database["public"]["Enums"]["orden_control_estado"];
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          alerta_id: string;
+          insumo_catalogo_id: string;
+          dosis_recomendada: string;
+          observaciones_tecnico?: string | null;
+          estado?: Database["public"]["Enums"]["orden_control_estado"];
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          alerta_id?: string;
+          insumo_catalogo_id?: string;
+          dosis_recomendada?: string;
+          observaciones_tecnico?: string | null;
+          estado?: Database["public"]["Enums"]["orden_control_estado"];
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      aplicaciones_fitosanitarias: {
+        Row: {
+          id: string;
+          orden_id: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          fecha_aplicacion: string;
+          cantidad_aplicada: string;
+          unidad_medida: string | null;
+          epp_confirmado: boolean;
+          latitud: string | null;
+          longitud: string | null;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          orden_id: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          fecha_aplicacion: string;
+          cantidad_aplicada: number | string;
+          unidad_medida?: string | null;
+          epp_confirmado?: boolean;
+          latitud?: number | string | null;
+          longitud?: number | string | null;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          orden_id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          catalogo_item_id?: string;
+          fecha_aplicacion?: string;
+          cantidad_aplicada?: number | string;
+          unidad_medida?: string | null;
+          epp_confirmado?: boolean;
+          latitud?: number | string | null;
+          longitud?: number | string | null;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
           created_at?: string;
           updated_at?: string;
         };
@@ -396,6 +507,7 @@ export type Database = {
         | "material_genetico"
         | "otro";
       nivel_severidad: "baja" | "media" | "alta" | "critica";
+      orden_control_estado: "autorizada" | "cerrada" | "cancelada";
     };
     CompositeTypes: Record<string, never>;
   };

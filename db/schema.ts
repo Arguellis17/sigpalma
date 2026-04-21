@@ -46,6 +46,12 @@ export const nivelSeveridadEnum = pgEnum("nivel_severidad", [
   "critica",
 ]);
 
+export const ordenControlEstadoEnum = pgEnum("orden_control_estado", [
+  "autorizada",
+  "cerrada",
+  "cancelada",
+]);
+
 export const fincas = pgTable(
   "fincas",
   {
@@ -224,6 +230,12 @@ export const alertasFitosanitarias = pgTable("alertas_fitosanitarias", {
   severidad: nivelSeveridadEnum("severidad").notNull(),
   descripcion: text("descripcion"),
   loteEstadoAlerta: boolean("lote_estado_alerta").notNull().default(false),
+  validacionEstado: text("validacion_estado").notNull().default("pendiente"),
+  validacionDiagnostico: text("validacion_diagnostico"),
+  validadoPor: uuid("validado_por").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  validadoEn: timestamp("validado_en", { withTimezone: true }),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
@@ -234,3 +246,66 @@ export const alertasFitosanitarias = pgTable("alertas_fitosanitarias", {
     .notNull()
     .defaultNow(),
 });
+
+export const ordenesControl = pgTable("ordenes_control", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  alertaId: uuid("alerta_id")
+    .notNull()
+    .references(() => alertasFitosanitarias.id, { onDelete: "restrict" }),
+  insumoCatalogoId: uuid("insumo_catalogo_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  dosisRecomendada: text("dosis_recomendada").notNull(),
+  observacionesTecnico: text("observaciones_tecnico"),
+  estado: ordenControlEstadoEnum("estado").notNull().default("autorizada"),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const aplicacionesFitosanitarias = pgTable(
+  "aplicaciones_fitosanitarias",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ordenId: uuid("orden_id")
+      .notNull()
+      .references(() => ordenesControl.id, { onDelete: "restrict" }),
+    fincaId: uuid("finca_id")
+      .notNull()
+      .references(() => fincas.id, { onDelete: "restrict" }),
+    loteId: uuid("lote_id")
+      .notNull()
+      .references(() => lotes.id, { onDelete: "restrict" }),
+    catalogoItemId: uuid("catalogo_item_id")
+      .notNull()
+      .references(() => catalogoItems.id, { onDelete: "restrict" }),
+    fechaAplicacion: date("fecha_aplicacion").notNull(),
+    cantidadAplicada: numeric("cantidad_aplicada", {
+      precision: 14,
+      scale: 4,
+    }).notNull(),
+    unidadMedida: text("unidad_medida"),
+    eppConfirmado: boolean("epp_confirmado").notNull().default(false),
+    latitud: numeric("latitud", { precision: 10, scale: 7 }),
+    longitud: numeric("longitud", { precision: 10, scale: 7 }),
+    notas: text("notas"),
+    createdBy: uuid("created_by").notNull(),
+    source: registroSourceEnum("source").notNull().default("web"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
+);

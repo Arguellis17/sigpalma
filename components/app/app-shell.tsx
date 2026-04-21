@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
+  Bug,
+  CheckCircle2,
   ChevronRight,
+  ClipboardList,
   FlaskConical,
   Layers,
   LayoutDashboard,
@@ -131,6 +134,16 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           items: [
             { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
             { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
+            {
+              href: "/tecnico/sanidad/validacion",
+              label: "Validación sanidad",
+              icon: CheckCircle2,
+            },
+            {
+              href: "/tecnico/sanidad/ordenes",
+              label: "Órdenes de control",
+              icon: ClipboardList,
+            },
           ],
         },
       ];
@@ -143,6 +156,35 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/operario", label: "Dashboard", icon: LayoutDashboard },
             { href: "/operario/labores", label: "Labores", icon: Tractor },
             { href: "/operario/cosecha", label: "Cosecha", icon: Wheat },
+          ],
+        },
+        {
+          label: "Consultas",
+          items: [
+            { href: "/operario/mi-finca", label: "Mi finca y lotes", icon: MapPinned },
+            { href: "/operario/suelo", label: "Análisis de suelo", icon: Layers },
+            { href: "/operario/catalogos/insumos", label: "Insumos", icon: Package },
+            {
+              href: "/operario/catalogos/material-genetico",
+              label: "Material genético",
+              icon: Sprout,
+            },
+            {
+              href: "/operario/catalogos/fitosanitario",
+              label: "Fitosanitario",
+              icon: FlaskConical,
+            },
+          ],
+        },
+        {
+          label: "Sanidad",
+          items: [
+            { href: "/operario/sanidad/alertas", label: "Alertas", icon: Bug },
+            {
+              href: "/operario/sanidad/aplicaciones",
+              label: "Aplicaciones",
+              icon: ClipboardList,
+            },
           ],
         },
       ];
@@ -174,6 +216,12 @@ const breadcrumbLabels: Record<string, string> = {
   "material-genetico": "Material genético",
   fitosanitario: "Fitosanitario",
   suelo: "Análisis de suelo",
+  "mi-finca": "Mi finca",
+  sanidad: "Sanidad",
+  validacion: "Validación",
+  ordenes: "Órdenes",
+  aplicaciones: "Aplicaciones",
+  alertas: "Alertas",
   labores: "Labores",
   cosecha: "Cosecha",
   editar: "Editar",
@@ -303,6 +351,60 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Cosecha",
       description: "Registro de racimos RFF por lote.",
+    };
+  }
+  if (pathname === "/operario/mi-finca") {
+    return {
+      title: "Mi finca y lotes",
+      description: "Consulta de la finca asignada y sus lotes.",
+    };
+  }
+  if (pathname === "/operario/suelo") {
+    return {
+      title: "Análisis de suelo",
+      description: "Historial de análisis de suelo de su finca (solo lectura).",
+    };
+  }
+  if (pathname === "/operario/catalogos/insumos") {
+    return {
+      title: "Insumos",
+      description: "Catálogo de insumos activos (solo lectura).",
+    };
+  }
+  if (pathname === "/operario/catalogos/material-genetico") {
+    return {
+      title: "Material genético",
+      description: "Catálogo de material genético (solo lectura).",
+    };
+  }
+  if (pathname === "/operario/catalogos/fitosanitario") {
+    return {
+      title: "Fitosanitario",
+      description: "Plagas y enfermedades del catálogo (solo lectura).",
+    };
+  }
+  if (pathname === "/operario/sanidad/alertas") {
+    return {
+      title: "Alertas fitosanitarias",
+      description: "Registro de hallazgos y seguimiento de validación.",
+    };
+  }
+  if (pathname === "/operario/sanidad/aplicaciones") {
+    return {
+      title: "Aplicación fitosanitaria",
+      description: "Ejecución de órdenes de control con confirmación de EPP.",
+    };
+  }
+  if (pathname === "/tecnico/sanidad/validacion") {
+    return {
+      title: "Validación sanidad",
+      description: "Bandeja RF15: diagnóstico y emisión de órdenes de control.",
+    };
+  }
+  if (pathname === "/tecnico/sanidad/ordenes") {
+    return {
+      title: "Órdenes de control",
+      description: "Órdenes fitosanitarias de la finca.",
     };
   }
   return { title: "SIG-Palma", description: "Panel operativo del sistema." };

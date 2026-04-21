@@ -169,7 +169,17 @@ export function CatalogoClient({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="ci-sub">Subcategoría</Label>
-          <Input id="ci-sub" name="subcategoria" defaultValue={item?.subcategoria ?? ""} className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" placeholder="Ej. Herbicida" />
+          <Input
+            id="ci-sub"
+            name="subcategoria"
+            defaultValue={item?.subcategoria ?? ""}
+            className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
+            placeholder={
+              categoria === "insumo"
+                ? "Nutrición, Fitosanitario o Herramienta (ej. Herbicida, Urea…)"
+                : "Ej. Herbicida"
+            }
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ci-unidad">{unidadLabel}</Label>
