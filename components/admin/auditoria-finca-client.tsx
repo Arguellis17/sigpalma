@@ -39,6 +39,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Json } from "@/lib/database.types";
+import {
+  formatDialogDateTimeFullCo,
+  formatTableDateTimeCo,
+} from "@/lib/format/datetime";
 
 const DETALLE_LABELS: Record<string, string> = {
   registroId: "Identificador del registro",
@@ -315,10 +319,7 @@ export function AuditoriaFincaClient({
               {rows.map((r) => (
                 <TableRow key={r.id} className="border-border/40">
                   <TableCell className="whitespace-nowrap px-4 py-3 tabular-nums text-foreground">
-                    {new Date(r.created_at).toLocaleString("es-CO", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {formatTableDateTimeCo(r.created_at)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-foreground">
                     {r.actor_full_name?.trim() || "Usuario del sistema"}
@@ -385,10 +386,7 @@ export function AuditoriaFincaClient({
             <DialogTitle>{detail?.titulo}</DialogTitle>
             <DialogDescription className="text-left text-xs sm:text-sm">
               {detail
-                ? new Date(detail.created_at).toLocaleString("es-CO", {
-                    dateStyle: "full",
-                    timeStyle: "short",
-                  })
+                ? formatDialogDateTimeFullCo(detail.created_at)
                 : null}
               {detail ? (
                 <>

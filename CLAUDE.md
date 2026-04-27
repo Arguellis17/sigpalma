@@ -4,17 +4,20 @@
 ## CodeCortex — Project Knowledge (auto-updated)
 
 ### Architecture
-**sigpalma** — tsx, typescript, javascript — 86 files, 716 symbols
-- **Modules (4):** validations (239loc), supabase (184loc), auth (99loc), campo (27loc)
-- **Key deps:** react, @/app, @/lib, @/components, next, +15 more
+**sigpalma** — tsx, typescript, javascript — 95 files, 895 symbols
+- **Modules (4):** validations (235loc), supabase (184loc), auth (99loc), campo (27loc)
+- **Key deps:** react, next, lucide-react, @/hooks, @/app, +18 more
 
 ### Risk Map
 **High-risk files:**
-- `components/auth/login-form.tsx` — 2 changes, stable
-- `...ello-repositorio-y-esquema-de-base-de-datos.txt` — 2 changes, stable
-- `...pauldi-despliegue-y-configuracion-en-vercel.txt` — 2 changes, stable
-- `.../jhojan-postgres-drizzle-y-migraciones.txt` — 2 changes, stable
-- `...cion-api-lotes-insumos-material-diccionario.txt` — 2 changes, stable
+- `components/app/app-shell.tsx` — 7 changes, stabilizing
+- `app/actions/usuarios.ts` — 5 changes, stabilizing, coupled to: usuarios-client.tsx ⚠
+- `.../admin/usuarios/usuarios-client.tsx` — 4 changes, moderate, coupled to: usuarios.ts ⚠
+- `lib/database.types.ts` — 4 changes, moderate
+- `db/schema.ts` — 4 changes, moderate
+
+**Hidden couplings (co-change, no import):**
+- `.../admin/usuarios/usuarios-client.tsx` ↔ `app/actions/usuarios.ts` (60% co-change)
 
 ### Before Editing
 Check `.codecortex/hotspots.md` for risk-ranked files before editing.
