@@ -135,6 +135,11 @@ export type Database = {
           densidad_palmas_ha: string | null;
           pendiente_pct: string | null;
           activo: boolean;
+          estado_cultivo:
+            | "vacante"
+            | "disponible"
+            | "planificado_siembra"
+            | "en_produccion";
           created_at: string;
           updated_at: string;
         };
@@ -148,6 +153,11 @@ export type Database = {
           densidad_palmas_ha?: number | string | null;
           pendiente_pct?: number | string | null;
           activo?: boolean;
+          estado_cultivo?:
+            | "vacante"
+            | "disponible"
+            | "planificado_siembra"
+            | "en_produccion";
           created_at?: string;
           updated_at?: string;
         };
@@ -161,6 +171,11 @@ export type Database = {
           densidad_palmas_ha?: number | string | null;
           pendiente_pct?: number | string | null;
           activo?: boolean;
+          estado_cultivo?:
+            | "vacante"
+            | "disponible"
+            | "planificado_siembra"
+            | "en_produccion";
           created_at?: string;
           updated_at?: string;
         };
@@ -170,6 +185,73 @@ export type Database = {
             columns: ["finca_id"];
             isOneToOne: false;
             referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      planes_siembra: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_material_id: string;
+          fecha_proyectada: string;
+          confirmacion_erosion: boolean;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_material_id: string;
+          fecha_proyectada: string;
+          confirmacion_erosion?: boolean;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          catalogo_material_id?: string;
+          fecha_proyectada?: string;
+          confirmacion_erosion?: boolean;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "planes_siembra_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "planes_siembra_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "lotes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "planes_siembra_catalogo_material_id_fkey";
+            columns: ["catalogo_material_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogo_items";
             referencedColumns: ["id"];
           },
         ];
@@ -564,6 +646,11 @@ export type Database = {
         | "labor";
       nivel_severidad: "baja" | "media" | "alta" | "critica";
       orden_control_estado: "autorizada" | "cerrada" | "cancelada";
+      lote_estado_cultivo:
+        | "vacante"
+        | "disponible"
+        | "planificado_siembra"
+        | "en_produccion";
     };
     CompositeTypes: Record<string, never>;
   };

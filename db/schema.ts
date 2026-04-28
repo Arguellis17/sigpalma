@@ -53,6 +53,14 @@ export const ordenControlEstadoEnum = pgEnum("orden_control_estado", [
   "cancelada",
 ]);
 
+/** RN26 HU10: elegibilidad para planificar siembra vs cultivo establecido */
+export const loteEstadoCultivoEnum = pgEnum("lote_estado_cultivo", [
+  "vacante",
+  "disponible",
+  "planificado_siembra",
+  "en_produccion",
+]);
+
 export const fincas = pgTable(
   "fincas",
   {
@@ -108,6 +116,9 @@ export const lotes = pgTable(
     }),
     pendientePct: numeric("pendiente_pct", { precision: 5, scale: 2 }),
     activo: boolean("activo").notNull().default(true),
+    estadoCultivo: loteEstadoCultivoEnum("estado_cultivo")
+      .notNull()
+      .default("en_produccion"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -159,6 +170,31 @@ export const laboresAgronomicas = pgTable("labores_agronomicas", {
   }),
   tipo: text("tipo").notNull(),
   fechaEjecucion: date("fecha_ejecucion").notNull(),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const planesSiembra = pgTable("planes_siembra", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  catalogoMaterialId: uuid("catalogo_material_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  fechaProyectada: date("fecha_proyectada").notNull(),
+  confirmacionErosion: boolean("confirmacion_erosion").notNull().default(false),
   notas: text("notas"),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),

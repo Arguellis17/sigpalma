@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { loteEstadoCultivoSchema } from "@/lib/validations/plan-siembra";
+
 const currentYear = new Date().getFullYear();
 
 export const crearFincaSchema = z.object({
@@ -29,6 +31,8 @@ export const crearLoteSchema = z.object({
       v === "" || v === null || v === undefined ? undefined : v,
     z.coerce.number().min(0).max(100).optional()
   ),
+  /** Estado agronómico (HU10 RN26); opcional al crear (por defecto BD: en producción). */
+  estado_cultivo: loteEstadoCultivoSchema.optional(),
 });
 
 export const actualizarFincaSchema = crearFincaSchema.extend({

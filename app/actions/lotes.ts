@@ -69,6 +69,7 @@ export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
       pendiente_pct: input.pendiente_pct ?? null,
+      ...(input.estado_cultivo ? { estado_cultivo: input.estado_cultivo } : {}),
     })
     .select("id")
     .single();
@@ -121,6 +122,9 @@ export async function actualizarLote(
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
       pendiente_pct: input.pendiente_pct ?? null,
+      ...(input.estado_cultivo !== undefined
+        ? { estado_cultivo: input.estado_cultivo }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)

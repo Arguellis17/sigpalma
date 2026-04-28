@@ -171,3 +171,124 @@ export async function getInsumosFitosanitariosActivos(): Promise<
     }))
   );
 }
+
+export type CatalogoMaterialGeneticoOption = { id: string; nombre: string };
+
+/** Catálogo RF06 / RN27: variedades certificadas para planificación de siembra (HU10). */
+export async function getCatalogoMaterialGenetico(): Promise<
+  ActionResult<CatalogoMaterialGeneticoOption[]>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select("id, nombre")
+    .eq("categoria", "material_genetico")
+    .eq("activo", true)
+    .order("nombre");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk((data ?? []) as CatalogoMaterialGeneticoOption[]);
+}
+
+export type LotePlanificableOption = {
+  id: string;
+  codigo: string;
+  pendiente_pct: string | null;
+};
+
+/** RN26: lotes activos en estado vacante o disponible (no cultivo establecido ni ya planificado). */
+export async function getLotesPlanificables(
+  fincaId: string
+): Promise<ActionResult<LotePlanificableOption[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lotes")
+    .select("id, codigo, pendiente_pct")
+    .eq("finca_id", fid)
+    .eq("activo", true)
+    .in("estado_cultivo", ["vacante", "disponible"])
+    .order("codigo");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk((data ?? []) as LotePlanificableOption[]);
+}
+
+export type PlanSiembraListRow = {
+  id: string;
+  lote_id: string;
+  fecha_proyectada: string;
+  confirmacion_erosion: boolean;
+  notas: string | null;
+  catalogo_material_id: string;
+  lote_codigo: string;
+  pendiente_pct: string | null;
+  material_nombre: string;
+};
+
+type PlanSiembraRaw = {
+  id: string;
+  lote_id: string;
+  fecha_proyectada: string;
+  confirmacion_erosion: boolean;
+  notas: string | null;
+  catalogo_material_id: string;
+  lotes: { codigo: string; pendiente_pct: string | null } | null;
+  catalogo_items: { nombre: string } | null;
+};
+
+export async function getPlanesSiembraPorFinca(
+  fincaId: string
+): Promise<ActionResult<PlanSiembraListRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("planes_siembra")
+    .select(
+      `
+      id,
+      lote_id,
+      fecha_proyectada,
+      confirmacion_erosion,
+      notas,
+      catalogo_material_id,
+      lotes ( codigo, pendiente_pct ),
+      catalogo_items ( nombre )
+    `
+    )
+    .eq("finca_id", fid)
+    .eq("is_voided", false)
+    .order("fecha_proyectada", { ascending: true });
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  const mapped = ((data ?? []) as PlanSiembraRaw[]).map((r) => ({
+    id: r.id,
+    lote_id: r.lote_id,
+    fecha_proyectada: r.fecha_proyectada,
+    confirmacion_erosion: r.confirmacion_erosion,
+    notas: r.notas,
+    catalogo_material_id: r.catalogo_material_id,
+    lote_codigo: r.lotes?.codigo ?? "—",
+    pendiente_pct: r.lotes?.pendiente_pct ?? null,
+    material_nombre: r.catalogo_items?.nombre ?? "—",
+  }));
+
+  return actionOk(mapped);
+}

@@ -3,6 +3,9 @@ import type { Json } from "@/lib/database.types";
 export const FINCA_AUDIT_ACTION_KEYS = [
   "cosecha.registrar",
   "cosecha.anular",
+  "plan_siembra.crear",
+  "plan_siembra.actualizar",
+  "plan_siembra.anular",
   "labor.registrar",
   "labor.actualizar",
   "labor.anular",
