@@ -11,6 +11,17 @@ export const registrarLaborSchema = z.object({
   fecha_ejecucion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notas: z.string().max(5000).optional().nullable(),
   source: registroSourceSchema.optional().default("web"),
+  /** Si viene informado (HU11), debe coincidir con un ítem labor activo para agrónomos. */
+  catalogo_item_id: uuid.optional().nullable(),
+});
+
+export const actualizarLaborSchema = z.object({
+  id: uuid,
+  lote_id: uuid,
+  tipo: z.string().min(1).max(200),
+  fecha_ejecucion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notas: z.string().max(5000).optional().nullable(),
+  catalogo_item_id: uuid.optional().nullable(),
 });
 
 export const reportarCosechaSchema = z.object({
@@ -46,5 +57,6 @@ export const anularRegistroCampoSchema = z.object({
 });
 
 export type RegistrarLaborInput = z.infer<typeof registrarLaborSchema>;
+export type ActualizarLaborInput = z.infer<typeof actualizarLaborSchema>;
 export type ReportarCosechaInput = z.infer<typeof reportarCosechaSchema>;
 export type AlertaFitosanitariaInput = z.infer<typeof alertaFitosanitariaSchema>;

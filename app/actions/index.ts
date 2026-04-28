@@ -1,4 +1,4 @@
-export { registrarLabor, anularLabor } from "./labores";
+export { registrarLabor, actualizarLabor, anularLabor } from "./labores";
 export {
   reportarCosecha,
   anularCosecha,
@@ -16,11 +16,15 @@ export { crearUsuarioConRol } from "./usuarios";
 export {
   getLotesPorFinca,
   getCatalogoFitosanidad,
+  getCatalogoLabores,
   getInsumosFitosanitariosActivos,
+  getLaboresRango,
 } from "./queries";
 export type {
   LoteOption,
   CatalogoFitosanidadOption,
+  CatalogoLaborOption,
+  LaborAgendaRow,
   InsumoFitosanitarioOption,
 } from "./queries";
 export type { ActionResult } from "./types";

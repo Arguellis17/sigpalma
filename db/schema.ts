@@ -37,6 +37,7 @@ export const catalogoCategoriaEnum = pgEnum("catalogo_categoria", [
   "insumo",
   "material_genetico",
   "otro",
+  "labor",
 ]);
 
 export const nivelSeveridadEnum = pgEnum("nivel_severidad", [
@@ -106,6 +107,7 @@ export const lotes = pgTable(
       scale: 2,
     }),
     pendientePct: numeric("pendiente_pct", { precision: 5, scale: 2 }),
+    activo: boolean("activo").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -152,6 +154,9 @@ export const laboresAgronomicas = pgTable("labores_agronomicas", {
   loteId: uuid("lote_id")
     .notNull()
     .references(() => lotes.id, { onDelete: "restrict" }),
+  catalogoItemId: uuid("catalogo_item_id").references(() => catalogoItems.id, {
+    onDelete: "set null",
+  }),
   tipo: text("tipo").notNull(),
   fechaEjecucion: date("fecha_ejecucion").notNull(),
   notas: text("notas"),

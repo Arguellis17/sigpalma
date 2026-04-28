@@ -4,6 +4,7 @@ export const FINCA_AUDIT_ACTION_KEYS = [
   "cosecha.registrar",
   "cosecha.anular",
   "labor.registrar",
+  "labor.actualizar",
   "labor.anular",
   "alerta.crear",
   "sanidad.validar_alerta",

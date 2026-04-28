@@ -159,11 +159,12 @@ export function CatalogoClient({
 
   const ItemForm = ({ item }: { item?: ItemRow }) => {
     const [categoriaItem, setCategoriaItem] = useState<CategoriaCatalogo>(
-      (item?.categoria as CategoriaCatalogo) ?? "plaga"
+      (item?.categoria as CategoriaCatalogo) ?? categoria
     );
 
     useEffect(() => {
-      setCategoriaItem((item?.categoria as CategoriaCatalogo) ?? "plaga");
+      setCategoriaItem((item?.categoria as CategoriaCatalogo) ?? categoria);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- `categoria` is fixed per page mount
     }, [item?.categoria, item?.id]);
 
     return (

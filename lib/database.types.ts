@@ -134,6 +134,7 @@ export type Database = {
           material_genetico: string | null;
           densidad_palmas_ha: string | null;
           pendiente_pct: string | null;
+          activo: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -146,6 +147,7 @@ export type Database = {
           material_genetico?: string | null;
           densidad_palmas_ha?: number | string | null;
           pendiente_pct?: number | string | null;
+          activo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -158,6 +160,7 @@ export type Database = {
           material_genetico?: string | null;
           densidad_palmas_ha?: number | string | null;
           pendiente_pct?: number | string | null;
+          activo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -287,6 +290,7 @@ export type Database = {
           id: string;
           finca_id: string;
           lote_id: string;
+          catalogo_item_id: string | null;
           tipo: string;
           fecha_ejecucion: string;
           notas: string | null;
@@ -300,6 +304,7 @@ export type Database = {
           id?: string;
           finca_id: string;
           lote_id: string;
+          catalogo_item_id?: string | null;
           tipo: string;
           fecha_ejecucion: string;
           notas?: string | null;
@@ -313,6 +318,7 @@ export type Database = {
           id?: string;
           finca_id?: string;
           lote_id?: string;
+          catalogo_item_id?: string | null;
           tipo?: string;
           fecha_ejecucion?: string;
           notas?: string | null;
@@ -322,7 +328,15 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "labores_agronomicas_catalogo_item_id_fkey";
+            columns: ["catalogo_item_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogo_items";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       cosechas_rff: {
         Row: {
@@ -546,7 +560,8 @@ export type Database = {
         | "enfermedad"
         | "insumo"
         | "material_genetico"
-        | "otro";
+        | "otro"
+        | "labor";
       nivel_severidad: "baja" | "media" | "alta" | "critica";
       orden_control_estado: "autorizada" | "cerrada" | "cancelada";
     };

@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import {
   Bug,
+  Calendar,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -127,6 +128,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/admin/catalogos/insumos", label: "Insumos", icon: Package },
             { href: "/admin/catalogos/material-genetico", label: "Material genético", icon: Sprout },
             { href: "/admin/catalogos/fitosanitario", label: "Fitosanitario", icon: FlaskConical },
+            { href: "/admin/catalogos/labores", label: "Labores agronómicas", icon: Tractor },
           ],
         },
       ];
@@ -137,6 +139,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           label: "Técnico",
           items: [
             { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
+            { href: "/tecnico/agenda", label: "Agenda de labores", icon: Calendar },
             { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
             {
               href: "/tecnico/sanidad/validacion",
@@ -219,6 +222,7 @@ const breadcrumbLabels: Record<string, string> = {
   insumos: "Insumos",
   "material-genetico": "Material genético",
   fitosanitario: "Fitosanitario",
+  agenda: "Agenda",
   suelo: "Análisis de suelo",
   "mi-finca": "Mi finca",
   sanidad: "Sanidad",
@@ -337,6 +341,18 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Fitosanitario",
       description: "Catálogo de plagas, enfermedades y productos fitosanitarios.",
+    };
+  }
+  if (pathname === "/admin/catalogos/labores") {
+    return {
+      title: "Labores agronómicas",
+      description: "Tipos de labor de mantenimiento (poda, malezas, etc.) para programación HU11.",
+    };
+  }
+  if (pathname === "/tecnico/agenda") {
+    return {
+      title: "Agenda de labores",
+      description: "Programación de labores de mantenimiento por lote y fecha.",
     };
   }
   if (pathname === "/tecnico/suelo") {

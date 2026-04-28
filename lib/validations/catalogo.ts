@@ -7,6 +7,7 @@ export const categoriasCatalogo = [
   "plaga",
   "enfermedad",
   "otro",
+  "labor",
 ] as const;
 
 export type CategoriaCatalogo = (typeof categoriasCatalogo)[number];
