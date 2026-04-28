@@ -12,6 +12,7 @@ import {
   ClipboardList,
   FlaskConical,
   Layers,
+  Leaf,
   LayoutDashboard,
   MapPinned,
   Package,
@@ -140,6 +141,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           items: [
             { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
             { href: "/tecnico/agenda", label: "Agenda de labores", icon: Calendar },
+            {
+              href: "/tecnico/planificacion-siembra",
+              label: "Planificación de siembra",
+              icon: Leaf,
+            },
             { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
             {
               href: "/tecnico/sanidad/validacion",
@@ -223,6 +229,7 @@ const breadcrumbLabels: Record<string, string> = {
   "material-genetico": "Material genético",
   fitosanitario: "Fitosanitario",
   agenda: "Agenda",
+  "planificacion-siembra": "Planificación de siembra",
   suelo: "Análisis de suelo",
   "mi-finca": "Mi finca",
   sanidad: "Sanidad",
@@ -353,6 +360,13 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Agenda de labores",
       description: "Programación de labores de mantenimiento por lote y fecha.",
+    };
+  }
+  if (pathname === "/tecnico/planificacion-siembra") {
+    return {
+      title: "Planificación de siembra",
+      description:
+        "Material genético certificado y fecha proyectada por lote (HU10). Distinto del mantenimiento (agenda).",
     };
   }
   if (pathname === "/tecnico/suelo") {
