@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth/session-profile";
 import {
   isInsumoFitosanitarioProducto,
   isInsumoNutricion,
@@ -610,4 +611,182 @@ export async function getPlanNutricionDetalle(
     items,
     riego,
   });
+}
+
+export type OperarioFincaOption = { id: string; full_name: string };
+
+/** Operarios activos de la finca (HU13 asignación). Requiere sesión agrónomo + RLS. */
+export async function getOperariosFinca(
+  fincaId: string
+): Promise<ActionResult<OperarioFincaOption[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("finca_id", fid)
+    .eq("role", "operario")
+    .eq("is_active", true)
+    .order("full_name");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk((data ?? []) as OperarioFincaOption[]);
+}
+
+export type MonitoreoProgramadoRow = {
+  id: string;
+  lote_id: string;
+  lote_codigo: string;
+  fecha_inspeccion: string;
+  assigned_to: string;
+  asignado_nombre: string;
+  notas: string | null;
+  estado: string;
+  is_voided: boolean;
+  created_at: string;
+};
+
+export async function getMonitoreosFitosanitariosRango(
+  fincaId: string,
+  desde: string,
+  hasta: string
+): Promise<ActionResult<MonitoreoProgramadoRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+    return actionError("Rango de fechas inválido.");
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("monitoreos_fitosanitarios_programados")
+    .select(
+      `
+      id,
+      lote_id,
+      fecha_inspeccion,
+      assigned_to,
+      notas,
+      estado,
+      is_voided,
+      created_at,
+      lotes ( codigo )
+    `
+    )
+    .eq("finca_id", fid)
+    .gte("fecha_inspeccion", desde)
+    .lte("fecha_inspeccion", hasta)
+    .order("fecha_inspeccion");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  type Raw = {
+    id: string;
+    lote_id: string;
+    fecha_inspeccion: string;
+    assigned_to: string;
+    notas: string | null;
+    estado: string;
+    is_voided: boolean;
+    created_at: string;
+    lotes: { codigo: string } | null;
+  };
+
+  const rawList = (rows ?? []) as Raw[];
+  const assigneeIds = [...new Set(rawList.map((r) => r.assigned_to))];
+  const nameById = new Map<string, string>();
+  if (assigneeIds.length > 0) {
+    const { data: profs, error: pe } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", assigneeIds);
+    if (pe) {
+      return actionError(pe.message);
+    }
+    for (const p of profs ?? []) {
+      nameById.set(p.id, (p.full_name as string)?.trim() || "Operario");
+    }
+  }
+
+  const mapped = rawList.map((r) => ({
+    id: r.id,
+    lote_id: r.lote_id,
+    lote_codigo: r.lotes?.codigo ?? "—",
+    fecha_inspeccion: r.fecha_inspeccion,
+    assigned_to: r.assigned_to,
+    asignado_nombre: nameById.get(r.assigned_to) ?? "Operario",
+    notas: r.notas,
+    estado: r.estado,
+    is_voided: r.is_voided,
+    created_at: r.created_at,
+  }));
+
+  return actionOk(mapped);
+}
+
+export type MonitoreoPendienteOperarioRow = {
+  id: string;
+  lote_codigo: string;
+  fecha_inspeccion: string;
+  notas: string | null;
+};
+
+/** RN37: monitoreos pendientes asignados al operario actual. */
+export async function getMonitoreosPendientesOperario(): Promise<
+  ActionResult<MonitoreoPendienteOperarioRow[]>
+> {
+  const session = await getSessionProfile();
+  if (!session?.profile?.is_active || !session.user) {
+    return actionError("Sesión no válida.");
+  }
+  if (session.profile.role !== "operario") {
+    return actionError("Solo disponible para operarios.");
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("monitoreos_fitosanitarios_programados")
+    .select(
+      `
+      id,
+      fecha_inspeccion,
+      notas,
+      lotes ( codigo )
+    `
+    )
+    .eq("assigned_to", session.user.id)
+    .eq("estado", "pendiente")
+    .eq("is_voided", false)
+    .order("fecha_inspeccion");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  type Raw = {
+    id: string;
+    fecha_inspeccion: string;
+    notas: string | null;
+    lotes: { codigo: string } | null;
+  };
+
+  return actionOk(
+    ((rows ?? []) as Raw[]).map((r) => ({
+      id: r.id,
+      lote_codigo: r.lotes?.codigo ?? "—",
+      fecha_inspeccion: r.fecha_inspeccion,
+      notas: r.notas,
+    }))
+  );
 }

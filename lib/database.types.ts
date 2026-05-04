@@ -411,6 +411,73 @@ export type Database = {
           },
         ];
       };
+      monitoreos_fitosanitarios_programados: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          fecha_inspeccion: string;
+          assigned_to: string;
+          created_by: string;
+          notas: string | null;
+          estado: Database["public"]["Enums"]["monitoreo_fitosanitario_estado"];
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          fecha_inspeccion: string;
+          assigned_to: string;
+          created_by: string;
+          notas?: string | null;
+          estado?: Database["public"]["Enums"]["monitoreo_fitosanitario_estado"];
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          fecha_inspeccion?: string;
+          assigned_to?: string;
+          created_by?: string;
+          notas?: string | null;
+          estado?: Database["public"]["Enums"]["monitoreo_fitosanitario_estado"];
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "monitoreos_fitosanitarios_programados_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monitoreos_fitosanitarios_programados_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "lotes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monitoreos_fitosanitarios_programados_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalogo_items: {
         Row: {
           id: string;
@@ -813,6 +880,7 @@ export type Database = {
         | "quincenal"
         | "mensual"
         | "personalizado";
+      monitoreo_fitosanitario_estado: "pendiente" | "completada" | "anulada";
     };
     CompositeTypes: Record<string, never>;
   };

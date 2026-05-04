@@ -75,6 +75,13 @@ export const planNutricionFrecuenciaEnum = pgEnum("plan_nutricion_frecuencia", [
   "personalizado",
 ]);
 
+/** HU13: inspección fitosanitaria programada */
+export const monitoreoFitosanitarioEstadoEnum = pgEnum("monitoreo_fitosanitario_estado", [
+  "pendiente",
+  "completada",
+  "anulada",
+]);
+
 export const fincas = pgTable(
   "fincas",
   {
@@ -278,6 +285,35 @@ export const planesRiegoItems = pgTable("planes_riego_items", {
     .notNull()
     .defaultNow(),
 });
+
+/** HU13 RF13: monitoreo fitosanitario programado (lote, fecha, operario). */
+export const monitoreosFitosanitariosProgramados = pgTable(
+  "monitoreos_fitosanitarios_programados",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fincaId: uuid("finca_id")
+      .notNull()
+      .references(() => fincas.id, { onDelete: "restrict" }),
+    loteId: uuid("lote_id")
+      .notNull()
+      .references(() => lotes.id, { onDelete: "restrict" }),
+    fechaInspeccion: date("fecha_inspeccion").notNull(),
+    assignedTo: uuid("assigned_to")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "restrict" }),
+    createdBy: uuid("created_by").notNull(),
+    notas: text("notas"),
+    estado: monitoreoFitosanitarioEstadoEnum("estado").notNull().default("pendiente"),
+    source: registroSourceEnum("source").notNull().default("web"),
+    isVoided: boolean("is_voided").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
+);
 
 export const cosechasRff = pgTable("cosechas_rff", {
   id: uuid("id").primaryKey().defaultRandom(),

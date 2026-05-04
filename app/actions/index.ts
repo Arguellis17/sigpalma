@@ -22,6 +22,12 @@ export {
   actualizarPlanNutricion,
   anularPlanNutricion,
 } from "./plan-nutricion";
+export {
+  crearMonitoreoProgramado,
+  actualizarMonitoreoProgramado,
+  anularMonitoreoProgramado,
+  marcarMonitoreoCompletado,
+} from "./monitoreo-programado";
 export { crearUsuarioConRol } from "./usuarios";
 export {
   getLotesPorFinca,
@@ -36,6 +42,9 @@ export {
   getPlanesNutricionPorFinca,
   getUltimoAnalisisSueloPorLote,
   getPlanNutricionDetalle,
+  getOperariosFinca,
+  getMonitoreosFitosanitariosRango,
+  getMonitoreosPendientesOperario,
 } from "./queries";
 export type {
   LoteOption,
@@ -50,5 +59,8 @@ export type {
   PlanNutricionListRow,
   UltimoAnalisisSueloResumen,
   PlanNutricionDetalle,
+  OperarioFincaOption,
+  MonitoreoProgramadoRow,
+  MonitoreoPendienteOperarioRow,
 } from "./queries";
 export type { ActionResult } from "./types";
