@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   Bug,
   Calendar,
+  CalendarClock,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -154,6 +155,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             },
             { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
             {
+              href: "/tecnico/sanidad/programacion-monitoreos",
+              label: "Programación monitoreos",
+              icon: CalendarClock,
+            },
+            {
               href: "/tecnico/sanidad/validacion",
               label: "Validación sanidad",
               icon: CheckCircle2,
@@ -200,6 +206,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           items: [
             { href: "/operario/sanidad/alertas", label: "Alertas", icon: Bug },
             {
+              href: "/operario/sanidad/monitoreos-pendientes",
+              label: "Monitoreos pendientes",
+              icon: Calendar,
+            },
+            {
               href: "/operario/sanidad/aplicaciones",
               label: "Aplicaciones",
               icon: ClipboardList,
@@ -243,6 +254,8 @@ const breadcrumbLabels: Record<string, string> = {
   ordenes: "Órdenes",
   aplicaciones: "Aplicaciones",
   alertas: "Alertas",
+  "monitoreos-pendientes": "Monitoreos pendientes",
+  "programacion-monitoreos": "Programación monitoreos",
   labores: "Labores",
   cosecha: "Cosecha",
   editar: "Editar",
@@ -430,6 +443,12 @@ function getPageMeta(pathname: string): PageMeta {
       description: "Plagas y enfermedades del catálogo (solo lectura).",
     };
   }
+  if (pathname === "/operario/sanidad/monitoreos-pendientes") {
+    return {
+      title: "Monitoreos pendientes",
+      description: "HU13 · RN37: inspecciones fitosanitarias asignadas por el agrónomo.",
+    };
+  }
   if (pathname === "/operario/sanidad/alertas") {
     return {
       title: "Alertas fitosanitarias",
@@ -440,6 +459,13 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Aplicación fitosanitaria",
       description: "Ejecución de órdenes de control con confirmación de EPP.",
+    };
+  }
+  if (pathname === "/tecnico/sanidad/programacion-monitoreos") {
+    return {
+      title: "Programación de monitoreos",
+      description:
+        "HU13: inspecciones fitosanitarias por lote, fecha y operario; evita duplicados pendientes (CU13).",
     };
   }
   if (pathname === "/tecnico/sanidad/validacion") {
