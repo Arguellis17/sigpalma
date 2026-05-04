@@ -61,6 +61,20 @@ export const loteEstadoCultivoEnum = pgEnum("lote_estado_cultivo", [
   "en_produccion",
 ]);
 
+/** RN33 HU12: dosis programada por hectárea o por palma */
+export const planNutricionDosisUnidadEnum = pgEnum("plan_nutricion_dosis_unidad", [
+  "por_ha",
+  "por_palma",
+]);
+
+export const planNutricionFrecuenciaEnum = pgEnum("plan_nutricion_frecuencia", [
+  "once",
+  "semanal",
+  "quincenal",
+  "mensual",
+  "personalizado",
+]);
+
 export const fincas = pgTable(
   "fincas",
   {
@@ -203,6 +217,64 @@ export const planesSiembra = pgTable("planes_siembra", {
     .notNull()
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** HU12 RF12: plan nutrición y riego por lote */
+export const planesNutricion = pgTable("planes_nutricion", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  nombre: text("nombre"),
+  fechaInicio: date("fecha_inicio"),
+  fechaFin: date("fecha_fin"),
+  notas: text("notas"),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const planesNutricionItems = pgTable("planes_nutricion_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  planId: uuid("plan_id")
+    .notNull()
+    .references(() => planesNutricion.id, { onDelete: "cascade" }),
+  catalogoInsumoId: uuid("catalogo_insumo_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  dosisCantidad: numeric("dosis_cantidad", { precision: 14, scale: 4 }).notNull(),
+  dosisUnidad: planNutricionDosisUnidadEnum("dosis_unidad").notNull(),
+  frecuencia: planNutricionFrecuenciaEnum("frecuencia").notNull().default("once"),
+  fechaObjetivo: date("fecha_objetivo"),
+  notas: text("notas"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const planesRiegoItems = pgTable("planes_riego_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  planId: uuid("plan_id")
+    .notNull()
+    .references(() => planesNutricion.id, { onDelete: "cascade" }),
+  descripcion: text("descripcion").notNull(),
+  intervaloDias: integer("intervalo_dias"),
+  proximaFecha: date("proxima_fecha").notNull(),
+  volumenOTiempo: text("volumen_o_tiempo"),
+  notas: text("notas"),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

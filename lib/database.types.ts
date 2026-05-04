@@ -256,6 +256,161 @@ export type Database = {
           },
         ];
       };
+      planes_nutricion: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          nombre: string | null;
+          fecha_inicio: string | null;
+          fecha_fin: string | null;
+          notas: string | null;
+          locked_at: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          nombre?: string | null;
+          fecha_inicio?: string | null;
+          fecha_fin?: string | null;
+          notas?: string | null;
+          locked_at?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          nombre?: string | null;
+          fecha_inicio?: string | null;
+          fecha_fin?: string | null;
+          notas?: string | null;
+          locked_at?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "planes_nutricion_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "planes_nutricion_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "lotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      planes_nutricion_items: {
+        Row: {
+          id: string;
+          plan_id: string;
+          catalogo_insumo_id: string;
+          dosis_cantidad: string;
+          dosis_unidad: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          frecuencia: Database["public"]["Enums"]["plan_nutricion_frecuencia"];
+          fecha_objetivo: string | null;
+          notas: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          catalogo_insumo_id: string;
+          dosis_cantidad: number | string;
+          dosis_unidad: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          frecuencia?: Database["public"]["Enums"]["plan_nutricion_frecuencia"];
+          fecha_objetivo?: string | null;
+          notas?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          catalogo_insumo_id?: string;
+          dosis_cantidad?: number | string;
+          dosis_unidad?: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          frecuencia?: Database["public"]["Enums"]["plan_nutricion_frecuencia"];
+          fecha_objetivo?: string | null;
+          notas?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "planes_nutricion_items_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "planes_nutricion";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "planes_nutricion_items_catalogo_insumo_id_fkey";
+            columns: ["catalogo_insumo_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogo_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      planes_riego_items: {
+        Row: {
+          id: string;
+          plan_id: string;
+          descripcion: string;
+          intervalo_dias: number | null;
+          proxima_fecha: string;
+          volumen_o_tiempo: string | null;
+          notas: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          descripcion: string;
+          intervalo_dias?: number | null;
+          proxima_fecha: string;
+          volumen_o_tiempo?: string | null;
+          notas?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          descripcion?: string;
+          intervalo_dias?: number | null;
+          proxima_fecha?: string;
+          volumen_o_tiempo?: string | null;
+          notas?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "planes_riego_items_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "planes_nutricion";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalogo_items: {
         Row: {
           id: string;
@@ -651,6 +806,13 @@ export type Database = {
         | "disponible"
         | "planificado_siembra"
         | "en_produccion";
+      plan_nutricion_dosis_unidad: "por_ha" | "por_palma";
+      plan_nutricion_frecuencia:
+        | "once"
+        | "semanal"
+        | "quincenal"
+        | "mensual"
+        | "personalizado";
     };
     CompositeTypes: Record<string, never>;
   };
