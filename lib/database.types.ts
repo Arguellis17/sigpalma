@@ -478,6 +478,146 @@ export type Database = {
           },
         ];
       };
+      registros_germinacion: {
+        Row: {
+          id: string;
+          finca_id: string;
+          catalogo_material_id: string;
+          lote_id: string | null;
+          fecha_tratamiento: string;
+          temperatura_max_c: string;
+          dias_tratamiento: number;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          catalogo_material_id: string;
+          lote_id?: string | null;
+          fecha_tratamiento: string;
+          temperatura_max_c: number | string;
+          dias_tratamiento: number;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          catalogo_material_id?: string;
+          lote_id?: string | null;
+          fecha_tratamiento?: string;
+          temperatura_max_c?: number | string;
+          dias_tratamiento?: number;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "registros_germinacion_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "registros_germinacion_catalogo_material_id_fkey";
+            columns: ["catalogo_material_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogo_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "registros_germinacion_lote_id_fkey";
+            columns: ["lote_id"];
+            isOneToOne: false;
+            referencedRelation: "lotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evaluaciones_vivero: {
+        Row: {
+          id: string;
+          finca_id: string;
+          germinacion_id: string;
+          total_inicial: number;
+          unidades_germinadas: number;
+          unidades_descartadas: number;
+          pct_germinacion: string;
+          motivo_descarte: string | null;
+          observaciones_fitosanitarias: string | null;
+          concepto: Database["public"]["Enums"]["vivero_concepto_evaluacion"];
+          evidencia_urls: Json;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          germinacion_id: string;
+          total_inicial: number;
+          unidades_germinadas: number;
+          unidades_descartadas: number;
+          motivo_descarte?: string | null;
+          observaciones_fitosanitarias?: string | null;
+          concepto: Database["public"]["Enums"]["vivero_concepto_evaluacion"];
+          evidencia_urls?: Json;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          germinacion_id?: string;
+          total_inicial?: number;
+          unidades_germinadas?: number;
+          unidades_descartadas?: number;
+          motivo_descarte?: string | null;
+          observaciones_fitosanitarias?: string | null;
+          concepto?: Database["public"]["Enums"]["vivero_concepto_evaluacion"];
+          evidencia_urls?: Json;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluaciones_vivero_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluaciones_vivero_germinacion_id_fkey";
+            columns: ["germinacion_id"];
+            isOneToOne: false;
+            referencedRelation: "registros_germinacion";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalogo_items: {
         Row: {
           id: string;
@@ -881,6 +1021,7 @@ export type Database = {
         | "mensual"
         | "personalizado";
       monitoreo_fitosanitario_estado: "pendiente" | "completada" | "anulada";
+      vivero_concepto_evaluacion: "apto_trasplante" | "no_apto";
     };
     CompositeTypes: Record<string, never>;
   };

@@ -82,6 +82,12 @@ export const monitoreoFitosanitarioEstadoEnum = pgEnum("monitoreo_fitosanitario_
   "anulada",
 ]);
 
+/** HU14 RF14: concepto emitido en evaluación de vivero */
+export const viveroConceptoEvaluacionEnum = pgEnum("vivero_concepto_evaluacion", [
+  "apto_trasplante",
+  "no_apto",
+]);
+
 export const fincas = pgTable(
   "fincas",
   {
@@ -314,6 +320,59 @@ export const monitoreosFitosanitariosProgramados = pgTable(
       .defaultNow(),
   }
 );
+
+/** RF18: registro de germinación / tratamiento térmico (precondición HU14). */
+export const registrosGerminacion = pgTable("registros_germinacion", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  catalogoMaterialId: uuid("catalogo_material_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id").references(() => lotes.id, { onDelete: "set null" }),
+  fechaTratamiento: date("fecha_tratamiento").notNull(),
+  temperaturaMaxC: numeric("temperatura_max_c", { precision: 5, scale: 2 }).notNull(),
+  diasTratamiento: integer("dias_tratamiento").notNull(),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** HU14 RF14: evaluación de vivero (RN38–40; pct_germinacion generada en Postgres). */
+export const evaluacionesVivero = pgTable("evaluaciones_vivero", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  germinacionId: uuid("germinacion_id")
+    .notNull()
+    .references(() => registrosGerminacion.id, { onDelete: "restrict" }),
+  totalInicial: integer("total_inicial").notNull(),
+  unidadesGerminadas: integer("unidades_germinadas").notNull(),
+  unidadesDescartadas: integer("unidades_descartadas").notNull(),
+  pctGerminacion: numeric("pct_germinacion", { precision: 7, scale: 4 }).notNull(),
+  motivoDescarte: text("motivo_descarte"),
+  observacionesFitosanitarias: text("observaciones_fitosanitarias"),
+  concepto: viveroConceptoEvaluacionEnum("concepto").notNull(),
+  evidenciaUrls: jsonb("evidencia_urls").notNull().default(sql`'[]'::jsonb`),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 export const cosechasRff = pgTable("cosechas_rff", {
   id: uuid("id").primaryKey().defaultRandom(),
