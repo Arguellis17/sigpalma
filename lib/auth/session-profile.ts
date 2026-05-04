@@ -2,8 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { Enums, Tables } from "@/lib/database.types";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { getRoleDashboardPath } from "@/lib/auth/role-dashboard-path";
 
 export type UserRole = Enums<"user_role">;
+
+export { getRoleDashboardPath };
 
 export type SessionProfile = {
   user: User;
@@ -49,17 +52,6 @@ export function hasRole(
 ): boolean {
   if (!profile?.is_active) return false;
   return allowedRoles.includes(profile.role);
-}
-
-/** Returns the default dashboard path for a given role. */
-export function getRoleDashboardPath(role: UserRole | null | undefined): string {
-  switch (role) {
-    case "superadmin": return "/superadmin";
-    case "admin":      return "/admin";
-    case "agronomo":   return "/tecnico";
-    case "operario":   return "/operario";
-    default:           return "/auth/login";
-  }
 }
 
 export function canManageLotes(profile: Tables<"profiles"> | null): boolean {

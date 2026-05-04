@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, TreePalm } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { resolveLoginIdentifier } from "@/app/actions/usuarios";
+import type { ActionResult } from "@/app/actions/types";
+import { getRoleDashboardPath } from "@/lib/auth/role-dashboard-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,13 +37,36 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  /** Quitar credenciales de la URL; opcionalmente rellenar correo/cédula desde ?identifier= */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const idParam = url.searchParams.get("identifier")?.trim();
+    if (idParam) {
+      setIdentifier(idParam);
+    }
+    if (!url.searchParams.has("password") && !url.searchParams.has("identifier")) return;
+    url.searchParams.delete("password");
+    url.searchParams.delete("identifier");
+    const qs = url.searchParams.toString();
+    window.history.replaceState(null, "", `${url.pathname}${qs ? `?${qs}` : ""}${url.hash}`);
+  }, []);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setPending(true);
 
     // Step 1: resolve email from identifier (email or cédula)
-    const resolved = await resolveLoginIdentifier(identifier);
+    let resolved: ActionResult<{ email: string }>;
+    try {
+      resolved = await resolveLoginIdentifier(identifier);
+    } catch {
+      setPending(false);
+      setError(
+        "El servidor se actualizó mientras tenías la página abierta. Recarga (F5 o Ctrl+Shift+R) e intenta de nuevo."
+      );
+      return;
+    }
     if (!resolved.success) {
       setError(resolved.error);
       setPending(false);
@@ -54,12 +79,57 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
       email: resolved.data.email,
       password,
     });
-    setPending(false);
     if (signError) {
+      setPending(false);
       setError("Credenciales incorrectas. Verifica tu contraseña.");
       return;
     }
-    window.location.assign(afterLogin);
+
+    // Persistir sesión en cookies (Supabase SSR) y leer perfil con el mismo cliente autenticado.
+    // Las Server Actions no reciben aquí las cookies recién escritas; no usar getPostLoginDashboard.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      setPending(false);
+      setError("No se pudo establecer la sesión. Intente de nuevo.");
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", sessionData.session.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      setPending(false);
+      setError(profileError.message);
+      await supabase.auth.signOut();
+      return;
+    }
+    if (!profile) {
+      setPending(false);
+      setError("Su cuenta no tiene perfil asignado. Contacte al administrador.");
+      await supabase.auth.signOut();
+      return;
+    }
+    if (!profile.is_active) {
+      setPending(false);
+      setError("Su cuenta está inactiva. Contacte al administrador.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    const dashboardPath = getRoleDashboardPath(profile.role);
+    if (dashboardPath === "/auth/login") {
+      setPending(false);
+      setError("Rol de usuario no válido para el sistema.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    setPending(false);
+    const dest = afterLogin !== "/" ? afterLogin : dashboardPath;
+    window.location.assign(dest);
   }
 
   return (

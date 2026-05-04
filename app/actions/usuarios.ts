@@ -2,7 +2,11 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getSessionProfile, isAdmin, isSuperAdmin } from "@/lib/auth/session-profile";
+import {
+  getSessionProfile,
+  isAdmin,
+  isSuperAdmin,
+} from "@/lib/auth/session-profile";
 import {
   cambiarContrasenaObligatoriaSchema,
   crearUsuarioAdminSchema,
@@ -474,4 +478,3 @@ export async function resolveLoginIdentifier(
 
   return actionOk({ email: data as string });
 }
-
