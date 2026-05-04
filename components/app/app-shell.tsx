@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
+  Droplets,
   FlaskConical,
   Layers,
   Leaf,
@@ -145,6 +146,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/tecnico/planificacion-siembra",
               label: "Planificación de siembra",
               icon: Leaf,
+            },
+            {
+              href: "/tecnico/nutricion-riego",
+              label: "Nutrición y riego",
+              icon: Droplets,
             },
             { href: "/tecnico/suelo", label: "Análisis de suelo", icon: Layers },
             {
@@ -367,6 +373,13 @@ function getPageMeta(pathname: string): PageMeta {
       title: "Planificación de siembra",
       description:
         "Material genético certificado y fecha proyectada por lote (HU10). Distinto del mantenimiento (agenda).",
+    };
+  }
+  if (pathname === "/tecnico/nutricion-riego") {
+    return {
+      title: "Nutrición y riego",
+      description:
+        "Planes de fertilización (nutrición) y riego por lote (HU12 / RF12). Bloqueo tras aplicación en campo (RF22, pendiente).",
     };
   }
   if (pathname === "/tecnico/suelo") {
