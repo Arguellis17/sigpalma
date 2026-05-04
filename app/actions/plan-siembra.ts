@@ -12,6 +12,7 @@ import {
 } from "@/lib/validations/plan-siembra";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
+import { assertCadenaViveroAptoParaPlanSiembra } from "@/lib/vivero-gate";
 
 const PLANIFICABLE = ["vacante", "disponible"] as const;
 
@@ -91,6 +92,15 @@ export async function crearPlanSiembra(
     return actionError(
       "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar (RN28)."
     );
+  }
+
+  const viveroGate = await assertCadenaViveroAptoParaPlanSiembra(
+    supabase,
+    input.finca_id,
+    input.catalogo_material_id
+  );
+  if (!viveroGate.success) {
+    return viveroGate;
   }
 
   const { data: inserted, error: insErr } = await supabase
@@ -203,6 +213,15 @@ export async function actualizarPlanSiembra(
     return actionError(
       "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar (RN28)."
     );
+  }
+
+  const viveroGateUpd = await assertCadenaViveroAptoParaPlanSiembra(
+    supabase,
+    fincaId,
+    input.catalogo_material_id
+  );
+  if (!viveroGateUpd.success) {
+    return viveroGateUpd;
   }
 
   const { data: updated, error: ue } = await supabase

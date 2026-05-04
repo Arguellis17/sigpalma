@@ -790,3 +790,202 @@ export async function getMonitoreosPendientesOperario(): Promise<
     }))
   );
 }
+
+/** RF18: germinaciones / tratamiento térmico activos de la finca (listado operario / técnico). */
+export type RegistroGerminacionListRow = {
+  id: string;
+  catalogo_material_id: string;
+  material_nombre: string;
+  lote_id: string | null;
+  lote_codigo: string | null;
+  fecha_tratamiento: string;
+  temperatura_max_c: number;
+  dias_tratamiento: number;
+  notas: string | null;
+  created_at: string;
+};
+
+export async function getRegistrosGerminacionPorFinca(
+  fincaId: string
+): Promise<ActionResult<RegistroGerminacionListRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("registros_germinacion")
+    .select(
+      `
+      id,
+      catalogo_material_id,
+      lote_id,
+      fecha_tratamiento,
+      temperatura_max_c,
+      dias_tratamiento,
+      notas,
+      created_at,
+      catalogo_items ( nombre ),
+      lotes ( codigo )
+    `
+    )
+    .eq("finca_id", fid)
+    .eq("is_voided", false)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  type Raw = {
+    id: string;
+    catalogo_material_id: string;
+    lote_id: string | null;
+    fecha_tratamiento: string;
+    temperatura_max_c: string | number;
+    dias_tratamiento: number;
+    notas: string | null;
+    created_at: string;
+    catalogo_items: { nombre: string } | null;
+    lotes: { codigo: string } | null;
+  };
+
+  const mapped = ((rows ?? []) as unknown as Raw[]).map((r) => ({
+    id: r.id,
+    catalogo_material_id: r.catalogo_material_id,
+    material_nombre: r.catalogo_items?.nombre ?? "—",
+    lote_id: r.lote_id,
+    lote_codigo: r.lotes?.codigo ?? null,
+    fecha_tratamiento: r.fecha_tratamiento,
+    temperatura_max_c: Number(r.temperatura_max_c),
+    dias_tratamiento: r.dias_tratamiento,
+    notas: r.notas,
+    created_at: r.created_at,
+  }));
+
+  return actionOk(mapped);
+}
+
+/** Germinaciones sin evaluación de vivero activa (RF14 previo a crear evaluación). */
+export async function getGerminacionesSinEvaluacionActiva(
+  fincaId: string
+): Promise<ActionResult<RegistroGerminacionListRow[]>> {
+  const allRes = await getRegistrosGerminacionPorFinca(fincaId);
+  if (!allRes.success) return allRes;
+  const list = allRes.data;
+  if (list.length === 0) return actionOk([]);
+
+  const supabase = await createClient();
+  const ids = list.map((g) => g.id);
+  const { data: evs, error } = await supabase
+    .from("evaluaciones_vivero")
+    .select("germinacion_id")
+    .in("germinacion_id", ids)
+    .eq("is_voided", false);
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  const busy = new Set((evs ?? []).map((e) => e.germinacion_id as string));
+  return actionOk(list.filter((g) => !busy.has(g.id)));
+}
+
+/** HU14 / RF14: historial de evaluaciones de vivero de la finca. */
+export type EvaluacionViveroListRow = {
+  id: string;
+  germinacion_id: string;
+  material_nombre: string;
+  concepto: string;
+  total_inicial: number;
+  unidades_germinadas: number;
+  unidades_descartadas: number;
+  pct_germinacion: number | null;
+  motivo_descarte: string | null;
+  observaciones_fitosanitarias: string | null;
+  evidencia_count: number;
+  created_at: string;
+  is_voided: boolean;
+};
+
+export async function getEvaluacionesViveroPorFinca(
+  fincaId: string
+): Promise<ActionResult<EvaluacionViveroListRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("evaluaciones_vivero")
+    .select(
+      `
+      id,
+      germinacion_id,
+      concepto,
+      total_inicial,
+      unidades_germinadas,
+      unidades_descartadas,
+      pct_germinacion,
+      motivo_descarte,
+      observaciones_fitosanitarias,
+      evidencia_urls,
+      created_at,
+      is_voided,
+      registros_germinacion (
+        catalogo_items ( nombre )
+      )
+    `
+    )
+    .eq("finca_id", fid)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  type Raw = {
+    id: string;
+    germinacion_id: string;
+    concepto: string;
+    total_inicial: number;
+    unidades_germinadas: number;
+    unidades_descartadas: number;
+    pct_germinacion: string | number | null;
+    motivo_descarte: string | null;
+    observaciones_fitosanitarias: string | null;
+    evidencia_urls: unknown;
+    created_at: string;
+    is_voided: boolean;
+    registros_germinacion: { catalogo_items: { nombre: string } | null } | null;
+  };
+
+  const mapped = ((rows ?? []) as Raw[]).map((r) => {
+    const urls = r.evidencia_urls;
+    const evidenciaCount = Array.isArray(urls) ? urls.length : 0;
+    const pct =
+      r.pct_germinacion === null || r.pct_germinacion === undefined
+        ? null
+        : Number(r.pct_germinacion);
+    return {
+      id: r.id,
+      germinacion_id: r.germinacion_id,
+      material_nombre: r.registros_germinacion?.catalogo_items?.nombre ?? "—",
+      concepto: r.concepto,
+      total_inicial: r.total_inicial,
+      unidades_germinadas: r.unidades_germinadas,
+      unidades_descartadas: r.unidades_descartadas,
+      pct_germinacion: Number.isFinite(pct) ? pct : null,
+      motivo_descarte: r.motivo_descarte,
+      observaciones_fitosanitarias: r.observaciones_fitosanitarias,
+      evidencia_count: evidenciaCount,
+      created_at: r.created_at,
+      is_voided: r.is_voided,
+    };
+  });
+
+  return actionOk(mapped);
+}
