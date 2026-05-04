@@ -17,6 +17,11 @@ export {
   actualizarPlanSiembra,
   anularPlanSiembra,
 } from "./plan-siembra";
+export {
+  crearPlanNutricion,
+  actualizarPlanNutricion,
+  anularPlanNutricion,
+} from "./plan-nutricion";
 export { crearUsuarioConRol } from "./usuarios";
 export {
   getLotesPorFinca,
@@ -27,6 +32,10 @@ export {
   getLaboresRango,
   getLotesPlanificables,
   getPlanesSiembraPorFinca,
+  getInsumosNutricionActivos,
+  getPlanesNutricionPorFinca,
+  getUltimoAnalisisSueloPorLote,
+  getPlanNutricionDetalle,
 } from "./queries";
 export type {
   LoteOption,
@@ -37,5 +46,9 @@ export type {
   InsumoFitosanitarioOption,
   LotePlanificableOption,
   PlanSiembraListRow,
+  InsumoNutricionOption,
+  PlanNutricionListRow,
+  UltimoAnalisisSueloResumen,
+  PlanNutricionDetalle,
 } from "./queries";
 export type { ActionResult } from "./types";
