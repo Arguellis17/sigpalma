@@ -20,10 +20,12 @@ import {
   Package,
   ShieldCheck,
   Sprout,
+  Thermometer,
   Tractor,
   Users,
   Wheat,
   ScrollText,
+  ClipboardCheck,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -149,6 +151,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               icon: Leaf,
             },
             {
+              href: "/tecnico/vivero/evaluacion",
+              label: "Evaluación de vivero",
+              icon: ClipboardCheck,
+            },
+            {
               href: "/tecnico/nutricion-riego",
               label: "Nutrición y riego",
               icon: Droplets,
@@ -193,6 +200,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/operario/catalogos/material-genetico",
               label: "Material genético",
               icon: Sprout,
+            },
+            {
+              href: "/operario/vivero/germinacion",
+              label: "Germinación (vivero)",
+              icon: Thermometer,
             },
             {
               href: "/operario/catalogos/fitosanitario",
@@ -258,6 +270,9 @@ const breadcrumbLabels: Record<string, string> = {
   "programacion-monitoreos": "Programación monitoreos",
   labores: "Labores",
   cosecha: "Cosecha",
+  vivero: "Vivero",
+  germinacion: "Germinación",
+  evaluacion: "Evaluación",
   editar: "Editar",
   nuevo_usuario: "Nuevo usuario",
 };
@@ -388,6 +403,13 @@ function getPageMeta(pathname: string): PageMeta {
         "Material genético certificado y fecha proyectada por lote (HU10). Distinto del mantenimiento (agenda).",
     };
   }
+  if (pathname === "/tecnico/vivero/evaluacion") {
+    return {
+      title: "Evaluación de vivero",
+      description:
+        "HU14 / RF14: acta técnica sobre germinación RF18; concepto Apto / No apto y evidencia (CU14.1). Habilita plan de siembra cuando está Apto (RF20 parcial).",
+    };
+  }
   if (pathname === "/tecnico/nutricion-riego") {
     return {
       title: "Nutrición y riego",
@@ -435,6 +457,13 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Material genético",
       description: "Catálogo de material genético (solo lectura).",
+    };
+  }
+  if (pathname === "/operario/vivero/germinacion") {
+    return {
+      title: "Germinación en vivero",
+      description:
+        "RF18: tratamiento térmico y datos de germinación por material genético; precondición de la evaluación de vivero (HU14).",
     };
   }
   if (pathname === "/operario/catalogos/fitosanitario") {
