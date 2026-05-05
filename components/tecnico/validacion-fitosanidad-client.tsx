@@ -73,7 +73,7 @@ export function ValidacionFitosanidadClient({
     if (!openId) return;
     setErr(null);
     if (!diagnostico.trim()) {
-      setErr("El diagnóstico / concepto técnico es obligatorio (RF15).");
+      setErr("El diagnóstico / concepto técnico es obligatorio.");
       return;
     }
     if (decision === "validado" && emitirOrden) {
@@ -169,7 +169,7 @@ export function ValidacionFitosanidadClient({
       <Dialog open={!!openId} onOpenChange={(v) => !v && close()}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Validación fitosanitaria (RF15)</DialogTitle>
+            <DialogTitle>Validación fitosanitaria</DialogTitle>
             <DialogDescription>
               Registre el diagnóstico técnico y, si corresponde, emita una orden de
               control con producto y dosis recomendada.
@@ -216,7 +216,7 @@ export function ValidacionFitosanidadClient({
                   onChange={(e) => setDiagnostico(e.target.value)}
                   rows={4}
                   className="rounded-2xl border-border/70 bg-background/80"
-                  placeholder="Justificación obligatoria (RN42)…"
+                  placeholder="Justificación obligatoria…"
                 />
               </div>
 
@@ -230,8 +230,7 @@ export function ValidacionFitosanidadClient({
                       className="mt-1 size-4"
                     />
                     <span>
-                      Emitir orden de control con producto fitosanitario (catálogo
-                      RN65)
+                      Emitir orden de control con producto fitosanitario del catálogo
                     </span>
                   </label>
                   {emitirOrden ? (

@@ -198,7 +198,7 @@ export function PlanSiembraClient({
         <p className="surface-panel rounded-[1.5rem] p-4 text-sm text-muted-foreground">
           No hay planes de siembra vigentes. Los lotes deben estar en estado{" "}
           <strong className="text-foreground">vacante</strong> o{" "}
-          <strong className="text-foreground">disponible</strong> para crear un plan (RN26).
+          <strong className="text-foreground">disponible</strong> para crear un plan.
         </p>
       ) : (
         <div className="surface-panel overflow-hidden rounded-[1.25rem] ring-1 ring-border/60">
@@ -210,7 +210,7 @@ export function PlanSiembraClient({
                   <th className="px-4 py-3">Material</th>
                   <th className="px-4 py-3">Fecha proyectada</th>
                   <th className="px-4 py-3">Pendiente %</th>
-                  <th className="px-4 py-3">RN28</th>
+                  <th className="px-4 py-3">Erosión</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -337,7 +337,7 @@ export function PlanSiembraClient({
               {mostrarAdvertenciaPendiente ? (
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
                   <p className="font-medium text-amber-900 dark:text-amber-100">
-                    Pendiente del terreno mayor al 12% (RN28).
+                    Pendiente del terreno mayor al 12%.
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Confirme que asume el riesgo de erosión al planificar la siembra en este lote.

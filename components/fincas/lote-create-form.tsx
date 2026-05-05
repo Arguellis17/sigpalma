@@ -113,7 +113,7 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
           <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>
-              <strong>Alerta técnica (RN12):</strong> Pendiente &gt;{SLOPE_THRESHOLD}%. Riesgo de erosión del suelo. El lote se registrará con esta advertencia.
+              <strong>Alerta técnica:</strong> Pendiente &gt;{SLOPE_THRESHOLD}%. Riesgo de erosión del suelo. El lote se registrará con esta advertencia.
             </span>
           </div>
         ) : null}

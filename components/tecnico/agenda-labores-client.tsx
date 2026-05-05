@@ -390,8 +390,7 @@ export function AgendaLaboresClient({
   if (lotes.length === 0) {
     return (
       <p className="surface-panel rounded-[1.5rem] p-4 text-sm leading-6 text-muted-foreground">
-        No hay lotes activos en su finca. Revise la gestión de lotes (HU04) antes de programar
-        labores.
+        No hay lotes activos en su finca. Revise la gestión de lotes antes de programar labores.
       </p>
     );
   }

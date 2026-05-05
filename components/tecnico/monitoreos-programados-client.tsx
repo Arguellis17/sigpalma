@@ -236,7 +236,7 @@ export function MonitoreosProgramadosClient({
         <p className="text-sm text-muted-foreground">
           {!hayLotes ? "No hay lotes activos para programar. " : ""}
           {!hayOperarios
-            ? "No hay operarios activos en esta finca; cree usuarios operario asignados a la finca (RN37)."
+            ? "No hay operarios activos en esta finca; cree usuarios operario asignados a la finca."
             : ""}
         </p>
       ) : null}

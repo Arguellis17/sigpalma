@@ -63,8 +63,8 @@ export default async function TecnicoAgendaPage() {
           Agenda de labores
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Programe labores de mantenimiento por lote (HU11). Las fechas deben ser hoy o futuras; los
-          tipos provienen del catálogo técnico.
+          Programe labores de mantenimiento por lote. Las fechas deben ser hoy o futuras; los tipos
+          provienen del catálogo técnico.
         </p>
       </div>
       <AgendaLaboresClient

@@ -85,7 +85,7 @@ export async function registrarLabor(
 
   if (role === "agronomo") {
     if (!input.catalogo_item_id) {
-      return actionError("Seleccione el tipo de labor del catálogo (RN30).");
+      return actionError("Seleccione el tipo de labor del catálogo.");
     }
     const cat = await fetchLaborCatalogItem(supabase, input.catalogo_item_id);
     if (!cat.success) return cat;
@@ -94,7 +94,7 @@ export async function registrarLabor(
     const hoy = todayColombiaYmd();
     if (input.fecha_ejecucion < hoy) {
       return actionError(
-        "No se permite programar labores en fechas anteriores a la fecha actual (RN31)."
+        "No se permite programar labores en fechas anteriores a la fecha actual."
       );
     }
 
@@ -197,7 +197,7 @@ export async function actualizarLabor(
   }
 
   if (!input.catalogo_item_id) {
-    return actionError("Seleccione el tipo de labor del catálogo (RN30).");
+    return actionError("Seleccione el tipo de labor del catálogo.");
   }
 
   const cat = await fetchLaborCatalogItem(supabase, input.catalogo_item_id);
@@ -207,7 +207,7 @@ export async function actualizarLabor(
   const hoy = todayColombiaYmd();
   if (input.fecha_ejecucion < hoy) {
     return actionError(
-      "No se permite programar labores en fechas anteriores a la fecha actual (RN31)."
+      "No se permite programar labores en fechas anteriores a la fecha actual."
     );
   }
 

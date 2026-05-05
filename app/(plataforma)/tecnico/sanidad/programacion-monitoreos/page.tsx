@@ -68,8 +68,8 @@ export default async function ProgramacionMonitoreosPage() {
           Programación de monitoreos
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          HU13 · RF13 / CU13: inspecciones fitosanitarias por lote, fecha y operario asignado (RN35–RN37).
-          No se permiten fechas pasadas ni duplicados pendientes mismo lote y fecha.
+          Inspecciones fitosanitarias por lote, fecha y operario asignado. No se permiten fechas
+          pasadas ni duplicados pendientes mismo lote y fecha.
         </p>
       </div>
       <MonitoreosProgramadosClient

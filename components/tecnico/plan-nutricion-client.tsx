@@ -286,8 +286,7 @@ export function PlanNutricionClient({
 
       {planes.length === 0 ? (
         <p className="surface-panel rounded-[1.5rem] p-4 text-sm text-muted-foreground">
-          No hay planes vigentes. Use «Nuevo plan» para programar fertilización (RN32) y riego por
-          lote (HU12 / RF12).
+          No hay planes vigentes. Use «Nuevo plan» para programar fertilización y riego por lote.
         </p>
       ) : (
         <div className="surface-panel overflow-hidden rounded-[1.5rem]">
@@ -384,7 +383,7 @@ export function PlanNutricionClient({
 
                 <div className="space-y-2 sm:col-span-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Análisis de suelo (RN34)
+                    Análisis de suelo
                   </p>
                   {analisis === undefined ? (
                     <p className="text-sm text-muted-foreground">Cargando datos de suelo…</p>
@@ -528,7 +527,7 @@ export function PlanNutricionClient({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Unidad (RN33)</Label>
+                        <Label>Unidad</Label>
                         <Select
                           value={it.dosis_unidad}
                           onValueChange={(v) => {

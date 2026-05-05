@@ -21,7 +21,7 @@ export const crearRegistroGerminacionSchema = z
     },
     {
       message:
-        "Temperatura máxima superior a 42 °C: registre un comentario de validación (RF18 escenario 2).",
+        "Temperatura máxima superior a 42 °C: registre un comentario de validación.",
     }
   );
 

@@ -24,11 +24,11 @@ async function fetchInsumoNutricionValido(
     .maybeSingle();
   if (error || !data) return actionError("Insumo no encontrado.");
   if (data.categoria !== "insumo" || !data.activo) {
-    return actionError("Seleccione un insumo activo del catálogo (RN32).");
+    return actionError("Seleccione un insumo activo del cat?logo.");
   }
   if (!isInsumoNutricion(data.subcategoria)) {
     return actionError(
-      "Solo insumos de nutrición/fertilización (RN32). Revise la subcategoría en el catálogo."
+      "Solo insumos de nutrici?n/fertilizaci?n. Revise la subcategor?a en el cat?logo."
     );
   }
   return actionOk({ nombre: data.nombre });

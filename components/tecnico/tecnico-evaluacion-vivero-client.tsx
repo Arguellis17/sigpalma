@@ -90,7 +90,7 @@ export function TecnicoEvaluacionViveroClient({
       !germinacionId ||
       !germinacionesDisponibles.some((g) => g.id === germinacionId)
     ) {
-      setErr("Seleccione un registro de germinación (RF18) sin evaluación activa.");
+      setErr("Seleccione un registro de germinación sin evaluación activa.");
       return;
     }
     setPending(true);
@@ -135,21 +135,19 @@ export function TecnicoEvaluacionViveroClient({
         onSubmit={onSubmit}
         className="surface-panel space-y-4 rounded-2xl p-5 sm:p-6"
       >
-        <h3 className="text-lg font-semibold text-foreground">
-          Nueva evaluación (HU14 / RF14)
-        </h3>
+        <h3 className="text-lg font-semibold text-foreground">Nueva evaluación</h3>
         <p className="text-sm text-muted-foreground">
-          Solo aparecen germinaciones sin evaluación activa. Las rutas de evidencia se guardan en
-          CU14.1 (bucket evidencia-tecnica).
+          Solo aparecen germinaciones sin evaluación activa. Las rutas de evidencia se guardan en el
+          bucket evidencia-tecnica.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label>Germinación (RF18)</Label>
+            <Label>Germinación</Label>
             {germinacionesDisponibles.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                No hay germinaciones sin evaluación activa. Registre primero RF18 (operario) o
-                anule una evaluación existente para volver a evaluar.
+                No hay germinaciones sin evaluación activa. Registre primero la germinación (operario)
+                o anule una evaluación existente para volver a evaluar.
               </p>
             ) : (
               <Select value={germinacionId} onValueChange={setGerminacionId}>
@@ -201,7 +199,7 @@ export function TecnicoEvaluacionViveroClient({
             />
           </div>
           <div className="space-y-2">
-            <Label>Concepto (RN40)</Label>
+            <Label>Concepto</Label>
             <Select
               value={concepto}
               onValueChange={(v) => setConcepto(v as "apto_trasplante" | "no_apto")}
@@ -217,7 +215,7 @@ export function TecnicoEvaluacionViveroClient({
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="motivo">Motivo descarte (RN39, si hay descartes)</Label>
+          <Label htmlFor="motivo">Motivo descarte (si hay descartes)</Label>
           <Textarea
             id="motivo"
             value={motivoDescarte}
@@ -237,7 +235,7 @@ export function TecnicoEvaluacionViveroClient({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="fotos">Evidencia fotográfica (CU14.1, opcional)</Label>
+          <Label htmlFor="fotos">Evidencia fotográfica (opcional)</Label>
           <Input
             id="fotos"
             type="file"

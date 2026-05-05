@@ -69,7 +69,7 @@ export default async function TecnicoSanidadValidacionPage() {
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Revise las alertas registradas por operarios, documente el diagnóstico y,
-          si aplica, emita una orden de control fitosanitario (RF15).
+          si aplica, emita una orden de control fitosanitario.
         </p>
       </div>
       <ValidacionFitosanidadClient

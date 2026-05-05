@@ -55,9 +55,8 @@ export default async function NutricionRiegoPage() {
           Nutrición y riego
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          HU12 · RF12: calendarios de fertilización (insumos nutrición, RN32) y ciclos de riego por
-          lote, con dosis por ha o por palma (RN33). Consulte análisis de suelo (RN34) antes de
-          definir el plan.
+          Calendarios de fertilización (insumos de nutrición) y ciclos de riego por lote, con dosis
+          por ha o por palma. Consulte análisis de suelo antes de definir el plan.
         </p>
       </div>
       <PlanNutricionClient

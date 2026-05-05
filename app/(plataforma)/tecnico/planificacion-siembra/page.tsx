@@ -55,8 +55,8 @@ export default async function PlanificacionSiembraPage() {
           Planificación de siembra
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          HU10 · RF10: asigne material genético certificado y fecha proyectada a lotes vacantes o
-          disponibles. Pendiente &gt; 12% requiere confirmación explícita (RN28). Distinto de la{" "}
+          Asigne material genético certificado y fecha proyectada a lotes vacantes o disponibles.
+          Pendiente &gt; 12% requiere confirmación explícita por riesgo de erosión. Distinto de la{" "}
           <span className="text-foreground">agenda de labores</span> (mantenimiento).
         </p>
       </div>

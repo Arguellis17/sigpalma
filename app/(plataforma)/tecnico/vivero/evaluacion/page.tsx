@@ -32,8 +32,8 @@ export default async function TecnicoViveroEvaluacionPage() {
           Evaluación de vivero
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          HU14 / RF14: conteos, concepto Apto / No apto, evidencia opcional (CU14.1). Requiere
-          germinación RF18 previa. La planificación de siembra exige cadena completa (RF20 parcial).
+          Conteos, concepto Apto / No apto y evidencia fotográfica opcional. Requiere germinación
+          previa. La planificación de siembra exige cadena completa (germinación + evaluación Apto).
         </p>
       </div>
       <TecnicoEvaluacionViveroClient

@@ -32,8 +32,8 @@ export default async function MonitoreosPendientesOperarioPage() {
           Monitoreos pendientes
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          HU13 · RN37: inspecciones fitosanitarias que el agrónomo le asignó. Marque como realizada cuando haya
-          ejecutado la visita; luego puede registrar alertas desde «Alertas» (RF25/26).
+          Inspecciones fitosanitarias que el agrónomo le asignó. Marque como realizada cuando haya
+          ejecutado la visita; luego puede registrar alertas desde «Alertas».
         </p>
       </div>
 

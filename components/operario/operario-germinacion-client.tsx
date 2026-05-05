@@ -53,7 +53,7 @@ export function OperarioGerminacionClient({
     e.preventDefault();
     setErr(null);
     if (!catalogoMaterialId) {
-      setErr("Seleccione material genético (RF06).");
+      setErr("Seleccione material genético.");
       return;
     }
     setPending(true);
@@ -81,9 +81,7 @@ export function OperarioGerminacionClient({
         onSubmit={onSubmit}
         className="surface-panel space-y-4 rounded-2xl p-5 sm:p-6"
       >
-        <h3 className="text-lg font-semibold text-foreground">
-          Nuevo registro (RF18)
-        </h3>
+        <h3 className="text-lg font-semibold text-foreground">Nuevo registro</h3>
         <p className="text-sm text-muted-foreground">
           Tratamiento térmico / germinación vinculado al material genético de la finca.
           Temperatura máxima &gt; 42 °C requiere comentario.

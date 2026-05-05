@@ -387,7 +387,7 @@ function getPageMeta(pathname: string): PageMeta {
   if (pathname === "/admin/catalogos/labores") {
     return {
       title: "Labores agronómicas",
-      description: "Tipos de labor de mantenimiento (poda, malezas, etc.) para programación HU11.",
+      description: "Tipos de labor de mantenimiento (poda, malezas, etc.) para la programación en agenda.",
     };
   }
   if (pathname === "/tecnico/agenda") {
@@ -400,21 +400,21 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Planificación de siembra",
       description:
-        "Material genético certificado y fecha proyectada por lote (HU10). Distinto del mantenimiento (agenda).",
+        "Material genético certificado y fecha proyectada por lote. Distinto del mantenimiento (agenda).",
     };
   }
   if (pathname === "/tecnico/vivero/evaluacion") {
     return {
       title: "Evaluación de vivero",
       description:
-        "HU14 / RF14: acta técnica sobre germinación RF18; concepto Apto / No apto y evidencia (CU14.1). Habilita plan de siembra cuando está Apto (RF20 parcial).",
+        "Acta técnica sobre germinación previa; concepto Apto / No apto y evidencia fotográfica opcional. Habilita plan de siembra cuando el concepto es Apto.",
     };
   }
   if (pathname === "/tecnico/nutricion-riego") {
     return {
       title: "Nutrición y riego",
       description:
-        "Planes de fertilización (nutrición) y riego por lote (HU12 / RF12). Bloqueo tras aplicación en campo (RF22, pendiente).",
+        "Planes de fertilización (nutrición) y riego por lote. Bloqueo tras aplicación en campo (pendiente).",
     };
   }
   if (pathname === "/tecnico/suelo") {
@@ -463,7 +463,7 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Germinación en vivero",
       description:
-        "RF18: tratamiento térmico y datos de germinación por material genético; precondición de la evaluación de vivero (HU14).",
+        "Tratamiento térmico y datos de germinación por material genético; requisito previo para la evaluación de vivero.",
     };
   }
   if (pathname === "/operario/catalogos/fitosanitario") {
@@ -475,7 +475,7 @@ function getPageMeta(pathname: string): PageMeta {
   if (pathname === "/operario/sanidad/monitoreos-pendientes") {
     return {
       title: "Monitoreos pendientes",
-      description: "HU13 · RN37: inspecciones fitosanitarias asignadas por el agrónomo.",
+      description: "Inspecciones fitosanitarias asignadas por el agrónomo.",
     };
   }
   if (pathname === "/operario/sanidad/alertas") {
@@ -494,13 +494,13 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Programación de monitoreos",
       description:
-        "HU13: inspecciones fitosanitarias por lote, fecha y operario; evita duplicados pendientes (CU13).",
+        "Inspecciones fitosanitarias por lote, fecha y operario; evita duplicados pendientes para el mismo lote y fecha.",
     };
   }
   if (pathname === "/tecnico/sanidad/validacion") {
     return {
       title: "Validación sanidad",
-      description: "Bandeja RF15: diagnóstico y emisión de órdenes de control.",
+      description: "Bandeja de diagnóstico y emisión de órdenes de control fitosanitario.",
     };
   }
   if (pathname === "/tecnico/sanidad/ordenes") {

@@ -36,8 +36,8 @@ export default async function OperarioViveroGerminacionPage() {
           Germinación / tratamiento térmico
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          RF18: registro previo a la evaluación de vivero (HU14). Operario o técnico pueden crear
-          registros según política de la finca.
+          Registro previo a la evaluación de vivero. Operario o técnico pueden crear registros según
+          política de la finca.
         </p>
       </div>
       <OperarioGerminacionClient

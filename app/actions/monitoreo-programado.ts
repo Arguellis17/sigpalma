@@ -16,7 +16,7 @@ import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 
 const DUP_MSG =
-  "Ya existe una inspección pendiente para este lote en la misma fecha (CU13). Cambie la fecha o anule la anterior.";
+  "Ya existe una inspección pendiente para este lote en la misma fecha. Cambie la fecha o anule la anterior.";
 
 function isUniqueViolation(err: { code?: string; message?: string } | null): boolean {
   return err?.code === "23505" || Boolean(err?.message?.includes("monitoreos_fitos_prog_lote_fecha_pendiente"));
@@ -38,7 +38,7 @@ async function assertLoteActivoFinca(
     return actionError("El lote no pertenece a la finca.");
   }
   if (!lote.activo) {
-    return actionError("El lote no está activo (RN35).");
+    return actionError("El lote no está activo.");
   }
   return actionOk({ codigo: lote.codigo });
 }
@@ -68,7 +68,7 @@ async function assertOperarioAsignado(
 function assertFechaInspeccionRn36(fecha: string): ActionResult<void> {
   const hoy = todayColombiaYmd();
   if (fecha < hoy) {
-    return actionError("La fecha de inspección no puede ser anterior a hoy (RN36).");
+    return actionError("La fecha de inspección no puede ser anterior a hoy.");
   }
   return actionOk(undefined);
 }

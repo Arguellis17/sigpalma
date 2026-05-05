@@ -27,7 +27,7 @@ async function fetchMaterialGeneticoValido(
     .maybeSingle();
   if (error || !data) return actionError("Material genético no encontrado.");
   if (data.categoria !== "material_genetico" || !data.activo) {
-    return actionError("Seleccione un material genético activo del catálogo (RN27).");
+    return actionError("Seleccione un material genético activo del catálogo.");
   }
   return actionOk({ nombre: data.nombre });
 }
@@ -84,13 +84,13 @@ export async function crearPlanSiembra(
   }
   if (!PLANIFICABLE.includes(lote.estado_cultivo as (typeof PLANIFICABLE)[number])) {
     return actionError(
-      "Solo se pueden planificar siembras en lotes en estado vacante o disponible (RN26)."
+      "Solo se pueden planificar siembras en lotes en estado vacante o disponible."
     );
   }
 
   if (pendienteRequiresConfirm(lote.pendiente_pct) && !input.confirmacion_erosion) {
     return actionError(
-      "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar (RN28)."
+      "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar."
     );
   }
 
@@ -211,7 +211,7 @@ export async function actualizarPlanSiembra(
 
   if (pendienteRequiresConfirm(lote.pendiente_pct) && !input.confirmacion_erosion) {
     return actionError(
-      "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar (RN28)."
+      "Pendiente del terreno mayor al 12%: confirme el riesgo de erosión para continuar."
     );
   }
 

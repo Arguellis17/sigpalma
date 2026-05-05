@@ -22,7 +22,7 @@ async function assertMaterialGeneticoFinca(
     .select("id, categoria, activo")
     .eq("id", catalogoMaterialId)
     .maybeSingle();
-  if (ce || !cat) return actionError("Material genético no encontrado (RF06).");
+  if (ce || !cat) return actionError("Material genético no encontrado.");
   if (cat.categoria !== "material_genetico" || !cat.activo) {
     return actionError("Seleccione material genético activo del catálogo.");
   }
@@ -57,7 +57,7 @@ export async function crearRegistroGerminacion(
   }
   const role = session.profile.role;
   if (role !== "operario" && role !== "agronomo") {
-    return actionError("Solo operario o técnico agrónomo puede registrar germinación (RF18).");
+    return actionError("Solo operario o técnico agrónomo puede registrar germinación.");
   }
   if (session.profile.finca_id !== input.finca_id) {
     return actionError("La finca no coincide con su asignación.");
@@ -96,7 +96,7 @@ export async function crearRegistroGerminacion(
   await registrarEventoFinca({
     fincaId: input.finca_id,
     actionKey: "vivero.germinacion_crear",
-    titulo: "Registro de germinación / tratamiento térmico (RF18)",
+    titulo: "Registro de germinación / tratamiento térmico",
     detalle: {
       germinacionId: inserted.id,
       catalogoMaterialId: input.catalogo_material_id,
@@ -176,7 +176,7 @@ export async function actualizarRegistroGerminacion(
   await registrarEventoFinca({
     fincaId: prev.finca_id,
     actionKey: "vivero.germinacion_actualizar",
-    titulo: "Germinación actualizada (RF18)",
+    titulo: "Germinación actualizada",
     detalle: { germinacionId: input.id },
   });
 

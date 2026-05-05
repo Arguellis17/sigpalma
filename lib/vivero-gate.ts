@@ -4,7 +4,7 @@ import { actionError, actionOk, type ActionResult } from "@/app/actions/types";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * RF20 / HU10: exige cadena RF18 + evaluación HU14 con concepto Apto para el mismo material en la finca.
+ * Exige germinación registrada y evaluación de vivero con concepto Apto para el mismo material en la finca.
  */
 export async function assertCadenaViveroAptoParaPlanSiembra(
   supabase: Supabase,
@@ -22,7 +22,7 @@ export async function assertCadenaViveroAptoParaPlanSiembra(
   const ids = (germs ?? []).map((g) => g.id);
   if (ids.length === 0) {
     return actionError(
-      "Debe existir un registro de germinación / tratamiento térmico (RF18) para este material en la finca antes de planificar la siembra."
+      "Debe existir un registro de germinación / tratamiento térmico para este material en la finca antes de planificar la siembra."
     );
   }
 
@@ -38,7 +38,7 @@ export async function assertCadenaViveroAptoParaPlanSiembra(
   if (ee) return actionError(ee.message);
   if (!ev) {
     return actionError(
-      "Debe existir una evaluación de vivero (HU14 / RF14) con concepto «Apto para trasplante» para este material, vinculada a la germinación registrada."
+      "Debe existir una evaluación de vivero con concepto «Apto para trasplante» para este material, vinculada a la germinación registrada."
     );
   }
 

@@ -27,7 +27,7 @@ export async function crearEvaluacionVivero(
     return actionError("Sesión no válida.");
   }
   if (session.profile.role !== "agronomo" && !isSuperAdmin(session.profile)) {
-    return actionError("Solo el técnico agrónomo puede registrar la evaluación de vivero (HU14).");
+    return actionError("Solo el técnico agrónomo puede registrar la evaluación de vivero.");
   }
   if (!isSuperAdmin(session.profile) && session.profile.finca_id !== input.finca_id) {
     return actionError("La finca no coincide con su asignación.");
@@ -41,7 +41,7 @@ export async function crearEvaluacionVivero(
     .eq("id", input.germinacion_id)
     .maybeSingle();
 
-  if (ge || !germ) return actionError("Registro de germinación (RF18) no encontrado.");
+  if (ge || !germ) return actionError("Registro de germinación no encontrado.");
   if (germ.is_voided) return actionError("La germinación vinculada está anulada.");
   if (germ.finca_id !== input.finca_id) {
     return actionError("La germinación no pertenece a la finca del formulario.");
@@ -84,7 +84,7 @@ export async function crearEvaluacionVivero(
   if (insErr || !inserted) {
     const msg = insErr?.message ?? "No se pudo registrar la evaluación.";
     if (insErr?.code === "23514") {
-      return actionError("Revise conteos y motivo de descarte (RN38–RN39).");
+      return actionError("Revise conteos y motivo de descarte.");
     }
     return actionError(msg);
   }
@@ -162,7 +162,7 @@ export async function anularEvaluacionVivero(
   return actionOk({ id: updated.id });
 }
 
-/** Sube una imagen al bucket evidencia-tecnica (CU14.1); retorna la ruta almacenada en DB. */
+/** Sube una imagen al bucket evidencia-tecnica; retorna la ruta almacenada en DB. */
 export async function subirEvidenciaEvaluacionVivero(
   formData: FormData
 ): Promise<ActionResult<{ path: string }>> {

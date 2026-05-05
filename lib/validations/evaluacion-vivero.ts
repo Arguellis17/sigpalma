@@ -24,7 +24,7 @@ export const crearEvaluacionViveroSchema = z
       }
       return true;
     },
-    { message: "RN39: indique el motivo de descarte (mínimo 3 caracteres) si hay unidades descartadas." }
+    { message: "Indique el motivo de descarte (mínimo 3 caracteres) si hay unidades descartadas." }
   );
 
 export const anularEvaluacionViveroSchema = z.object({
