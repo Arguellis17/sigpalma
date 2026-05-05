@@ -28,7 +28,7 @@ async function fetchInsumoNutricionValido(
   }
   if (!isInsumoNutricion(data.subcategoria)) {
     return actionError(
-      "Solo insumos de nutrici?n/fertilizaci?n. Revise la subcategor?a en el cat?logo."
+      "Solo insumos de nutrición/fertilización. Revise la subcategoría en el catálogo."
     );
   }
   return actionOk({ nombre: data.nombre });
