@@ -401,13 +401,64 @@ export function PlanNutricionClient({
                       <p>
                         <span className="text-muted-foreground">Último análisis:</span>{" "}
                         {analisis.fecha_analisis}
-                        {analisis.ph != null ? (
+                        {analisis.ph != null && String(analisis.ph).trim() !== "" ? (
                           <>
                             {" "}
                             · pH {analisis.ph}
                           </>
                         ) : null}
+                        {analisis.humedad_pct != null &&
+                        String(analisis.humedad_pct).trim() !== "" ? (
+                          <>
+                            {" "}
+                            · Humedad {analisis.humedad_pct}%
+                          </>
+                        ) : null}
+                        {analisis.compactacion != null &&
+                        String(analisis.compactacion).trim() !== "" ? (
+                          <>
+                            {" "}
+                            · Compact. {analisis.compactacion} MPa
+                          </>
+                        ) : null}
+                        {analisis.cic != null && String(analisis.cic).trim() !== "" ? (
+                          <>
+                            {" "}
+                            · CIC {analisis.cic}
+                          </>
+                        ) : null}
+                        {analisis.materia_organica_pct != null &&
+                        String(analisis.materia_organica_pct).trim() !== "" ? (
+                          <>
+                            {" "}
+                            · MO {analisis.materia_organica_pct}%
+                          </>
+                        ) : null}
+                        {analisis.textura?.trim() ? (
+                          <>
+                            {" "}
+                            · {analisis.textura}
+                          </>
+                        ) : null}
+                        {analisis.aluminio != null && String(analisis.aluminio).trim() !== "" ? (
+                          <>
+                            {" "}
+                            · Al {analisis.aluminio}
+                          </>
+                        ) : null}
+                        {analisis.drenaje_campo?.trim() ? (
+                          <>
+                            {" "}
+                            · Drenaje: {analisis.drenaje_campo}
+                          </>
+                        ) : null}
                       </p>
+                      {analisis.fertilidad_completa?.trim() ? (
+                        <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">Fertilidad: </span>
+                          {analisis.fertilidad_completa}
+                        </p>
+                      ) : null}
                       {analisis.nutrientes && Object.keys(analisis.nutrientes).length > 0 ? (
                         <pre className="mt-2 max-h-24 overflow-auto rounded-lg bg-background/80 p-2 text-xs">
                           {JSON.stringify(analisis.nutrientes, null, 2)}

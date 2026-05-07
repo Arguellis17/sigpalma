@@ -7,6 +7,12 @@ const projectRoot = path.dirname(require.resolve("./package.json"));
 const canvasStub = path.join(projectRoot, "stubs/canvas-empty.js");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // Default 1 MB trunca PDFs multipart hasta 5 MB (RN46). Margen sobre el tope de producto.
+      bodySizeLimit: "6mb",
+    },
+  },
   // Silencia el aviso de lockfile en el home del usuario; imports CSS usan rutas en globals.css.
   turbopack: {
     root: projectRoot,

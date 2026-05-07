@@ -2,6 +2,28 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { AnalisisPdfViewerButton } from "@/components/suelo/analisis-pdf-viewer-button";
 
+function resumenOtrosOperario(r: {
+  cic: string | null;
+  materia_organica_pct: string | null;
+  textura: string | null;
+  compactacion: string | null;
+  aluminio: string | null;
+  drenaje_campo: string | null;
+}): string {
+  const parts: string[] = [];
+  if (r.compactacion != null && String(r.compactacion).trim() !== "") {
+    parts.push(`Comp. ${r.compactacion}`);
+  }
+  if (r.cic != null && String(r.cic).trim() !== "") parts.push(`CIC ${r.cic}`);
+  if (r.materia_organica_pct != null && String(r.materia_organica_pct).trim() !== "") {
+    parts.push(`MO ${r.materia_organica_pct}%`);
+  }
+  if (r.textura?.trim()) parts.push(r.textura.trim());
+  if (r.aluminio != null && String(r.aluminio).trim() !== "") parts.push(`Al ${r.aluminio}`);
+  if (r.drenaje_campo?.trim()) parts.push(r.drenaje_campo.trim());
+  return parts.join(" · ") || "—";
+}
+
 export default async function OperarioSueloConsultaPage() {
   const session = await getSessionProfile();
   const fincaId = session?.profile?.finca_id ?? null;
@@ -18,7 +40,7 @@ export default async function OperarioSueloConsultaPage() {
   const { data: rowsRaw } = await supabase
     .from("analisis_suelo")
     .select(
-      "id, lote_id, fecha_analisis, ph, humedad_pct, compactacion, notas, archivo_url"
+      "id, lote_id, fecha_analisis, ph, humedad_pct, compactacion, cic, materia_organica_pct, textura, aluminio, drenaje_campo, notas, archivo_url"
     )
     .eq("finca_id", fincaId)
     .eq("is_voided", false)
@@ -39,6 +61,11 @@ export default async function OperarioSueloConsultaPage() {
     ph: r.ph,
     humedad_pct: r.humedad_pct,
     compactacion: r.compactacion,
+    cic: r.cic,
+    materia_organica_pct: r.materia_organica_pct,
+    textura: r.textura,
+    aluminio: r.aluminio,
+    drenaje_campo: r.drenaje_campo,
     notas: r.notas,
     tienePdf: Boolean(r.archivo_url),
     lote_codigo: loteMap.get(r.lote_id) ?? "—",
@@ -64,13 +91,14 @@ export default async function OperarioSueloConsultaPage() {
       ) : (
         <div className="surface-panel overflow-hidden rounded-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <th className="px-4 py-3">Fecha</th>
                   <th className="px-4 py-3">Lote</th>
                   <th className="px-4 py-3">pH</th>
                   <th className="px-4 py-3">Humedad %</th>
+                  <th className="px-4 py-3">Otros</th>
                   <th className="px-4 py-3">Archivo</th>
                 </tr>
               </thead>
@@ -91,6 +119,12 @@ export default async function OperarioSueloConsultaPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {r.humedad_pct ?? "—"}
+                    </td>
+                    <td
+                      className="max-w-[220px] truncate px-4 py-3 text-xs text-muted-foreground"
+                      title={resumenOtrosOperario(r)}
+                    >
+                      {resumenOtrosOperario(r)}
                     </td>
                     <td className="px-4 py-3">
                       {r.tienePdf ? (

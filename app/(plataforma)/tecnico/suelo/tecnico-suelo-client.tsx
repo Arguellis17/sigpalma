@@ -31,6 +31,12 @@ export type AnalisisSueloListRow = {
   ph: string | null;
   humedad_pct: string | null;
   compactacion: string | null;
+  fertilidad_completa: string | null;
+  textura: string | null;
+  aluminio: string | null;
+  cic: string | null;
+  materia_organica_pct: string | null;
+  drenaje_campo: string | null;
   notas: string | null;
   archivo_url: string | null;
   created_at: string;
@@ -62,9 +68,28 @@ function rowToFormRecord(row: AnalisisSueloListRow): AnalisisSueloFormRecord {
     ph: parseFormNumber(row.ph),
     humedad_pct: parseFormNumber(row.humedad_pct),
     compactacion: parseFormNumber(row.compactacion),
+    fertilidad_completa: row.fertilidad_completa,
+    textura: row.textura,
+    aluminio: parseFormNumber(row.aluminio),
+    cic: parseFormNumber(row.cic),
+    materia_organica_pct: parseFormNumber(row.materia_organica_pct),
+    drenaje_campo: row.drenaje_campo,
     notas: row.notas,
     archivo_url: row.archivo_url,
   };
+}
+
+function resumenOtrosAnalisis(a: AnalisisSueloListRow): string {
+  const parts: string[] = [];
+  if (a.cic != null && String(a.cic).trim() !== "") parts.push(`CIC ${a.cic}`);
+  if (a.materia_organica_pct != null && String(a.materia_organica_pct).trim() !== "") {
+    parts.push(`MO ${a.materia_organica_pct}%`);
+  }
+  if (a.textura?.trim()) parts.push(a.textura.trim());
+  if (a.aluminio != null && String(a.aluminio).trim() !== "") parts.push(`Al ${a.aluminio}`);
+  if (a.drenaje_campo?.trim()) parts.push(a.drenaje_campo.trim());
+  if (a.fertilidad_completa?.trim()) parts.push("Fertilidad (texto)");
+  return parts.join(" · ");
 }
 
 function formatDate(iso: string | null | undefined) {
@@ -96,7 +121,7 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
     return rows.filter((a) => {
       const finca = (a.fincas as { nombre?: string } | null)?.nombre ?? "";
       const lote = (a.lotes as { codigo?: string } | null)?.codigo ?? "";
-      const blob = `${finca} ${lote} ${a.notas ?? ""} ${a.id}`.toLowerCase();
+      const blob = `${finca} ${lote} ${a.notas ?? ""} ${a.textura ?? ""} ${a.drenaje_campo ?? ""} ${a.fertilidad_completa ?? ""} ${a.id}`.toLowerCase();
       return blob.includes(q);
     });
   }, [rows, search]);
@@ -196,6 +221,21 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                       Comp. {a.compactacion}
                     </Badge>
                   ) : null}
+                  {a.cic != null && String(a.cic).trim() !== "" ? (
+                    <Badge variant="secondary" className="text-xs">
+                      CIC {a.cic}
+                    </Badge>
+                  ) : null}
+                  {a.materia_organica_pct != null && String(a.materia_organica_pct).trim() !== "" ? (
+                    <Badge variant="secondary" className="text-xs">
+                      MO {a.materia_organica_pct}%
+                    </Badge>
+                  ) : null}
+                  {a.textura ? (
+                    <Badge variant="outline" className="max-w-[140px] truncate text-xs">
+                      {a.textura}
+                    </Badge>
+                  ) : null}
                 </div>
                 {a.notas ? (
                   <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{a.notas}</p>
@@ -227,7 +267,7 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
 
           <div className="surface-panel hidden overflow-hidden rounded-2xl md:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[800px] text-sm">
                 <thead>
                   <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     <th className="px-4 py-3">Finca</th>
@@ -236,6 +276,7 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                     <th className="px-4 py-3">pH</th>
                     <th className="px-4 py-3">Humedad</th>
                     <th className="px-4 py-3">Compact.</th>
+                    <th className="px-4 py-3">Otros datos</th>
                     <th className="px-4 py-3">Notas</th>
                     <th className="px-4 py-3">PDF</th>
                     <th className="px-4 py-3">Registro</th>
@@ -265,6 +306,12 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {a.compactacion ?? "—"}
+                      </td>
+                      <td
+                        className="max-w-[200px] truncate px-4 py-3 text-xs text-muted-foreground"
+                        title={resumenOtrosAnalisis(a) || undefined}
+                      >
+                        {resumenOtrosAnalisis(a) || "—"}
                       </td>
                       <td className="max-w-[180px] truncate px-4 py-3 text-muted-foreground">
                         {a.notas ?? "—"}

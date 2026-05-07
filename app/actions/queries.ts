@@ -410,6 +410,13 @@ export type UltimoAnalisisSueloResumen = {
   fecha_analisis: string;
   ph: string | null;
   humedad_pct: string | null;
+  compactacion: string | null;
+  fertilidad_completa: string | null;
+  textura: string | null;
+  aluminio: string | null;
+  cic: string | null;
+  materia_organica_pct: string | null;
+  drenaje_campo: string | null;
   nutrientes: Record<string, unknown> | null;
 };
 
@@ -424,7 +431,9 @@ export async function getUltimoAnalisisSueloPorLote(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("analisis_suelo")
-    .select("id, fecha_analisis, ph, humedad_pct, nutrientes")
+    .select(
+      "id, fecha_analisis, ph, humedad_pct, compactacion, fertilidad_completa, textura, aluminio, cic, materia_organica_pct, drenaje_campo, nutrientes"
+    )
     .eq("lote_id", lid)
     .eq("is_voided", false)
     .order("fecha_analisis", { ascending: false })
@@ -444,6 +453,13 @@ export async function getUltimoAnalisisSueloPorLote(
     fecha_analisis: data.fecha_analisis,
     ph: data.ph,
     humedad_pct: data.humedad_pct,
+    compactacion: data.compactacion,
+    fertilidad_completa: data.fertilidad_completa,
+    textura: data.textura,
+    aluminio: data.aluminio,
+    cic: data.cic,
+    materia_organica_pct: data.materia_organica_pct,
+    drenaje_campo: data.drenaje_campo,
     nutrientes: (data.nutrientes as Record<string, unknown> | null) ?? null,
   });
 }

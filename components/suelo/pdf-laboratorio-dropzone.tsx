@@ -15,6 +15,12 @@ import { cn } from "@/lib/utils";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 function assignPdfToInput(input: HTMLInputElement, file: File) {
   const dt = new DataTransfer();
   dt.items.add(file);
@@ -43,6 +49,7 @@ export function PdfLaboratorioDropzone({
   const descId = `${inputId}-desc`;
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [selectedSizeLabel, setSelectedSizeLabel] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -59,6 +66,7 @@ export function PdfLaboratorioDropzone({
     if (!inputRef.current) return false;
     assignPdfToInput(inputRef.current, file);
     setSelectedName(file.name);
+    setSelectedSizeLabel(formatFileSize(file.size));
     return true;
   }
 
@@ -67,6 +75,7 @@ export function PdfLaboratorioDropzone({
       inputRef.current.value = "";
     }
     setSelectedName(null);
+    setSelectedSizeLabel(null);
     setHint(null);
   }
 
@@ -136,7 +145,8 @@ export function PdfLaboratorioDropzone({
             Informe del laboratorio
           </CardTitle>
           <CardDescription id={descId} className="text-xs leading-snug">
-            Opcional · solo PDF · máximo 5 MB · almacenamiento privado para auditoría.
+            Opcional · solo PDF · máximo 5 MB · almacenamiento privado para auditoría. Si el archivo
+            es grande, el envío puede tardar unos segundos.
           </CardDescription>
         </CardHeader>
 
@@ -183,6 +193,9 @@ export function PdfLaboratorioDropzone({
               <span className="min-w-0 flex-1 truncate font-medium" title={selectedName}>
                 {selectedName}
               </span>
+              {selectedSizeLabel ? (
+                <span className="shrink-0 text-xs text-muted-foreground">{selectedSizeLabel}</span>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"

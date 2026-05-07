@@ -669,6 +669,12 @@ export type Database = {
           ph: string | null;
           humedad_pct: string | null;
           compactacion: string | null;
+          fertilidad_completa: string | null;
+          textura: string | null;
+          aluminio: string | null;
+          cic: string | null;
+          materia_organica_pct: string | null;
+          drenaje_campo: string | null;
           nutrientes: Json | null;
           archivo_url: string | null;
           notas: string | null;
@@ -686,6 +692,12 @@ export type Database = {
           ph?: number | string | null;
           humedad_pct?: number | string | null;
           compactacion?: string | null;
+          fertilidad_completa?: string | null;
+          textura?: string | null;
+          aluminio?: number | string | null;
+          cic?: number | string | null;
+          materia_organica_pct?: number | string | null;
+          drenaje_campo?: string | null;
           nutrientes?: Json | null;
           archivo_url?: string | null;
           notas?: string | null;
@@ -703,6 +715,12 @@ export type Database = {
           ph?: number | string | null;
           humedad_pct?: number | string | null;
           compactacion?: string | null;
+          fertilidad_completa?: string | null;
+          textura?: string | null;
+          aluminio?: number | string | null;
+          cic?: number | string | null;
+          materia_organica_pct?: number | string | null;
+          drenaje_campo?: string | null;
           nutrientes?: Json | null;
           archivo_url?: string | null;
           notas?: string | null;

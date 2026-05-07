@@ -30,6 +30,12 @@ export type AnalisisSueloFormRecord = {
   ph: number | null;
   humedad_pct: number | null;
   compactacion: number | null;
+  fertilidad_completa: string | null;
+  textura: string | null;
+  aluminio: number | null;
+  cic: number | null;
+  materia_organica_pct: number | null;
+  drenaje_campo: string | null;
   notas: string | null;
   /** Path en Storage (bucket evidencia-tecnica), no URL pública. */
   archivo_url?: string | null;
@@ -231,6 +237,93 @@ export function AnalisisSueloForm({
             placeholder="Ej. 2.5"
             className="rounded-xl"
             defaultValue={record?.compactacion != null ? String(record.compactacion) : undefined}
+          />
+        </div>
+      </div>
+
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Variables adicionales (opcional)
+      </p>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="fertilidad_completa">Fertilidad completa</Label>
+          <Textarea
+            id="fertilidad_completa"
+            name="fertilidad_completa"
+            rows={layout === "dialog" ? 2 : 3}
+            placeholder="Resumen o índices de fertilidad según el informe de laboratorio…"
+            className="rounded-xl"
+            defaultValue={record?.fertilidad_completa ?? undefined}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="textura">Textura</Label>
+          <Input
+            id="textura"
+            name="textura"
+            placeholder="Ej. Franco-arcilloso"
+            className="rounded-xl"
+            defaultValue={record?.textura ?? undefined}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="drenaje_campo">Drenaje en campo</Label>
+          <Input
+            id="drenaje_campo"
+            name="drenaje_campo"
+            placeholder="Ej. Bueno, moderado, deficiente…"
+            className="rounded-xl"
+            defaultValue={record?.drenaje_campo ?? undefined}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="aluminio">Aluminio</Label>
+          <Input
+            id="aluminio"
+            name="aluminio"
+            type="number"
+            step="0.001"
+            min={0}
+            placeholder="Valor según informe"
+            className="rounded-xl"
+            defaultValue={record?.aluminio != null ? String(record.aluminio) : undefined}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cic">CIC</Label>
+          <Input
+            id="cic"
+            name="cic"
+            type="number"
+            step="0.01"
+            min={0}
+            placeholder="Capacidad de intercambio catiónico"
+            className="rounded-xl"
+            defaultValue={record?.cic != null ? String(record.cic) : undefined}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="materia_organica_pct">Materia orgánica (%)</Label>
+          <Input
+            id="materia_organica_pct"
+            name="materia_organica_pct"
+            type="number"
+            step="0.01"
+            min={0}
+            max={100}
+            placeholder="Ej. 3.2"
+            className="rounded-xl"
+            defaultValue={
+              record?.materia_organica_pct != null
+                ? String(record.materia_organica_pct)
+                : undefined
+            }
           />
         </div>
       </div>

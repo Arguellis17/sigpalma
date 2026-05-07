@@ -28,6 +28,58 @@ function canAccessAnalisisSueloFinca(
   return profile.finca_id === fincaId;
 }
 
+/** Columnas de análisis compartidas entre insert/update (JSON y formulario). */
+function columnasAnalisisDesdeInput(input: RegistrarAnalisisSueloInput) {
+  return {
+    ph: input.ph ?? null,
+    humedad_pct: input.humedad_pct ?? null,
+    compactacion:
+      input.compactacion !== null && input.compactacion !== undefined
+        ? String(input.compactacion)
+        : null,
+    fertilidad_completa: input.fertilidad_completa ?? null,
+    textura: input.textura ?? null,
+    aluminio: input.aluminio ?? null,
+    cic: input.cic ?? null,
+    materia_organica_pct: input.materia_organica_pct ?? null,
+    drenaje_campo: input.drenaje_campo ?? null,
+    nutrientes: input.nutrientes ?? null,
+    notas: input.notas?.trim() ?? null,
+    archivo_url: input.archivo_url ?? null,
+  };
+}
+
+function detalleAuditoriaAnalisis(
+  input: RegistrarAnalisisSueloInput,
+  extras: {
+    analisisId: string;
+    loteCodigo: string;
+    tieneAdjuntoLaboratorio: boolean;
+    archivoReemplazado?: boolean;
+  }
+) {
+  return {
+    analisisId: extras.analisisId,
+    loteCodigo: extras.loteCodigo,
+    fechaAnalisis: input.fecha_analisis,
+    ph: input.ph ?? null,
+    humedadPct: input.humedad_pct ?? null,
+    compactacion: input.compactacion ?? null,
+    fertilidadCompleta: input.fertilidad_completa ?? null,
+    textura: input.textura ?? null,
+    aluminio: input.aluminio ?? null,
+    cic: input.cic ?? null,
+    materiaOrganicaPct: input.materia_organica_pct ?? null,
+    drenajeCampo: input.drenaje_campo ?? null,
+    nutrientes: input.nutrientes ?? null,
+    tieneAdjuntoLaboratorio: extras.tieneAdjuntoLaboratorio,
+    notas: input.notas?.trim() ?? null,
+    ...(extras.archivoReemplazado !== undefined
+      ? { archivoReemplazado: extras.archivoReemplazado }
+      : {}),
+  };
+}
+
 // ─── HU16: Registrar análisis de suelo ───────────────────────────────────────
 
 export async function registrarAnalisisSuelo(
@@ -57,14 +109,7 @@ export async function registrarAnalisisSuelo(
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha_analisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedad_pct: input.humedad_pct ?? null,
-      compactacion: input.compactacion !== null && input.compactacion !== undefined
-        ? String(input.compactacion)
-        : null,
-      nutrientes: input.nutrientes ?? null,
-      notas: input.notas?.trim() ?? null,
-      archivo_url: input.archivo_url ?? null,
+      ...columnasAnalisisDesdeInput(input),
       created_by: session.user.id,
       source: "web",
       is_voided: false,
@@ -103,15 +148,7 @@ export async function actualizarAnalisisSuelo(
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha_analisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedad_pct: input.humedad_pct ?? null,
-      compactacion:
-        input.compactacion !== null && input.compactacion !== undefined
-          ? String(input.compactacion)
-          : null,
-      nutrientes: input.nutrientes ?? null,
-      notas: input.notas?.trim() ?? null,
-      archivo_url: input.archivo_url ?? null,
+      ...columnasAnalisisDesdeInput(input),
     })
     .eq("id", input.id)
     .eq("is_voided", false)
@@ -233,6 +270,20 @@ export async function listarAnalisisPorFinca(
   return actionOk(data ?? []);
 }
 
+function parseFormDataNumber(formData: FormData, name: string): number | null {
+  const raw = formData.get(name);
+  if (raw === "" || raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseFormDataText(formData: FormData, name: string): string | null {
+  const raw = formData.get(name);
+  if (raw == null || raw === "") return null;
+  const s = String(raw).trim();
+  return s.length ? s : null;
+}
+
 type RegistroAnalisisFormFields = {
   finca_id: FormDataEntryValue | null;
   lote_id: FormDataEntryValue | null;
@@ -240,6 +291,12 @@ type RegistroAnalisisFormFields = {
   ph: number | null;
   humedad_pct: number | null;
   compactacion: number | null;
+  fertilidad_completa: string | null;
+  textura: string | null;
+  aluminio: number | null;
+  cic: number | null;
+  materia_organica_pct: number | null;
+  drenaje_campo: string | null;
   nutrientes: null;
   notas: string | null;
   archivo_url: null;
@@ -258,6 +315,12 @@ function formDataToRegistroPayload(formData: FormData): RegistroAnalisisFormFiel
     humedad_pct: humedadRaw === "" || humedadRaw == null ? null : Number(humedadRaw),
     compactacion:
       compactacionRaw === "" || compactacionRaw == null ? null : Number(compactacionRaw),
+    fertilidad_completa: parseFormDataText(formData, "fertilidad_completa"),
+    textura: parseFormDataText(formData, "textura"),
+    aluminio: parseFormDataNumber(formData, "aluminio"),
+    cic: parseFormDataNumber(formData, "cic"),
+    materia_organica_pct: parseFormDataNumber(formData, "materia_organica_pct"),
+    drenaje_campo: parseFormDataText(formData, "drenaje_campo"),
     nutrientes: null,
     notas: notasRaw && String(notasRaw).trim() ? String(notasRaw).trim() : null,
     archivo_url: null,
@@ -323,14 +386,7 @@ export async function registrarAnalisisSueloDesdeFormulario(
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha_analisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedad_pct: input.humedad_pct ?? null,
-      compactacion:
-        input.compactacion !== null && input.compactacion !== undefined
-          ? String(input.compactacion)
-          : null,
-      nutrientes: input.nutrientes ?? null,
-      notas: input.notas?.trim() ?? null,
+      ...columnasAnalisisDesdeInput(input),
       archivo_url: archivoPath,
       created_by: session.user.id,
       source: "web",
@@ -356,16 +412,11 @@ export async function registrarAnalisisSueloDesdeFormulario(
     fincaId: input.finca_id,
     actionKey: "suelo.registrar",
     titulo: "Nuevo análisis de suelo",
-    detalle: {
+    detalle: detalleAuditoriaAnalisis(input, {
       analisisId: data.id,
       loteCodigo: lote?.codigo ?? input.lote_id,
-      fechaAnalisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedadPct: input.humedad_pct ?? null,
-      compactacion: input.compactacion ?? null,
       tieneAdjuntoLaboratorio: Boolean(archivoPath),
-      notas: input.notas?.trim() ?? null,
-    },
+    }),
   });
 
   return actionOk({ id: data.id });
@@ -443,14 +494,7 @@ export async function actualizarAnalisisSueloDesdeFormulario(
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha_analisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedad_pct: input.humedad_pct ?? null,
-      compactacion:
-        input.compactacion !== null && input.compactacion !== undefined
-          ? String(input.compactacion)
-          : null,
-      nutrientes: input.nutrientes ?? null,
-      notas: input.notas?.trim() ?? null,
+      ...columnasAnalisisDesdeInput(input),
       archivo_url: archivoPath,
     })
     .eq("id", input.id)
@@ -472,15 +516,12 @@ export async function actualizarAnalisisSueloDesdeFormulario(
     fincaId: input.finca_id,
     actionKey: "suelo.actualizar",
     titulo: "Análisis de suelo actualizado",
-    detalle: {
+    detalle: detalleAuditoriaAnalisis(input, {
       analisisId: input.id,
       loteCodigo: lote?.codigo ?? input.lote_id,
-      fechaAnalisis: input.fecha_analisis,
-      ph: input.ph ?? null,
-      humedadPct: input.humedad_pct ?? null,
       tieneAdjuntoLaboratorio: Boolean(archivoPath),
       archivoReemplazado: Boolean(file),
-    },
+    }),
   });
 
   return actionOk({ id: data.id });
