@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/session-profile";
 import {
   cambiarContrasenaObligatoriaSchema,
+  cambiarContrasenaSesionSchema,
   crearUsuarioAdminSchema,
   actualizarUsuarioSchema,
   restablecerContrasenaSchema,
@@ -348,6 +349,43 @@ export async function cambiarContrasenaObligatoria(
     return actionError(
       `Contraseña actualizada, pero no se pudo actualizar el perfil: ${updErr.message}`
     );
+  }
+
+  return actionOk(undefined);
+}
+
+/** Usuario con sesión: verifica contraseña actual y actualiza la nueva. */
+export async function cambiarContrasenaConSesion(
+  raw: unknown
+): Promise<ActionResult<void>> {
+  const parsed = cambiarContrasenaSesionSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+  if (userErr || !user?.email) {
+    return actionError("Sesión no válida. Inicie sesión nuevamente.");
+  }
+
+  const email = user.email.trim().toLowerCase();
+  const { error: signErr } = await supabase.auth.signInWithPassword({
+    email,
+    password: parsed.data.current_password,
+  });
+  if (signErr) {
+    return actionError("La contraseña actual no es correcta.");
+  }
+
+  const { error: authErr } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (authErr) {
+    return actionError(authErr.message);
   }
 
   return actionOk(undefined);

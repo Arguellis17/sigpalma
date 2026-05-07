@@ -55,3 +55,16 @@ export type CambiarContrasenaObligatoriaInput = z.infer<
   typeof cambiarContrasenaObligatoriaSchema
 >;
 
+export const cambiarContrasenaSesionSchema = z
+  .object({
+    current_password: z.string().min(1, "Indique su contraseña actual."),
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+    confirm_password: z.string().min(1, "Confirme la contraseña."),
+  })
+  .refine((d) => d.password === d.confirm_password, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirm_password"],
+  });
+
+export type CambiarContrasenaSesionInput = z.infer<typeof cambiarContrasenaSesionSchema>;
+

@@ -30,6 +30,7 @@ import {
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -629,6 +630,9 @@ export function AppShell({ children, session }: AppShellProps) {
                 {session.isActive ? "Activa" : "Inactiva"}
               </Badge>
             </div>
+            <Button variant="outline" size="sm" className="mt-3 w-full" asChild>
+              <Link href="/cuenta/contrasena">Cambiar contraseña</Link>
+            </Button>
           </div>
 
           <SignOutButton

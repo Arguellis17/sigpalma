@@ -24,6 +24,9 @@ const dashboardMap: Record<string, string> = {
 };
 
 const CHANGE_PASSWORD_PATH = "/auth/cambiar-contrasena";
+/** Tras enlace de correo (recovery); debe permitirse con sesión para no redirigir al panel antes de `updateUser`. */
+const RECOVERY_SET_PASSWORD_PATH = "/auth/restablecer-contrasena";
+const AUTH_CONFIRM_PATH = "/auth/confirm";
 
 type SessionGate = {
   activeRole: string | null;
@@ -226,6 +229,12 @@ export async function updateSession(request: NextRequest) {
         CHANGE_PASSWORD_PATH,
         supabaseResponse
       );
+    }
+    if (
+      pathname === RECOVERY_SET_PASSWORD_PATH ||
+      pathname === AUTH_CONFIRM_PATH
+    ) {
+      return supabaseResponse;
     }
     const dest = dashboardMap[activeRole] ?? "/operario";
     return redirectPreservingAuthCookies(request, dest, supabaseResponse);

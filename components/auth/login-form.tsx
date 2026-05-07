@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, TreePalm } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { resolveLoginIdentifier } from "@/app/actions/usuarios";
@@ -190,7 +191,13 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
               </button>
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Usa la contraseña asignada por tu administrador.
+              Usa la contraseña asignada por tu administrador.{" "}
+              <Link
+                href="/auth/recuperar-contrasena"
+                className="font-medium text-primary underline underline-offset-2 hover:text-primary/90"
+              >
+                ¿Olvidó su contraseña?
+              </Link>
             </p>
           </div>
           {error ? (
