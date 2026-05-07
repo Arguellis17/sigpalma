@@ -26,6 +26,7 @@ import {
   Wheat,
   ScrollText,
   ClipboardCheck,
+  Waypoints,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -147,6 +148,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
             { href: "/tecnico/agenda", label: "Agenda de labores", icon: Calendar },
             {
+              href: "/tecnico/trazabilidad",
+              label: "Trazabilidad por lote",
+              icon: Waypoints,
+            },
+            {
               href: "/tecnico/planificacion-siembra",
               label: "Planificación de siembra",
               icon: Leaf,
@@ -259,6 +265,7 @@ const breadcrumbLabels: Record<string, string> = {
   "material-genetico": "Material genético",
   fitosanitario: "Fitosanitario",
   agenda: "Agenda",
+  trazabilidad: "Trazabilidad",
   "planificacion-siembra": "Planificación de siembra",
   suelo: "Análisis de suelo",
   "mi-finca": "Mi finca",
@@ -395,6 +402,13 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Agenda de labores",
       description: "Programación de labores de mantenimiento por lote y fecha.",
+    };
+  }
+  if (pathname === "/tecnico/trazabilidad") {
+    return {
+      title: "Trazabilidad por lote",
+      description:
+        "HU17 — Línea de tiempo técnica: genética/plan de siembra, labores, nutrición, sanidad y cosecha (solo lectura).",
     };
   }
   if (pathname === "/tecnico/planificacion-siembra") {

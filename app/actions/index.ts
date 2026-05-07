@@ -77,4 +77,5 @@ export type {
   RegistroGerminacionListRow,
   EvaluacionViveroListRow,
 } from "./queries";
+export { getTrazabilidadTecnicaLote } from "./trazabilidad-lote";
 export type { ActionResult } from "./types";

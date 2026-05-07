@@ -27,6 +27,8 @@ export const FINCA_AUDIT_ACTION_KEYS = [
   "suelo.registrar",
   "suelo.actualizar",
   "suelo.anular",
+  /** HU17: consulta de trazabilidad técnica (solo lectura). */
+  "trazabilidad.consulta",
 ] as const;
 
 export type FincaAuditActionKey = (typeof FINCA_AUDIT_ACTION_KEYS)[number];
