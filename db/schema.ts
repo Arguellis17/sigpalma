@@ -438,6 +438,7 @@ export const alertasFitosanitarias = pgTable("alertas_fitosanitarias", {
   }),
   severidad: nivelSeveridadEnum("severidad").notNull(),
   descripcion: text("descripcion"),
+  evidenciaUrls: jsonb("evidencia_urls").notNull().default(sql`'[]'::jsonb`),
   loteEstadoAlerta: boolean("lote_estado_alerta").notNull().default(false),
   validacionEstado: text("validacion_estado").notNull().default("pendiente"),
   validacionDiagnostico: text("validacion_diagnostico"),

@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { getCatalogoFitosanidad } from "@/app/actions/queries";
 import { AlertasOperarioClient } from "@/components/operario/alertas-operario-client";
+import {
+  createSignedUrlsForStoragePaths,
+  parseEvidenciaPaths,
+} from "@/lib/storage-evidencia-tecnica";
 
 export default async function OperarioSanidadAlertasPage() {
   const session = await getSessionProfile();
@@ -24,7 +28,7 @@ export default async function OperarioSanidadAlertasPage() {
     ? await supabase
         .from("alertas_fitosanitarias")
         .select(
-          "id, created_at, severidad, descripcion, validacion_estado, validacion_diagnostico, lote_id, catalogo_item_id"
+          "id, created_at, severidad, descripcion, validacion_estado, validacion_diagnostico, lote_id, catalogo_item_id, evidencia_urls"
         )
         .eq("finca_id", fincaId)
         .eq("is_voided", false)
@@ -59,9 +63,13 @@ export default async function OperarioSanidadAlertasPage() {
     (catRows ?? []).map((c) => [c.id, { nombre: c.nombre, categoria: c.categoria }])
   );
 
-  const initialRows = ar.map((a) => {
+  const initialRows = [];
+  for (const a of ar) {
     const cat = a.catalogo_item_id ? catMap.get(a.catalogo_item_id) : undefined;
-    return {
+    const paths = parseEvidenciaPaths(a.evidencia_urls);
+    const evidenciaSignedUrls =
+      paths.length > 0 ? await createSignedUrlsForStoragePaths(supabase, paths) : [];
+    initialRows.push({
       id: a.id,
       created_at: a.created_at,
       severidad: a.severidad,
@@ -71,8 +79,9 @@ export default async function OperarioSanidadAlertasPage() {
       lote_codigo: loteMap.get(a.lote_id) ?? "—",
       amenaza: cat?.nombre ?? null,
       amenaza_categoria: cat?.categoria ?? null,
-    };
-  });
+      evidencia_signed_urls: evidenciaSignedUrls,
+    });
+  }
 
   return (
     <div className="fade-up-enter space-y-6">

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { crearAlertaFitosanitaria } from "@/app/actions/alertas";
+import { useEffect, useRef, useState } from "react";
+import {
+  crearAlertaFitosanitaria,
+  subirEvidenciaAlertaFitosanitaria,
+} from "@/app/actions/alertas";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Camera, ImageIcon, X } from "lucide-react";
 
 type FincaRow = { id: string; nombre: string };
 
@@ -34,6 +38,8 @@ const SEVERIDADES = [
   { value: "critica", label: "Crítica (marca alerta en lote)" },
 ] as const;
 
+const ACCEPT_IMAGES = "image/jpeg,image/png,image/webp";
+
 export function AlertaForm({
   fincas,
   defaultFincaId,
@@ -48,9 +54,53 @@ export function AlertaForm({
   const [severidad, setSeveridad] =
     useState<(typeof SEVERIDADES)[number]["value"]>("media");
   const [descripcion, setDescripcion] = useState("");
+  const [evidenciaPaths, setEvidenciaPaths] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const inputCameraRef = useRef<HTMLInputElement>(null);
+  const inputGalleryRef = useRef<HTMLInputElement>(null);
+  const evidenciaPathsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    evidenciaPathsRef.current = evidenciaPaths;
+  }, [evidenciaPaths]);
+
+  async function uploadFiles(files: FileList | File[] | null) {
+    if (!files?.length || !fincaId) return;
+    const list = Array.from(files);
+    setError(null);
+    for (const file of list) {
+      if (evidenciaPathsRef.current.length >= 8) {
+        setError("Máximo 8 fotos por alerta.");
+        break;
+      }
+      const fd = new FormData();
+      fd.set("finca_id", fincaId);
+      fd.set("archivo", file);
+      const up = await subirEvidenciaAlertaFitosanitaria(fd);
+      if (!up.success) {
+        setError(up.error);
+        return;
+      }
+      setEvidenciaPaths((prev) => {
+        const next = [...prev, up.data.path];
+        evidenciaPathsRef.current = next;
+        return next;
+      });
+    }
+    if (inputCameraRef.current) inputCameraRef.current.value = "";
+    if (inputGalleryRef.current) inputGalleryRef.current.value = "";
+  }
+
+  function removeEvidencia(idx: number) {
+    setEvidenciaPaths((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      evidenciaPathsRef.current = next;
+      return next;
+    });
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +110,10 @@ export function AlertaForm({
       setError("Seleccione finca y lote.");
       return;
     }
+    if (evidenciaPaths.length === 0) {
+      setError("Adjunte al menos una foto de evidencia (cámara o galería / archivo).");
+      return;
+    }
     setPending(true);
     const res = await crearAlertaFitosanitaria({
       finca_id: fincaId,
@@ -67,6 +121,7 @@ export function AlertaForm({
       catalogo_item_id: catalogoId || null,
       severidad,
       descripcion: descripcion.trim() || null,
+      evidencia_urls: evidenciaPaths,
       source: "web",
     });
     setPending(false);
@@ -75,6 +130,8 @@ export function AlertaForm({
       return;
     }
     setDescripcion("");
+    setEvidenciaPaths([]);
+    evidenciaPathsRef.current = [];
     if (onSuccess) {
       onSuccess();
       return;
@@ -201,6 +258,87 @@ export function AlertaForm({
           className="min-h-[110px] rounded-2xl border-border/70 bg-background/80 px-4 py-3 text-base shadow-none"
         />
       </div>
+
+      <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Label className="text-base">Evidencia fotográfica (obligatoria)</Label>
+          <span className="text-xs text-muted-foreground">
+            {evidenciaPaths.length} / 8
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          En el teléfono puede usar la cámara; en la computadora, adjunte archivos de imagen.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 rounded-xl"
+            disabled={!fincaId || evidenciaPaths.length >= 8 || pending}
+            onClick={() => inputCameraRef.current?.click()}
+          >
+            <Camera className="size-4" />
+            Tomar foto
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 rounded-xl"
+            disabled={!fincaId || evidenciaPaths.length >= 8 || pending}
+            onClick={() => inputGalleryRef.current?.click()}
+          >
+            <ImageIcon className="size-4" />
+            Galería o archivo
+          </Button>
+        </div>
+        <input
+          ref={inputCameraRef}
+          type="file"
+          accept={ACCEPT_IMAGES}
+          capture="environment"
+          className="sr-only"
+          aria-hidden
+          tabIndex={-1}
+          onChange={(e) => void uploadFiles(e.target.files)}
+        />
+        <input
+          ref={inputGalleryRef}
+          type="file"
+          accept={ACCEPT_IMAGES}
+          multiple
+          className="sr-only"
+          aria-hidden
+          tabIndex={-1}
+          onChange={(e) => void uploadFiles(e.target.files)}
+        />
+        {evidenciaPaths.length > 0 ? (
+          <ul className="flex flex-col gap-2 text-sm">
+            {evidenciaPaths.map((path, idx) => (
+              <li
+                key={`${path}-${idx}`}
+                className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/60 px-3 py-2"
+              >
+                <span className="truncate font-mono text-xs text-muted-foreground" title={path}>
+                  {path.split("/").pop()}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={() => removeEvidencia(idx)}
+                  aria-label="Quitar foto"
+                >
+                  <X className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
       {error ? (
         <p className="rounded-[1.5rem] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-red-600" role="alert">
           {error}

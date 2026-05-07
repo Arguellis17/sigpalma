@@ -31,6 +31,7 @@ export type AlertaPendienteRow = {
   descripcion: string | null;
   lote_codigo: string;
   amenaza: string | null;
+  evidencia_signed_urls: string[];
 };
 
 const SELECT_NONE = "__none__";
@@ -189,8 +190,34 @@ export function ValidacionFitosanidadClient({
                 ) : null}
               </p>
 
+              {current.evidencia_signed_urls.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Evidencia en campo
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {current.evidencia_signed_urls.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block overflow-hidden rounded-xl border border-border/60 bg-muted/30 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <img
+                          src={url}
+                          alt="Evidencia fitosanitaria"
+                          className="aspect-square w-full object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Sin fotos adjuntas en este reporte.</p>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="vf-decision">Decisión</Label>
                 <Select
                   value={decision}
                   onValueChange={(v) =>

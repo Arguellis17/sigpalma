@@ -4,7 +4,7 @@ export {
   anularCosecha,
   type ReportarCosechaResult,
 } from "./cosecha";
-export { crearAlertaFitosanitaria } from "./alertas";
+export { crearAlertaFitosanitaria, subirEvidenciaAlertaFitosanitaria } from "./alertas";
 export {
   validarAlertaFitosanitaria,
   cancelarOrdenControl,

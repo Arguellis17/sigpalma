@@ -841,6 +841,7 @@ export type Database = {
           catalogo_item_id: string | null;
           severidad: Database["public"]["Enums"]["nivel_severidad"];
           descripcion: string | null;
+          evidencia_urls: Json;
           lote_estado_alerta: boolean;
           created_by: string;
           source: Database["public"]["Enums"]["registro_source"];
@@ -859,6 +860,7 @@ export type Database = {
           catalogo_item_id?: string | null;
           severidad: Database["public"]["Enums"]["nivel_severidad"];
           descripcion?: string | null;
+          evidencia_urls?: Json;
           lote_estado_alerta?: boolean;
           created_by: string;
           source?: Database["public"]["Enums"]["registro_source"];
@@ -877,8 +879,8 @@ export type Database = {
           catalogo_item_id?: string | null;
           severidad?: Database["public"]["Enums"]["nivel_severidad"];
           descripcion?: string | null;
+          evidencia_urls?: Json;
           lote_estado_alerta?: boolean;
-          created_by?: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
           created_at?: string;

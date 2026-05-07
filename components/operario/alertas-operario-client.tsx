@@ -27,6 +27,7 @@ export type AlertaListRow = {
   lote_codigo: string;
   amenaza: string | null;
   amenaza_categoria: string | null;
+  evidencia_signed_urls: string[];
 };
 
 type Finca = { id: string; nombre: string };
@@ -222,6 +223,28 @@ export function AlertasOperarioClient({
                   {viewRow.descripcion ?? "—"}
                 </dd>
               </div>
+              {viewRow.evidencia_signed_urls.length > 0 ? (
+                <div>
+                  <dt className="text-xs font-medium uppercase text-muted-foreground">Fotos</dt>
+                  <dd className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {viewRow.evidencia_signed_urls.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block overflow-hidden rounded-lg border border-border/60"
+                      >
+                        <img
+                          src={url}
+                          alt="Evidencia"
+                          className="aspect-square w-full object-cover"
+                        />
+                      </a>
+                    ))}
+                  </dd>
+                </div>
+              ) : null}
               <div>
                 <dt className="text-xs font-medium uppercase text-muted-foreground">Validación</dt>
                 <dd className="mt-0.5">{viewRow.validacion_estado ?? "pendiente"}</dd>

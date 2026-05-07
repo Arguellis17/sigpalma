@@ -49,6 +49,10 @@ export const alertaFitosanitariaSchema = z.object({
   catalogo_item_id: uuid.optional().nullable(),
   severidad: nivelSeveridadSchema,
   descripcion: z.string().max(5000).optional().nullable(),
+  evidencia_urls: z
+    .array(z.string().min(3).max(500))
+    .min(1, "Adjunte al menos una foto de evidencia.")
+    .max(8),
   source: registroSourceSchema.optional().default("web"),
 });
 

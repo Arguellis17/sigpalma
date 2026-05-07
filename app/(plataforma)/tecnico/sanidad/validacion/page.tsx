@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { getInsumosFitosanitariosActivos } from "@/app/actions/queries";
 import { ValidacionFitosanidadClient } from "@/components/tecnico/validacion-fitosanidad-client";
+import {
+  createSignedUrlsForStoragePaths,
+  parseEvidenciaPaths,
+} from "@/lib/storage-evidencia-tecnica";
 
 export default async function TecnicoSanidadValidacionPage() {
   const session = await getSessionProfile();
@@ -19,7 +23,7 @@ export default async function TecnicoSanidadValidacionPage() {
   const { data: raw } = await supabase
     .from("alertas_fitosanitarias")
     .select(
-      "id, created_at, severidad, descripcion, catalogo_item_id, lote_id"
+      "id, created_at, severidad, descripcion, catalogo_item_id, lote_id, evidencia_urls"
     )
     .eq("finca_id", fincaId)
     .eq("is_voided", false)
@@ -47,16 +51,23 @@ export default async function TecnicoSanidadValidacionPage() {
   const loteMap = new Map((lotesRows ?? []).map((l) => [l.id, l.codigo]));
   const catMap = new Map((catRows ?? []).map((c) => [c.id, c.nombre]));
 
-  const alertas = list.map((row) => ({
-    id: row.id,
-    created_at: row.created_at,
-    severidad: row.severidad,
-    descripcion: row.descripcion,
-    lote_codigo: loteMap.get(row.lote_id) ?? "—",
-    amenaza: row.catalogo_item_id
-      ? catMap.get(row.catalogo_item_id) ?? null
-      : null,
-  }));
+  const alertas = [];
+  for (const row of list) {
+    const paths = parseEvidenciaPaths(row.evidencia_urls);
+    const evidenciaSignedUrls =
+      paths.length > 0 ? await createSignedUrlsForStoragePaths(supabase, paths) : [];
+    alertas.push({
+      id: row.id,
+      created_at: row.created_at,
+      severidad: row.severidad,
+      descripcion: row.descripcion,
+      lote_codigo: loteMap.get(row.lote_id) ?? "—",
+      amenaza: row.catalogo_item_id
+        ? catMap.get(row.catalogo_item_id) ?? null
+        : null,
+      evidencia_signed_urls: evidenciaSignedUrls,
+    });
+  }
 
   const insRes = await getInsumosFitosanitariosActivos();
   const insumos = insRes.success ? insRes.data : [];
