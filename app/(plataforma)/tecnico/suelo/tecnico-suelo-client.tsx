@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Layers, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { anularAnalisisSuelo } from "@/app/actions/suelo";
@@ -51,7 +51,19 @@ type Props = {
   initialRows: AnalisisSueloListRow[];
   fincas: Finca[];
   lotesPorFinca: Record<string, Lote[]>;
+  /** Desde HU12: abrir formulario con lote preseleccionado (?lote=uuid) */
+  initialLoteId?: string | null;
 };
+
+function findFincaForLote(
+  lotesPorFinca: Record<string, Lote[]>,
+  loteId: string
+): string | null {
+  for (const [fincaId, lotes] of Object.entries(lotesPorFinca)) {
+    if (lotes.some((l) => l.id === loteId)) return fincaId;
+  }
+  return null;
+}
 
 function parseFormNumber(v: string | null | undefined): number | null {
   if (v == null || v === "") return null;
@@ -105,7 +117,12 @@ function formatDate(iso: string | null | undefined) {
 
 type Sheet = { type: "create" } | { type: "edit"; row: AnalisisSueloListRow } | null;
 
-export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props) {
+export function TecnicoSueloClient({
+  initialRows,
+  fincas,
+  lotesPorFinca,
+  initialLoteId = null,
+}: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [rows, setRows] = useServerPropsState(initialRows);
@@ -114,6 +131,16 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
   const [confirmAnular, setConfirmAnular] = useState<AnalisisSueloListRow | null>(null);
   const [pendingAnular, setPendingAnular] = useState(false);
   const [createFormKey, setCreateFormKey] = useState(0);
+  const [defaultLoteId, setDefaultLoteId] = useState<string | null>(initialLoteId);
+
+  useEffect(() => {
+    if (!initialLoteId) return;
+    const fincaForLote = findFincaForLote(lotesPorFinca, initialLoteId);
+    if (!fincaForLote) return;
+    setCreateFormKey((k) => k + 1);
+    setDefaultLoteId(initialLoteId);
+    setSheet({ type: "create" });
+  }, [initialLoteId, lotesPorFinca]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -369,6 +396,7 @@ export function TecnicoSueloClient({ initialRows, fincas, lotesPorFinca }: Props
             lotesPorFinca={lotesPorFinca}
             layout="dialog"
             record={null}
+            defaultLoteId={defaultLoteId}
             onSuccess={afterSave}
             onCancel={closeSheet}
           />

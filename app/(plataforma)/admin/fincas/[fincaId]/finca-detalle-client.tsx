@@ -15,6 +15,7 @@ import {
 import { FincaEditForm } from "@/components/fincas/finca-edit-form";
 import { LoteCreateForm } from "@/components/fincas/lote-create-form";
 import { LoteEditForm } from "@/components/fincas/lote-edit-form";
+import { labelEstadoCultivo, type LoteEstadoCultivo } from "@/lib/lote-estado";
 
 type Finca = {
   id: string;
@@ -33,6 +34,8 @@ type Lote = {
   material_genetico: string | null;
   densidad_palmas_ha: string | number | null;
   pendiente_pct: string | number | null;
+  estado_cultivo: string;
+  activo: boolean;
   created_at: string;
 };
 
@@ -143,13 +146,21 @@ export function FincaDetalleClient({ finca, lotes, canEditFinca }: Props) {
                   key={lote.id}
                   className="surface-panel flex flex-col rounded-2xl border border-border/60 p-4"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold text-foreground">Lote {lote.codigo}</p>
-                    {hasSlope ? (
-                      <span title="Pendiente > 12% — Riesgo de erosión">
-                        <AlertTriangle className="size-4 text-amber-500" />
-                      </span>
-                    ) : null}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant={lote.activo ? "outline" : "secondary"}>
+                        {lote.activo ? "Activo" : "Inactivo"}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {labelEstadoCultivo(lote.estado_cultivo)}
+                      </Badge>
+                      {hasSlope ? (
+                        <span title="Pendiente > 12% — Riesgo de erosión">
+                          <AlertTriangle className="size-4 text-amber-500" />
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                     {lote.area_ha ? <p>{lote.area_ha} ha</p> : null}
@@ -244,6 +255,8 @@ export function FincaDetalleClient({ finca, lotes, canEditFinca }: Props) {
                 material_genetico: sheet.lote.material_genetico,
                 densidad_palmas_ha: sheet.lote.densidad_palmas_ha,
                 pendiente_pct: sheet.lote.pendiente_pct,
+                estado_cultivo: sheet.lote.estado_cultivo as LoteEstadoCultivo,
+                activo: sheet.lote.activo,
               }}
               onSuccess={handleDone}
               onCancel={() => setSheet(null)}

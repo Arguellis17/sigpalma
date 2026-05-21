@@ -19,7 +19,7 @@ async function getFincaConLotes(fincaId: string) {
   const { data: lotes } = await supabase
     .from("lotes")
     .select(
-      "id, codigo, area_ha, anio_siembra, material_genetico, densidad_palmas_ha, pendiente_pct, created_at"
+      "id, codigo, area_ha, anio_siembra, material_genetico, densidad_palmas_ha, pendiente_pct, estado_cultivo, activo, created_at"
     )
     .eq("finca_id", fincaId)
     .order("codigo", { ascending: true });

@@ -7,7 +7,6 @@ async function getMaterialGenetico() {
     .from("catalogo_items")
     .select("id, nombre, descripcion, subcategoria, unidad_medida, proveedor, anio_adquisicion, sintomas, activo")
     .eq("categoria", "material_genetico")
-    .eq("activo", true)
     .order("nombre", { ascending: true });
   return data ?? [];
 }
@@ -15,10 +14,20 @@ async function getMaterialGenetico() {
 export default async function CatalogoMaterialGeneticoPage() {
   const items = await getMaterialGenetico();
   return (
-    <CatalogoClient
-      categoria="material_genetico"
-      items={items}
-      unidadLabel="Presentación / formato"
-    />
+    <div className="space-y-5">
+      <div className="surface-panel rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+        <p>
+          Registre variedades con <strong className="text-foreground">proveedor certificado</strong> (RN16).
+          Los ítems activos alimentan la planificación de siembra del técnico agrónomo (RN27 / HU10) y la
+          cadena vivero → germinación → evaluación.
+        </p>
+      </div>
+      <CatalogoClient
+        categoria="material_genetico"
+        items={items}
+        unidadLabel="Presentación / formato"
+        materialGeneticoForm
+      />
+    </div>
   );
 }

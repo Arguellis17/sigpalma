@@ -51,6 +51,8 @@ type Props = {
   layout?: "page" | "dialog";
   /** When set, form runs in edit mode (multipart + PDF opcional). */
   record?: AnalisisSueloFormRecord | null;
+  /** Preselecciona lote al crear (p. ej. enlace desde plan nutrición HU12). */
+  defaultLoteId?: string | null;
   onSuccess: () => void;
   onCancel: () => void;
 };
@@ -60,19 +62,31 @@ export function AnalisisSueloForm({
   lotesPorFinca,
   layout = "page",
   record = null,
+  defaultLoteId = null,
   onSuccess,
   onCancel,
 }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fincaId, setFincaId] = useState(record?.finca_id ?? fincas[0]?.id ?? "");
-  const [loteId, setLoteId] = useState(record?.lote_id ?? "");
+  const [loteId, setLoteId] = useState(record?.lote_id ?? defaultLoteId ?? "");
   const [fechaAnalisis, setFechaAnalisis] = useState(() =>
     record?.fecha_analisis ? record.fecha_analisis.slice(0, 10) : todayLocalYmd()
   );
 
   const lotes = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
   const isEdit = Boolean(record);
+
+  useEffect(() => {
+    if (record || !defaultLoteId) return;
+    const fincaForLote = Object.entries(lotesPorFinca).find(([, list]) =>
+      list.some((l) => l.id === defaultLoteId)
+    )?.[0];
+    if (fincaForLote) {
+      setFincaId(fincaForLote);
+      setLoteId(defaultLoteId);
+    }
+  }, [defaultLoteId, lotesPorFinca, record]);
 
   useEffect(() => {
     setLoteId((prev) => {

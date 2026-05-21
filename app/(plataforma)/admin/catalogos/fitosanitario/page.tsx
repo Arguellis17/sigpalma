@@ -15,12 +15,21 @@ async function getFitosanitario() {
 export default async function CatalogoFitosanitarioPage() {
   const items = await getFitosanitario();
   return (
-    <CatalogoClient
-      categoria="plaga"
-      items={items}
-      showSintomas
-      allowCategorySelect
-      unidadLabel="Unidad de medida"
-    />
+    <div className="space-y-5">
+      <div className="surface-panel rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+        <p>
+          Catálogo RF07 / RN19: incluye amenazas críticas precargadas (Picudo, Pudrición del cogollo).
+          Las entradas activas alimentan reportes de campo (alertas MIP), validación técnica y futuros
+          censos sanitarios.
+        </p>
+      </div>
+      <CatalogoClient
+        categoria="plaga"
+        items={items}
+        showSintomas
+        allowCategorySelect
+        fitosanitarioForm
+      />
+    </div>
   );
 }
