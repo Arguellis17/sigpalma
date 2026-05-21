@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { labelSubcategoriaInsumo } from "@/lib/validations/catalogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -103,7 +104,9 @@ export function CatalogoReadonlyList({
                       {r.nombre}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {r.subcategoria ?? "—"}
+                      {r.subcategoria
+                        ? labelSubcategoriaInsumo(r.subcategoria)
+                        : "—"}
                     </td>
                     {extraColumns.map((c) => (
                       <td key={String(c.key)} className="px-4 py-3 text-muted-foreground">
@@ -151,7 +154,7 @@ export function CatalogoReadonlyList({
                 <dt className="text-xs font-medium text-muted-foreground">
                   Subcategoría
                 </dt>
-                <dd>{detail.subcategoria ?? "—"}</dd>
+                <dd>{labelSubcategoriaInsumo(detail.subcategoria)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-muted-foreground">

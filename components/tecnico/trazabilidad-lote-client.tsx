@@ -11,10 +11,14 @@ import {
   Wheat,
   Info,
   ExternalLink,
+  Layers,
+  FileDown,
+  Thermometer,
 } from "lucide-react";
 import Link from "next/link";
 
 import { getTrazabilidadTecnicaLote } from "@/app/actions/trazabilidad-lote";
+import { obtenerUrlDescargaAnalisisSuelo } from "@/app/actions/suelo";
 import type {
   TimelineEvent,
   TimelineEventCategory,
@@ -41,9 +45,11 @@ const IDLE = "__idle__";
 
 const CATEGORY_LABEL: Record<TimelineEventCategory, string> = {
   material_plan: "Genética / plan siembra",
+  vivero: "Vivero",
   labor: "Labores",
   nutricion: "Nutrición y riego",
   sanidad: "Sanidad",
+  suelo: "Suelo",
   cosecha: "Cosecha",
 };
 
@@ -51,12 +57,16 @@ function categoryIcon(cat: TimelineEventCategory) {
   switch (cat) {
     case "material_plan":
       return Sprout;
+    case "vivero":
+      return Thermometer;
     case "labor":
       return Tractor;
     case "nutricion":
       return Droplets;
     case "sanidad":
       return ShieldAlert;
+    case "suelo":
+      return Layers;
     case "cosecha":
       return Wheat;
     default:
@@ -232,28 +242,110 @@ export function TrazabilidadLoteClient({
             <DialogTitle>{detail?.title}</DialogTitle>
           </DialogHeader>
           {detail ? (
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">
-                Fecha: <strong>{formatDisplayDate(detail.displayDate)}</strong>
-              </p>
-              <dl className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
-                {Object.entries(detail.metadata).map(([k, v]) => (
-                  <div key={k}>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {k}
-                    </dt>
-                    <dd className="mt-0.5 break-words text-foreground">
-                      {typeof v === "object" && v !== null
-                        ? JSON.stringify(v, null, 2)
-                        : String(v ?? "—")}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            detail.category === "suelo" ? (
+              <SueloEventDetail event={detail} />
+            ) : (
+              <div className="space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  Fecha: <strong>{formatDisplayDate(detail.displayDate)}</strong>
+                </p>
+                <dl className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
+                  {Object.entries(detail.metadata).map(([k, v]) => (
+                    <div key={k}>
+                      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {k}
+                      </dt>
+                      <dd className="mt-0.5 break-words text-foreground">
+                        {typeof v === "object" && v !== null
+                          ? JSON.stringify(v, null, 2)
+                          : String(v ?? "—")}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )
           ) : null}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function SueloEventDetail({ event }: { event: TimelineEvent }) {
+  const m = event.metadata;
+  const analisisId = typeof m.analisisId === "string" ? m.analisisId : null;
+  const tieneArchivo = m.tieneArchivo === true;
+  const [pdfPending, setPdfPending] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  async function openPdf() {
+    if (!analisisId) return;
+    setPdfPending(true);
+    setPdfError(null);
+    const res = await obtenerUrlDescargaAnalisisSuelo(analisisId);
+    setPdfPending(false);
+    if (!res.success) {
+      setPdfError(res.error);
+      return;
+    }
+    window.open(res.data.url, "_blank", "noopener,noreferrer");
+  }
+
+  const rows: { label: string; value: string | null }[] = [
+    { label: "pH", value: m.ph != null ? String(m.ph) : null },
+    { label: "Humedad (%)", value: m.humedadPct != null ? String(m.humedadPct) : null },
+    { label: "Compactación", value: (m.compactacion as string) ?? null },
+    { label: "Fertilidad", value: (m.fertilidadCompleta as string) ?? null },
+    { label: "Textura", value: (m.textura as string) ?? null },
+    { label: "Aluminio", value: m.aluminio != null ? String(m.aluminio) : null },
+    { label: "CIC", value: m.cic != null ? String(m.cic) : null },
+    {
+      label: "Materia orgánica (%)",
+      value: m.materiaOrganicaPct != null ? String(m.materiaOrganicaPct) : null,
+    },
+    { label: "Drenaje en campo", value: (m.drenajeCampo as string) ?? null },
+    { label: "Notas", value: (m.notas as string) ?? null },
+  ].filter((r) => r.value != null && r.value !== "");
+
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-muted-foreground">
+        Fecha análisis: <strong>{formatDisplayDate(event.displayDate)}</strong>
+      </p>
+      <dl className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
+        {rows.map((r) => (
+          <div key={r.label}>
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {r.label}
+            </dt>
+            <dd className="mt-0.5 text-foreground">{r.value}</dd>
+          </div>
+        ))}
+        {rows.length === 0 ? (
+          <p className="text-muted-foreground">Sin parámetros registrados en el análisis.</p>
+        ) : null}
+      </dl>
+      {tieneArchivo && analisisId ? (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full rounded-xl"
+            disabled={pdfPending}
+            onClick={() => void openPdf()}
+          >
+            <FileDown className="mr-2 size-4" />
+            {pdfPending ? "Generando enlace…" : "Ver informe PDF"}
+          </Button>
+          {pdfError ? <p className="text-xs text-destructive">{pdfError}</p> : null}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Sin archivo PDF adjunto.</p>
+      )}
+      <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+        <Link href="/tecnico/suelo">Ir a análisis de suelo</Link>
+      </Button>
     </div>
   );
 }

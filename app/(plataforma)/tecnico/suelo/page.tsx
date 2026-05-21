@@ -54,9 +54,14 @@ async function getCatalogData(profileFincaId: string | null) {
   return { fincas: fincasResult, lotesPorFinca };
 }
 
-export default async function TecnicoSueloPage() {
+export default async function TecnicoSueloPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lote?: string }>;
+}) {
   const session = await getSessionProfile();
   const fincaId = session?.profile?.finca_id ?? null;
+  const { lote: loteQuery } = await searchParams;
   const [initialRows, { fincas, lotesPorFinca }] = await Promise.all([
     getAnalisis(fincaId),
     getCatalogData(fincaId),
@@ -67,6 +72,7 @@ export default async function TecnicoSueloPage() {
       initialRows={initialRows}
       fincas={fincas}
       lotesPorFinca={lotesPorFinca}
+      initialLoteId={loteQuery?.trim() || null}
     />
   );
 }

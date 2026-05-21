@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   getCatalogoMaterialGenetico,
   getLotesPlanificables,
@@ -60,6 +62,20 @@ export default async function PlanificacionSiembraPage() {
           <span className="text-foreground">agenda de labores</span> (mantenimiento).
         </p>
       </div>
+      {catalogo.data.length === 0 ? (
+        <div className="surface-panel rounded-[1.5rem] border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-muted-foreground">
+          <p>
+            No hay material genético activo en el catálogo. Sin variedades certificadas no puede
+            crear planes de siembra (RN27).
+          </p>
+          <Link
+            href="/admin/catalogos/material-genetico"
+            className="mt-2 inline-block font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Catálogo → Material genético
+          </Link>
+        </div>
+      ) : null}
       <PlanSiembraClient
         fincaId={fincaId}
         catalogoMaterial={catalogo.data}

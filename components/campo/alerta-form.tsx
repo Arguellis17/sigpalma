@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
   crearAlertaFitosanitaria,
+  crearReporteEnfermedad,
+  crearReportePlaga,
   subirEvidenciaAlertaFitosanitaria,
 } from "@/app/actions/alertas";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
+import { labelCategoriaFitosanitaria } from "@/lib/validations/catalogo";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +30,8 @@ type Props = {
   catalogo: CatalogoFitosanidadOption[];
   embedded?: boolean;
   onSuccess?: () => void;
+  /** HU25 plagas / HU26 enfermedades: catálogo obligatorio por tipo. */
+  variant?: "general" | "plaga" | "enfermedad";
 };
 
 const LOTE_SELECT_IDLE = "__lote_idle__";
@@ -40,12 +45,17 @@ const SEVERIDADES = [
 
 const ACCEPT_IMAGES = "image/jpeg,image/png,image/webp";
 
+function catalogoObligatorio(variant: Props["variant"]): boolean {
+  return variant === "plaga" || variant === "enfermedad";
+}
+
 export function AlertaForm({
   fincas,
   defaultFincaId,
   catalogo,
   embedded = false,
   onSuccess,
+  variant = "general",
 }: Props) {
   const { fincaId, setFincaId, loteId, setLoteId, lotes, loadingLotes } =
     useFincaLoteOptions(fincas, defaultFincaId);
@@ -114,16 +124,30 @@ export function AlertaForm({
       setError("Adjunte al menos una foto de evidencia (cámara o galería / archivo).");
       return;
     }
+    if (catalogoObligatorio(variant) && !catalogoId) {
+      setError(
+        variant === "plaga"
+          ? "Seleccione una plaga del catálogo (RN71)."
+          : "Seleccione una enfermedad del catálogo (RN74)."
+      );
+      return;
+    }
     setPending(true);
-    const res = await crearAlertaFitosanitaria({
+    const payload = {
       finca_id: fincaId,
       lote_id: loteId,
       catalogo_item_id: catalogoId || null,
       severidad,
       descripcion: descripcion.trim() || null,
       evidencia_urls: evidenciaPaths,
-      source: "web",
-    });
+      source: "web" as const,
+    };
+    const res =
+      variant === "plaga"
+        ? await crearReportePlaga({ ...payload, catalogo_item_id: catalogoId })
+        : variant === "enfermedad"
+          ? await crearReporteEnfermedad({ ...payload, catalogo_item_id: catalogoId })
+          : await crearAlertaFitosanitaria(payload);
     setPending(false);
     if (!res.success) {
       setError(res.error);
@@ -139,7 +163,11 @@ export function AlertaForm({
     setMessage(
       res.data.lote_estado_alerta
         ? "Alerta crítica registrada: el lote queda marcado para seguimiento."
-        : "Alerta fitosanitaria registrada."
+        : variant === "plaga"
+          ? "Reporte de plaga registrado. Queda pendiente de validación del técnico."
+          : variant === "enfermedad"
+            ? "Reporte de enfermedad registrado. Queda pendiente de validación del técnico."
+            : "Alerta fitosanitaria registrada."
     );
   }
 
@@ -210,23 +238,52 @@ export function AlertaForm({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="plaga">Plaga / enfermedad (catálogo, opcional)</Label>
+        <Label htmlFor="plaga">
+          {variant === "plaga"
+            ? "Plaga (catálogo, obligatorio)"
+            : variant === "enfermedad"
+              ? "Enfermedad (catálogo, obligatorio)"
+              : "Plaga / enfermedad (catálogo, opcional)"}
+        </Label>
         <Select
-          value={catalogoId || "__none__"}
+          value={catalogoId || (catalogoObligatorio(variant) ? "" : "__none__")}
           onValueChange={(v) => setCatalogoId(v === "__none__" ? "" : v)}
+          required={catalogoObligatorio(variant)}
         >
           <SelectTrigger id="plaga" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
-            <SelectValue placeholder="— Sin seleccionar —" />
+            <SelectValue
+              placeholder={
+                variant === "plaga"
+                  ? "Seleccione la plaga detectada…"
+                  : variant === "enfermedad"
+                    ? "Seleccione la enfermedad probable…"
+                    : "— Sin seleccionar —"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">— Sin seleccionar —</SelectItem>
+            {variant === "general" ? (
+              <SelectItem value="__none__">— Sin seleccionar —</SelectItem>
+            ) : null}
             {catalogo.map((c) => (
               <SelectItem key={c.id} value={c.id}>
-                [{c.categoria}] {c.nombre}
+                {variant === "general"
+                  ? `[${labelCategoriaFitosanitaria(c.categoria)}] ${c.nombre}`
+                  : c.nombre}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {variant === "plaga" && catalogo.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No hay plagas activas en el catálogo. Solicite al administrador su carga (HU07).
+          </p>
+        ) : null}
+        {variant === "enfermedad" && catalogo.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No hay enfermedades activas en el catálogo. Solicite al administrador su carga (HU07).
+          </p>
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="severidad">Severidad</Label>
@@ -249,12 +306,21 @@ export function AlertaForm({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="desc">Descripción (opcional)</Label>
+        <Label htmlFor="desc">
+          {variant === "enfermedad"
+            ? "Descripción del síntoma (recomendado)"
+            : "Descripción (opcional)"}
+        </Label>
         <Textarea
           id="desc"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           rows={3}
+          placeholder={
+            variant === "enfermedad"
+              ? "Ej.: amarillamiento en corona, avance visual del síntoma…"
+              : undefined
+          }
           className="min-h-[110px] rounded-2xl border-border/70 bg-background/80 px-4 py-3 text-base shadow-none"
         />
       </div>
@@ -267,7 +333,9 @@ export function AlertaForm({
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          En el teléfono puede usar la cámara; en la computadora, adjunte archivos de imagen.
+          {variant === "enfermedad"
+            ? "Enfoque la foto en el síntoma principal: hojas, estípite o cogollo (RN75)."
+            : "En el teléfono puede usar la cámara; en la computadora, adjunte archivos de imagen."}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -350,7 +418,11 @@ export function AlertaForm({
         </p>
       ) : null}
       <Button type="submit" size="lg" className="min-h-12 w-full rounded-2xl shadow-lg shadow-primary/15 sm:w-auto" disabled={pending}>
-        {pending ? "Enviando…" : "Registrar alerta"}
+        {pending ? "Enviando…" : variant === "plaga"
+          ? "Enviar reporte de plaga"
+          : variant === "enfermedad"
+            ? "Enviar reporte de enfermedad"
+            : "Registrar alerta"}
       </Button>
     </form>
   );

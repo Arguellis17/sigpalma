@@ -54,8 +54,8 @@ export default async function TecnicoTrazabilidadPage({
           Trazabilidad técnica por lote
         </h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          HU17 — Línea de tiempo cronológica (más reciente primero) con material de siembra, labores,
-          programación de nutrición y riego, sanidad y cosecha. Solo consulta.
+          Línea de tiempo cronológica (más reciente primero) con material de siembra, vivero, labores,
+          programación de nutrición y riego, sanidad, análisis de suelo y cosecha. Solo consulta.
         </p>
       </div>
       <TrazabilidadLoteClient

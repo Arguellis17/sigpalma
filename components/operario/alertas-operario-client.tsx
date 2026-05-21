@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Search } from "lucide-react";
+import { Bug, Eye, HeartPulse, Plus, Search } from "lucide-react";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { AlertaForm } from "@/components/campo/alerta-form";
@@ -37,30 +37,53 @@ type Props = {
   fincas: Finca[];
   defaultFincaId: string | null;
   catalogo: CatalogoFitosanidadOption[];
+  catalogoPlagas: CatalogoFitosanidadOption[];
+  catalogoEnfermedades: CatalogoFitosanidadOption[];
 };
+
+type FiltroTipo = "todos" | "plaga" | "enfermedad";
 
 export function AlertasOperarioClient({
   initialRows,
   fincas,
   defaultFincaId,
   catalogo,
+  catalogoPlagas,
+  catalogoEnfermedades,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [rows] = useServerPropsState(initialRows);
   const [search, setSearch] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>("todos");
   const [createOpen, setCreateOpen] = useState(false);
+  const [createPlagaOpen, setCreatePlagaOpen] = useState(false);
+  const [createEnfermedadOpen, setCreateEnfermedadOpen] = useState(false);
   const [createKey, setCreateKey] = useState(0);
   const [viewRow, setViewRow] = useState<AlertaListRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
     return rows.filter((r) => {
+      if (filtroTipo === "plaga" && r.amenaza_categoria !== "plaga") return false;
+      if (filtroTipo === "enfermedad" && r.amenaza_categoria !== "enfermedad") return false;
+      if (!q) return true;
       const blob = `${r.lote_codigo} ${r.amenaza ?? ""} ${r.descripcion ?? ""} ${r.severidad} ${r.validacion_estado ?? ""}`.toLowerCase();
       return blob.includes(q);
     });
-  }, [rows, search]);
+  }, [rows, search, filtroTipo]);
+
+  function afterCreateEnfermedad() {
+    setCreateEnfermedadOpen(false);
+    toast("Reporte de enfermedad registrado.", "success");
+    router.refresh();
+  }
+
+  function afterCreatePlaga() {
+    setCreatePlagaOpen(false);
+    toast("Reporte de plaga registrado.", "success");
+    router.refresh();
+  }
 
   function afterCreate() {
     setCreateOpen(false);
@@ -81,17 +104,64 @@ export function AlertasOperarioClient({
             className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
           />
         </div>
-        <Button
-          type="button"
-          className="shrink-0 gap-1.5"
-          onClick={() => {
-            setCreateKey((k) => k + 1);
-            setCreateOpen(true);
-          }}
-        >
-          <Plus className="size-4" />
-          Nueva alerta
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            className="shrink-0 gap-1.5"
+            onClick={() => {
+              setCreateKey((k) => k + 1);
+              setCreatePlagaOpen(true);
+            }}
+          >
+            <Bug className="size-4" />
+            Reportar plaga
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="shrink-0 gap-1.5"
+            onClick={() => {
+              setCreateKey((k) => k + 1);
+              setCreateEnfermedadOpen(true);
+            }}
+          >
+            <HeartPulse className="size-4" />
+            Reportar enfermedad
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 gap-1.5"
+            onClick={() => {
+              setCreateKey((k) => k + 1);
+              setCreateOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Otra alerta
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["todos", "Todas"],
+            ["plaga", "Plagas"],
+            ["enfermedad", "Enfermedades"],
+          ] as const
+        ).map(([value, label]) => (
+          <Button
+            key={value}
+            type="button"
+            size="sm"
+            variant={filtroTipo === value ? "default" : "outline"}
+            className="rounded-full"
+            onClick={() => setFiltroTipo(value)}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
       {filtered.length === 0 ? (
@@ -159,6 +229,48 @@ export function AlertasOperarioClient({
           </div>
         </div>
       )}
+
+      <Dialog open={createEnfermedadOpen} onOpenChange={(v) => !v && setCreateEnfermedadOpen(false)}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reporte de enfermedad</DialogTitle>
+            <DialogDescription>
+              Seleccione la enfermedad del catálogo, adjunte foto del síntoma y describa el
+              hallazgo. El técnico validará el caso (RF15).
+            </DialogDescription>
+          </DialogHeader>
+          <AlertaForm
+            key={`enfermedad-${createKey}`}
+            fincas={fincas}
+            defaultFincaId={defaultFincaId}
+            catalogo={catalogoEnfermedades}
+            variant="enfermedad"
+            embedded
+            onSuccess={afterCreateEnfermedad}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createPlagaOpen} onOpenChange={(v) => !v && setCreatePlagaOpen(false)}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reporte de plaga</DialogTitle>
+            <DialogDescription>
+              Seleccione la plaga del catálogo, adjunte al menos una foto y describa el hallazgo. El
+              técnico validará el caso (RF15).
+            </DialogDescription>
+          </DialogHeader>
+          <AlertaForm
+            key={`plaga-${createKey}`}
+            fincas={fincas}
+            defaultFincaId={defaultFincaId}
+            catalogo={catalogoPlagas}
+            variant="plaga"
+            embedded
+            onSuccess={afterCreatePlaga}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createOpen} onOpenChange={(v) => !v && setCreateOpen(false)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">

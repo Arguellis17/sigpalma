@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { actualizarLote } from "@/app/actions/lotes";
+import { LoteEstadoFields } from "@/components/fincas/lote-estado-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
+import type { LoteEstadoCultivo } from "@/lib/lote-estado";
 
 type Props = {
   fincaId: string;
@@ -17,6 +19,8 @@ type Props = {
     material_genetico: string | null;
     densidad_palmas_ha: string | number | null;
     pendiente_pct?: string | number | null;
+    estado_cultivo: LoteEstadoCultivo;
+    activo: boolean;
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -36,6 +40,8 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
   const [pendientePct, setPendientePct] = useState(
     initial.pendiente_pct != null ? String(initial.pendiente_pct) : ""
   );
+  const [estadoCultivo, setEstadoCultivo] = useState<LoteEstadoCultivo>(initial.estado_cultivo);
+  const [activo, setActivo] = useState(initial.activo);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +62,8 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
       material_genetico: material.trim() || null,
       densidad_palmas_ha: densRaw === "" ? null : densRaw,
       pendiente_pct: pendRaw === "" ? null : pendRaw,
+      estado_cultivo: estadoCultivo,
+      activo,
     });
     setPending(false);
     if (!result.success) {
@@ -105,6 +113,13 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
           />
         </div>
       </div>
+      <LoteEstadoFields
+        idPrefix="le"
+        estadoCultivo={estadoCultivo}
+        onEstadoCultivoChange={setEstadoCultivo}
+        activo={activo}
+        onActivoChange={setActivo}
+      />
       <div className="space-y-1.5">
         <Label htmlFor="le-pendiente">Pendiente del terreno (%)</Label>
         <Input
@@ -168,4 +183,3 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
     </form>
   );
 }
-

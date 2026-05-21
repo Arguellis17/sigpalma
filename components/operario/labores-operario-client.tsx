@@ -6,6 +6,8 @@ import { Eye, Plus, Search, Trash2 } from "lucide-react";
 import { anularLabor } from "@/app/actions/labores";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { LaborForm } from "@/components/campo/labor-form";
+import { formatCantidadLabor } from "@/lib/labor-ejecucion";
+import type { LaborPendienteRow } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,14 +27,20 @@ export type LaborListRow = {
   notas: string | null;
   lote_codigo: string;
   created_at: string;
+  cantidad_ejecutada: number;
+  unidad_medida: string;
+  ejecutada_at: string;
 };
 
 type Finca = { id: string; nombre: string };
+type CatalogoRow = { id: string; nombre: string };
 
 type Props = {
   initialRows: LaborListRow[];
   fincas: Finca[];
   defaultFincaId: string | null;
+  catalogoLabores: CatalogoRow[];
+  pendientes: LaborPendienteRow[];
 };
 
 function formatDate(iso: string) {
@@ -49,6 +57,8 @@ export function LaboresOperarioClient({
   initialRows,
   fincas,
   defaultFincaId,
+  catalogoLabores,
+  pendientes,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -92,6 +102,19 @@ export function LaboresOperarioClient({
 
   return (
     <div className="fade-up-enter space-y-6">
+      {pendientes.length > 0 ? (
+        <div className="surface-panel rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm">
+          <span className="font-medium text-foreground">
+            {pendientes.length} tarea{pendientes.length === 1 ? "" : "s"} pendiente
+            {pendientes.length === 1 ? "" : "s"}
+          </span>
+          <span className="text-muted-foreground">
+            {" "}
+            — use «Nueva labor» para reportar la ejecución.
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -127,14 +150,15 @@ export function LaboresOperarioClient({
       ) : (
         <div className="surface-panel overflow-hidden rounded-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <th className="px-4 py-3">Fecha ejecución</th>
                   <th className="px-4 py-3">Lote</th>
                   <th className="px-4 py-3">Tipo</th>
+                  <th className="px-4 py-3">Avance</th>
                   <th className="px-4 py-3">Notas</th>
-                  <th className="px-4 py-3">Registro</th>
+                  <th className="px-4 py-3">Reporte</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -151,11 +175,14 @@ export function LaboresOperarioClient({
                     </td>
                     <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
                     <td className="px-4 py-3">{r.tipo}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {formatCantidadLabor(r.cantidad_ejecutada, r.unidad_medida)}
+                    </td>
                     <td className="max-w-[200px] truncate px-4 py-3 text-muted-foreground">
                       {r.notas ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {formatDate(r.created_at)}
+                      {formatDate(r.ejecutada_at)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -201,6 +228,8 @@ export function LaboresOperarioClient({
             key={createKey}
             fincas={fincas}
             defaultFincaId={defaultFincaId}
+            catalogoLabores={catalogoLabores}
+            pendientes={pendientes}
             embedded
             onSuccess={afterCreate}
           />
@@ -224,6 +253,12 @@ export function LaboresOperarioClient({
                 <dd className="mt-0.5">{viewRow.tipo}</dd>
               </div>
               <div>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">Avance</dt>
+                <dd className="mt-0.5">
+                  {formatCantidadLabor(viewRow.cantidad_ejecutada, viewRow.unidad_medida)}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-xs font-medium uppercase text-muted-foreground">
                   Fecha ejecución
                 </dt>
@@ -236,9 +271,9 @@ export function LaboresOperarioClient({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">Registro</dt>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">Reporte</dt>
                 <dd className="mt-0.5 text-muted-foreground">
-                  {new Date(viewRow.created_at).toLocaleString("es-CO", {
+                  {new Date(viewRow.ejecutada_at).toLocaleString("es-CO", {
                     dateStyle: "short",
                     timeStyle: "short",
                   })}

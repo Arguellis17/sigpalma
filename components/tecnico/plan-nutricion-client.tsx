@@ -391,7 +391,10 @@ export function PlanNutricionClient({
                     <p className="text-sm text-amber-700 dark:text-amber-400">
                       No hay análisis de suelo registrado para este lote. Se recomienda registrar uno
                       en{" "}
-                      <Link href="/tecnico/suelo" className="underline font-medium">
+                      <Link
+                        href={loteId ? `/tecnico/suelo?lote=${loteId}` : "/tecnico/suelo"}
+                        className="underline font-medium"
+                      >
                         Análisis de suelo
                       </Link>{" "}
                       antes de definir el plan de nutrición.

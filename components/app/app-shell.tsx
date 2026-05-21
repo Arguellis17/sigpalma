@@ -27,6 +27,7 @@ import {
   ScrollText,
   ClipboardCheck,
   Waypoints,
+  Wrench,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -136,6 +137,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/admin/catalogos/material-genetico", label: "Material genético", icon: Sprout },
             { href: "/admin/catalogos/fitosanitario", label: "Fitosanitario", icon: FlaskConical },
             { href: "/admin/catalogos/labores", label: "Labores agronómicas", icon: Tractor },
+            {
+              href: "/admin/inventario-herramientas",
+              label: "Inventario herramientas",
+              icon: Wrench,
+            },
           ],
         },
       ];
@@ -156,6 +162,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/tecnico/planificacion-siembra",
               label: "Planificación de siembra",
               icon: Leaf,
+            },
+            {
+              href: "/tecnico/preparacion-terreno",
+              label: "Preparación de terreno",
+              icon: Layers,
             },
             {
               href: "/tecnico/vivero/evaluacion",
@@ -194,7 +205,19 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
           items: [
             { href: "/operario", label: "Dashboard", icon: LayoutDashboard },
             { href: "/operario/labores", label: "Labores", icon: Tractor },
+            { href: "/operario/nutricion", label: "Fertilización", icon: Droplets },
+            {
+              href: "/operario/preparacion-terreno",
+              label: "Preparación terreno",
+              icon: Layers,
+            },
+            { href: "/operario/siembra", label: "Siembra", icon: Sprout },
             { href: "/operario/cosecha", label: "Cosecha", icon: Wheat },
+            {
+              href: "/operario/inventario-herramientas",
+              label: "Inventario herramientas",
+              icon: Wrench,
+            },
           ],
         },
         {
@@ -233,6 +256,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/operario/sanidad/aplicaciones",
               label: "Aplicaciones",
               icon: ClipboardList,
+            },
+            {
+              href: "/operario/sanidad/censos",
+              label: "Censos sanitarios",
+              icon: ClipboardCheck,
             },
           ],
         },
@@ -274,10 +302,12 @@ const breadcrumbLabels: Record<string, string> = {
   ordenes: "Órdenes",
   aplicaciones: "Aplicaciones",
   alertas: "Alertas",
+  censos: "Censos sanitarios",
   "monitoreos-pendientes": "Monitoreos pendientes",
   "programacion-monitoreos": "Programación monitoreos",
   labores: "Labores",
   cosecha: "Cosecha",
+  "inventario-herramientas": "Inventario herramientas",
   vivero: "Vivero",
   germinacion: "Germinación",
   evaluacion: "Evaluación",
@@ -377,19 +407,19 @@ function getPageMeta(pathname: string): PageMeta {
   if (pathname === "/admin/catalogos/insumos") {
     return {
       title: "Insumos",
-      description: "Catálogo de fertilizantes, herbicidas y otros insumos.",
+      description: "Catálogo de insumos: nutrición, fitosanitarios y herramientas.",
     };
   }
   if (pathname === "/admin/catalogos/material-genetico") {
     return {
       title: "Material genético",
-      description: "Catálogo de variedades y semillas.",
+      description: "Variedades certificadas (DxP) con proveedor para planificación y trazabilidad.",
     };
   }
   if (pathname === "/admin/catalogos/fitosanitario") {
     return {
       title: "Fitosanitario",
-      description: "Catálogo de plagas, enfermedades y productos fitosanitarios.",
+      description: "Plagas y enfermedades estandarizadas para reportes MIP y alertas en campo.",
     };
   }
   if (pathname === "/admin/catalogos/labores") {
@@ -408,7 +438,7 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Trazabilidad por lote",
       description:
-        "HU17 — Línea de tiempo técnica: genética/plan de siembra, labores, nutrición, sanidad y cosecha (solo lectura).",
+        "Línea de tiempo técnica: genética/plan de siembra, vivero, labores, nutrición, sanidad, suelo y cosecha (solo lectura).",
     };
   }
   if (pathname === "/tecnico/planificacion-siembra") {
@@ -435,13 +465,34 @@ function getPageMeta(pathname: string): PageMeta {
   if (pathname === "/tecnico/suelo") {
     return {
       title: "Análisis de suelo",
-      description: "Registro de pH, humedad, compactación y nutrientes por lote.",
+      description: "pH, humedad, compactación, nutrientes y PDF de laboratorio por lote (RF16).",
     };
   }
   if (pathname === "/operario/labores") {
     return {
       title: "Labores",
       description: "Registro de labores agronómicas diarias.",
+    };
+  }
+  if (pathname === "/operario/nutricion") {
+    return {
+      title: "Fertilización",
+      description:
+        "Registro de aplicaciones de fertilizantes según el plan nutricional programado por el técnico.",
+    };
+  }
+  if (pathname === "/operario/preparacion-terreno") {
+    return {
+      title: "Preparación de terreno",
+      description:
+        "Adecuación física del lote planificado: actividades, pendiente final y habilitación para siembra.",
+    };
+  }
+  if (pathname === "/operario/siembra") {
+    return {
+      title: "Registro de siembra",
+      description:
+        "Formalice la siembra de plántulas en lotes con preparación aprobada; confirme parámetros técnicos y cantidad sembrada.",
     };
   }
   if (pathname === "/operario/cosecha") {

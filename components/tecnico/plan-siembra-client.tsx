@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import Link from "next/link";
 
 import {
   actualizarPlanSiembra,
@@ -72,6 +73,9 @@ export function PlanSiembraClient({
   const [notas, setNotas] = useState("");
   const [confirmacionErosion, setConfirmacionErosion] = useState(false);
   const [pending, setPending] = useState(false);
+  const [viveroGateHint, setViveroGateHint] = useState<"germinacion" | "evaluacion" | null>(
+    null
+  );
 
   const [anularOpen, setAnularOpen] = useState(false);
   const [anularId, setAnularId] = useState<string | null>(null);
@@ -94,6 +98,7 @@ export function PlanSiembraClient({
     setFechaYmd(todayColombiaYmd());
     setNotas("");
     setConfirmacionErosion(false);
+    setViveroGateHint(null);
     setDialogOpen(true);
   }
 
@@ -104,7 +109,19 @@ export function PlanSiembraClient({
     setFechaYmd(row.fecha_proyectada);
     setNotas(row.notas ?? "");
     setConfirmacionErosion(row.confirmacion_erosion);
+    setViveroGateHint(null);
     setDialogOpen(true);
+  }
+
+  function parseViveroGateError(message: string): "germinacion" | "evaluacion" | null {
+    const m = message.toLowerCase();
+    if (m.includes("germinación") || m.includes("germinacion") || m.includes("tratamiento térmico")) {
+      return "germinacion";
+    }
+    if (m.includes("evaluación de vivero") || m.includes("evaluacion de vivero") || m.includes("apto")) {
+      return "evaluacion";
+    }
+    return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -134,9 +151,11 @@ export function PlanSiembraClient({
       });
       setPending(false);
       if (!result.success) {
+        setViveroGateHint(parseViveroGateError(result.error));
         toast(result.error, "error");
         return;
       }
+      setViveroGateHint(null);
       toast("Plan de siembra registrado. El lote queda planificado.");
     } else {
       if (mostrarAdvertenciaPendiente && !confirmacionErosion) {
@@ -187,10 +206,15 @@ export function PlanSiembraClient({
           Nuevo plan de siembra
         </Button>
         {!hayCatalogo ? (
-          <p className="text-sm text-muted-foreground">
-            No hay material genético activo en catálogo. Solicite carga en Catálogos → Material
-            genético.
-          </p>
+          <div className="surface-panel max-w-xl rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+            <p>
+              No hay material genético activo en el catálogo (RN27). Un administrador debe registrar
+              al menos una variedad antes de planificar siembra.
+            </p>
+            <Button variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
+              <Link href="/admin/catalogos/material-genetico">Ir a catálogo material genético</Link>
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -301,8 +325,9 @@ export function PlanSiembraClient({
                   </Select>
                   {lotesPlanificables.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      No hay lotes elegibles. Marque lotes como vacante/disponible en la ficha del
-                      lote o cree nuevos lotes con ese estado.
+                      No hay lotes elegibles. En Administración → Fincas → Editar lote, use estado
+                      <strong> Vacante</strong> o <strong> Disponible</strong> y deje el lote{" "}
+                      <strong>Activo</strong>.
                     </p>
                   ) : null}
                 </div>
@@ -353,6 +378,35 @@ export function PlanSiembraClient({
                       Confirmo conocer el riesgo de erosión por pendiente elevada.
                     </span>
                   </label>
+                </div>
+              ) : null}
+
+              {viveroGateHint ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-3 text-sm">
+                  <p className="font-medium text-foreground">Cadena vivero incompleta</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {viveroGateHint === "germinacion"
+                      ? "Registre el tratamiento térmico del material seleccionado antes de planificar."
+                      : "Registre una evaluación de vivero con concepto «Apto para trasplante» vinculada a la germinación del mismo material."}
+                  </p>
+                  <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                    <li>
+                      <Link
+                        href="/operario/vivero/germinacion"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        Germinación (operario)
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/tecnico/vivero/evaluacion"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        Evaluación de vivero (técnico)
+                      </Link>
+                    </li>
+                  </ol>
                 </div>
               ) : null}
 

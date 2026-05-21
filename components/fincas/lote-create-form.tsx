@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { crearLote } from "@/app/actions/lotes";
+import { LoteEstadoFields } from "@/components/fincas/lote-estado-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
+import type { LoteEstadoCultivo } from "@/lib/lote-estado";
 
 type Props = {
   fincaId: string;
@@ -19,6 +21,8 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendientePct, setPendientePct] = useState("");
+  const [estadoCultivo, setEstadoCultivo] = useState<LoteEstadoCultivo>("disponible");
+  const [activo, setActivo] = useState(true);
 
   const slopeWarning =
     pendientePct !== "" && Number(pendientePct) > SLOPE_THRESHOLD;
@@ -42,6 +46,8 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
         densRaw === "" || densRaw === null ? null : densRaw,
       pendiente_pct:
         pendRaw === "" || pendRaw === null ? null : pendRaw,
+      estado_cultivo: estadoCultivo,
+      activo,
     });
     setPending(false);
     if (!result.success) {
@@ -93,6 +99,13 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
           />
         </div>
       </div>
+      <LoteEstadoFields
+        idPrefix="lc"
+        estadoCultivo={estadoCultivo}
+        onEstadoCultivoChange={setEstadoCultivo}
+        activo={activo}
+        onActivoChange={setActivo}
+      />
       <div className="space-y-1.5">
         <Label htmlFor="lc-pendiente">
           Pendiente del terreno (%)
@@ -159,4 +172,3 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
     </form>
   );
 }
-
