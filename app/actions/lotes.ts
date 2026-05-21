@@ -11,6 +11,7 @@ import {
   type CrearLoteInput,
   type ActualizarLoteInput,
 } from "@/lib/validations/finca-lote";
+import { isEstadoPlanificable } from "@/lib/lote-estado";
 import { actionError, actionOk, type ActionResult } from "./types";
 
 export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string }>> {
@@ -59,6 +60,9 @@ export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string
     }
   }
 
+  const estadoCultivo = input.estado_cultivo ?? "disponible";
+  const activo = input.activo ?? true;
+
   const { data, error } = await supabase
     .from("lotes")
     .insert({
@@ -69,7 +73,8 @@ export async function crearLote(raw: unknown): Promise<ActionResult<{ id: string
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
       pendiente_pct: input.pendiente_pct ?? null,
-      ...(input.estado_cultivo ? { estado_cultivo: input.estado_cultivo } : {}),
+      estado_cultivo: estadoCultivo,
+      activo,
     })
     .select("id")
     .single();
@@ -105,12 +110,34 @@ export async function actualizarLote(
   const supabase = await createClient();
   const { data: existing } = await supabase
     .from("lotes")
-    .select("id, finca_id")
+    .select("id, finca_id, estado_cultivo, activo")
     .eq("id", input.id)
     .maybeSingle();
 
   if (!existing || existing.finca_id !== input.finca_id) {
     return actionError("El lote no coincide con la finca indicada.");
+  }
+
+  const nextEstado = input.estado_cultivo ?? existing.estado_cultivo;
+  const nextActivo = input.activo ?? existing.activo;
+
+  if (
+    existing.estado_cultivo === "planificado_siembra" &&
+    isEstadoPlanificable(nextEstado)
+  ) {
+    const { data: planActivo } = await supabase
+      .from("planes_siembra")
+      .select("id")
+      .eq("lote_id", input.id)
+      .eq("is_voided", false)
+      .limit(1)
+      .maybeSingle();
+
+    if (planActivo) {
+      return actionError(
+        "El lote tiene un plan de siembra activo. Anúlelo antes de cambiar el estado a vacante o disponible."
+      );
+    }
   }
 
   const { data, error } = await supabase
@@ -122,9 +149,8 @@ export async function actualizarLote(
       material_genetico: input.material_genetico?.trim() || null,
       densidad_palmas_ha: input.densidad_palmas_ha ?? null,
       pendiente_pct: input.pendiente_pct ?? null,
-      ...(input.estado_cultivo !== undefined
-        ? { estado_cultivo: input.estado_cultivo }
-        : {}),
+      estado_cultivo: nextEstado,
+      activo: nextActivo,
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)

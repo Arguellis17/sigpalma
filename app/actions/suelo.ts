@@ -28,6 +28,53 @@ function canAccessAnalisisSueloFinca(
   return profile.finca_id === fincaId;
 }
 
+const MUTATE_ROLES = ["superadmin", "admin", "agronomo"] as const;
+
+function assertPuedeMutarAnalisisSuelo(
+  profile: Tables<"profiles">,
+  fincaId: string
+): string | null {
+  if (!profile.role || !MUTATE_ROLES.includes(profile.role as (typeof MUTATE_ROLES)[number])) {
+    return "No tienes permiso para gestionar análisis de suelo.";
+  }
+  if (!canAccessAnalisisSueloFinca(profile, fincaId)) {
+    return "No tiene permiso para esta finca.";
+  }
+  return null;
+}
+
+async function assertLoteEnFinca(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  fincaId: string,
+  loteId: string
+): Promise<string | null> {
+  const { data: lote, error } = await supabase
+    .from("lotes")
+    .select("finca_id")
+    .eq("id", loteId)
+    .maybeSingle();
+  if (error || !lote) return "Lote no encontrado.";
+  if (lote.finca_id !== fincaId) {
+    return "El lote no pertenece a la finca seleccionada.";
+  }
+  return null;
+}
+
+function esArchivoPdfValido(file: File): boolean {
+  if (file.type === "application/pdf") return true;
+  return file.name.toLowerCase().endsWith(".pdf");
+}
+
+function validarArchivoPdfLaboratorio(file: File): string | null {
+  if (!esArchivoPdfValido(file)) {
+    return "El adjunto debe ser un archivo PDF.";
+  }
+  if (file.size > MAX_PDF_BYTES) {
+    return "El PDF no puede superar 5 MB.";
+  }
+  return null;
+}
+
 /** Columnas de análisis compartidas entre insert/update (JSON y formulario). */
 function columnasAnalisisDesdeInput(input: RegistrarAnalisisSueloInput) {
   return {
@@ -92,16 +139,16 @@ export async function registrarAnalisisSuelo(
   const input: RegistrarAnalisisSueloInput = parsed.data;
 
   const session = await getSessionProfile();
-  if (!session?.profile) {
+  if (!session?.profile || !session.user) {
     return actionError("Sesión no encontrada.");
   }
 
-  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
-  if (!allowedRoles.includes(session.profile.role ?? "")) {
-    return actionError("No tienes permiso para registrar análisis de suelo.");
-  }
+  const permErr = assertPuedeMutarAnalisisSuelo(session.profile, input.finca_id);
+  if (permErr) return actionError(permErr);
 
   const supabase = await createClient();
+  const loteErr = await assertLoteEnFinca(supabase, input.finca_id, input.lote_id);
+  if (loteErr) return actionError(loteErr);
 
   const { data, error } = await supabase
     .from("analisis_suelo")
@@ -118,6 +165,24 @@ export async function registrarAnalisisSuelo(
     .single();
 
   if (error || !data) return actionError(error?.message ?? "No se pudo registrar el análisis.");
+
+  const { data: lote } = await supabase
+    .from("lotes")
+    .select("codigo")
+    .eq("id", input.lote_id)
+    .maybeSingle();
+
+  await registrarEventoFinca({
+    fincaId: input.finca_id,
+    actionKey: "suelo.registrar",
+    titulo: "Nuevo análisis de suelo",
+    detalle: detalleAuditoriaAnalisis(input, {
+      analisisId: data.id,
+      loteCodigo: lote?.codigo ?? input.lote_id,
+      tieneAdjuntoLaboratorio: Boolean(input.archivo_url),
+    }),
+  });
+
   return actionOk({ id: data.id });
 }
 
@@ -135,12 +200,12 @@ export async function actualizarAnalisisSuelo(
     return actionError("Sesión no encontrada.");
   }
 
-  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
-  if (!allowedRoles.includes(session.profile.role ?? "")) {
-    return actionError("No tienes permiso para editar análisis de suelo.");
-  }
+  const permErr = assertPuedeMutarAnalisisSuelo(session.profile, input.finca_id);
+  if (permErr) return actionError(permErr);
 
   const supabase = await createClient();
+  const loteErr = await assertLoteEnFinca(supabase, input.finca_id, input.lote_id);
+  if (loteErr) return actionError(loteErr);
 
   const { data, error } = await supabase
     .from("analisis_suelo")
@@ -247,9 +312,8 @@ export async function listarAnalisisPorFinca(
   const session = await getSessionProfile();
   if (!session?.profile) return actionError("Sesión no encontrada.");
 
-  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
-  if (!allowedRoles.includes(session.profile.role ?? "")) {
-    return actionError("No tienes permiso para ver análisis de suelo.");
+  if (!canAccessAnalisisSueloFinca(session.profile, fincaId)) {
+    return actionError("No tiene permiso para ver análisis de esta finca.");
   }
 
   const supabase = await createClient();
@@ -343,25 +407,22 @@ export async function registrarAnalisisSueloDesdeFormulario(
     archivo instanceof File && archivo.size > 0 ? archivo : null;
 
   if (file) {
-    if (file.type !== "application/pdf") {
-      return actionError("El adjunto debe ser un archivo PDF.");
-    }
-    if (file.size > MAX_PDF_BYTES) {
-      return actionError("El PDF no puede superar 5 MB.");
-    }
+    const pdfErr = validarArchivoPdfLaboratorio(file);
+    if (pdfErr) return actionError(pdfErr);
   }
 
   const session = await getSessionProfile();
-  if (!session?.profile) {
+  if (!session?.profile || !session.user) {
     return actionError("Sesión no encontrada.");
   }
 
-  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
-  if (!allowedRoles.includes(session.profile.role ?? "")) {
-    return actionError("No tienes permiso para registrar análisis de suelo.");
-  }
+  const permErr = assertPuedeMutarAnalisisSuelo(session.profile, input.finca_id);
+  if (permErr) return actionError(permErr);
 
   const supabase = await createClient();
+  const loteErr = await assertLoteEnFinca(supabase, input.finca_id, input.lote_id);
+  if (loteErr) return actionError(loteErr);
+
   const id = crypto.randomUUID();
   let archivoPath: string | null = null;
 
@@ -438,22 +499,13 @@ export async function actualizarAnalisisSueloDesdeFormulario(
     archivo instanceof File && archivo.size > 0 ? archivo : null;
 
   if (file) {
-    if (file.type !== "application/pdf") {
-      return actionError("El adjunto debe ser un archivo PDF.");
-    }
-    if (file.size > MAX_PDF_BYTES) {
-      return actionError("El PDF no puede superar 5 MB.");
-    }
+    const pdfErr = validarArchivoPdfLaboratorio(file);
+    if (pdfErr) return actionError(pdfErr);
   }
 
   const session = await getSessionProfile();
   if (!session?.profile) {
     return actionError("Sesión no encontrada.");
-  }
-
-  const allowedRoles: string[] = ["superadmin", "admin", "agronomo"];
-  if (!allowedRoles.includes(session.profile.role ?? "")) {
-    return actionError("No tienes permiso para editar análisis de suelo.");
   }
 
   const supabase = await createClient();
@@ -467,6 +519,15 @@ export async function actualizarAnalisisSueloDesdeFormulario(
   if (perr || !prev) {
     return actionError("Análisis no encontrado o anulado.");
   }
+
+  const permErr = assertPuedeMutarAnalisisSuelo(session.profile, input.finca_id);
+  if (permErr) return actionError(permErr);
+  if (!canAccessAnalisisSueloFinca(session.profile, prev.finca_id)) {
+    return actionError("No tiene permiso para editar este análisis.");
+  }
+
+  const loteErr = await assertLoteEnFinca(supabase, input.finca_id, input.lote_id);
+  if (loteErr) return actionError(loteErr);
 
   let archivoPath: string | null = prev.archivo_url;
 

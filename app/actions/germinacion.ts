@@ -19,12 +19,17 @@ async function assertMaterialGeneticoFinca(
 ): Promise<ActionResult<void>> {
   const { data: cat, error: ce } = await supabase
     .from("catalogo_items")
-    .select("id, categoria, activo")
+    .select("id, categoria, activo, proveedor")
     .eq("id", catalogoMaterialId)
     .maybeSingle();
   if (ce || !cat) return actionError("Material genético no encontrado.");
   if (cat.categoria !== "material_genetico" || !cat.activo) {
     return actionError("Seleccione material genético activo del catálogo.");
+  }
+  if (!cat.proveedor?.trim()) {
+    return actionError(
+      "El material genético debe tener proveedor certificado (RN16)."
+    );
   }
 
   if (loteId) {

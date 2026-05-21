@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, hasRole } from "@/lib/auth/session-profile";
 import { isInsumoFitosanitarioProducto } from "@/lib/catalogo-insumo-fitosanitario";
+import { mensajeDesviacionDosis } from "@/lib/sanidad-dosis";
 import {
   cancelarOrdenControlSchema,
   registrarAplicacionFitosanitariaSchema,
@@ -259,24 +260,30 @@ export async function registrarAplicacionFitosanitaria(
     return actionError("Sesión no válida.");
   }
   const profile = session.profile;
-  if (!hasRole(profile, ["operario", "agronomo"])) {
+  if (!hasRole(profile, ["operario", "agronomo", "superadmin"])) {
     return actionError("Solo operario o agrónomo pueden registrar aplicaciones.");
   }
-  if (!profile?.finca_id) {
+  if (!profile?.finca_id && profile?.role !== "superadmin") {
     return actionError("Su cuenta no tiene finca asignada.");
   }
 
   const supabase = await createClient();
   const { data: orden, error: oerr } = await supabase
     .from("ordenes_control")
-    .select("id, finca_id, lote_id, insumo_catalogo_id, estado")
+    .select(
+      "id, finca_id, lote_id, insumo_catalogo_id, dosis_recomendada, estado, alerta_id"
+    )
     .eq("id", input.orden_id)
     .maybeSingle();
 
   if (oerr || !orden) {
     return actionError("Orden no encontrada.");
   }
-  if (orden.finca_id !== profile.finca_id) {
+  if (
+    profile?.role !== "superadmin" &&
+    profile?.finca_id &&
+    orden.finca_id !== profile.finca_id
+  ) {
     return actionError("La orden no corresponde a su finca.");
   }
   if (orden.estado !== "autorizada") {
@@ -285,6 +292,28 @@ export async function registrarAplicacionFitosanitaria(
         ? "Esta orden ya fue cerrada con una aplicación."
         : "La orden no está disponible para aplicación."
     );
+  }
+
+  const { data: alerta, error: alertaErr } = await supabase
+    .from("alertas_fitosanitarias")
+    .select("id, validacion_estado, is_voided")
+    .eq("id", orden.alerta_id)
+    .maybeSingle();
+  if (alertaErr || !alerta) {
+    return actionError("No se encontró la alerta vinculada a la orden (RN66).");
+  }
+  if (alerta.is_voided || alerta.validacion_estado !== "validado") {
+    return actionError(
+      "Solo puede aplicar productos sobre órdenes emitidas tras validación técnica (RN66 / RF15)."
+    );
+  }
+
+  const desviacionMsg = mensajeDesviacionDosis(
+    input.cantidad_aplicada,
+    orden.dosis_recomendada
+  );
+  if (desviacionMsg) {
+    return actionError(desviacionMsg);
   }
 
   const insumoId = orden.insumo_catalogo_id;
@@ -305,6 +334,16 @@ export async function registrarAplicacionFitosanitaria(
     .maybeSingle();
   if (ierr || !insumo) {
     return actionError("Insumo de la orden no encontrado.");
+  }
+  if (
+    !isInsumoFitosanitarioProducto({
+      categoria: insumo.categoria,
+      subcategoria: insumo.subcategoria,
+    })
+  ) {
+    return actionError(
+      "El producto debe ser un insumo fitosanitario del catálogo (RN65)."
+    );
   }
 
   const { data: row, error: insertErr } = await supabase
@@ -330,6 +369,17 @@ export async function registrarAplicacionFitosanitaria(
 
   if (insertErr || !row) {
     return actionError(insertErr?.message ?? "No se pudo registrar la aplicación.");
+  }
+
+  const { data: ordenPost } = await supabase
+    .from("ordenes_control")
+    .select("estado")
+    .eq("id", orden.id)
+    .maybeSingle();
+  if (ordenPost?.estado !== "cerrada") {
+    return actionError(
+      "La aplicación se registró pero la orden no quedó cerrada. Contacte al administrador."
+    );
   }
 
   const { data: loteInfo } = await supabase
@@ -360,4 +410,72 @@ export async function registrarAplicacionFitosanitaria(
   });
 
   return actionOk({ id: row.id });
+}
+
+export type AplicacionFitosanitariaListRow = {
+  id: string;
+  fecha_aplicacion: string;
+  lote_codigo: string;
+  insumo_nombre: string;
+  cantidad_aplicada: number;
+  unidad_medida: string | null;
+  epp_confirmado: boolean;
+  created_at: string;
+};
+
+export async function listAplicacionesFitosanitariasForFinca(
+  fincaId: string
+): Promise<ActionResult<AplicacionFitosanitariaListRow[]>> {
+  if (!fincaId) return actionOk([]);
+
+  const session = await getSessionProfile();
+  if (!session?.profile?.is_active) {
+    return actionError("Sesión no válida.");
+  }
+  const p = session.profile;
+  if (p.role !== "superadmin" && p.finca_id !== fincaId) {
+    return actionError("No tiene permiso para consultar aplicaciones de esta finca.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("aplicaciones_fitosanitarias")
+    .select(
+      "id, fecha_aplicacion, lote_id, catalogo_item_id, cantidad_aplicada, unidad_medida, epp_confirmado, created_at"
+    )
+    .eq("finca_id", fincaId)
+    .order("fecha_aplicacion", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) return actionError(error.message);
+
+  const rows = data ?? [];
+  const loteIds = [...new Set(rows.map((r) => r.lote_id))];
+  const catIds = [...new Set(rows.map((r) => r.catalogo_item_id))];
+
+  const [{ data: lotes }, { data: insumos }] = await Promise.all([
+    loteIds.length
+      ? supabase.from("lotes").select("id, codigo").in("id", loteIds)
+      : Promise.resolve({ data: [] as { id: string; codigo: string }[] }),
+    catIds.length
+      ? supabase.from("catalogo_items").select("id, nombre").in("id", catIds)
+      : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+  ]);
+
+  const loteMap = new Map((lotes ?? []).map((l) => [l.id, l.codigo]));
+  const insumoMap = new Map((insumos ?? []).map((i) => [i.id, i.nombre]));
+
+  return actionOk(
+    rows.map((r) => ({
+      id: r.id,
+      fecha_aplicacion: r.fecha_aplicacion,
+      lote_codigo: loteMap.get(r.lote_id) ?? "—",
+      insumo_nombre: insumoMap.get(r.catalogo_item_id) ?? "—",
+      cantidad_aplicada: Number(r.cantidad_aplicada),
+      unidad_medida: r.unidad_medida,
+      epp_confirmado: r.epp_confirmado,
+      created_at: r.created_at,
+    }))
+  );
 }

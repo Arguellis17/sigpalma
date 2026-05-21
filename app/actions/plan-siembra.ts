@@ -22,12 +22,17 @@ async function fetchMaterialGeneticoValido(
 ): Promise<ActionResult<{ nombre: string }>> {
   const { data, error } = await supabase
     .from("catalogo_items")
-    .select("nombre, categoria, activo")
+    .select("nombre, categoria, activo, proveedor")
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return actionError("Material genético no encontrado.");
   if (data.categoria !== "material_genetico" || !data.activo) {
     return actionError("Seleccione un material genético activo del catálogo.");
+  }
+  if (!data.proveedor?.trim()) {
+    return actionError(
+      "El material genético debe tener proveedor certificado registrado (RN16)."
+    );
   }
   return actionOk({ nombre: data.nombre });
 }

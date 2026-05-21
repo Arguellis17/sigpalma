@@ -10,6 +10,14 @@ import {
   type ActualizarLaborInput,
   type RegistrarLaborInput,
 } from "@/lib/validations/operativo";
+import {
+  registrarLaborEjecutadaSchema,
+  type RegistrarLaborEjecutadaInput,
+} from "@/lib/validations/labor-ejecucion";
+import {
+  validarCantidadLaborVsLote,
+  type UnidadMedidaLabor,
+} from "@/lib/labor-ejecucion";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 
@@ -55,6 +63,47 @@ async function assertLoteActivoProgramacion(
     );
   }
   return actionOk({ codigo: data.codigo });
+}
+
+async function assertLoteEjecutableLabor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  loteId: string,
+  fincaId: string
+): Promise<
+  ActionResult<{
+    codigo: string;
+    area_ha: number;
+    densidad_palmas_ha: number | null;
+  }>
+> {
+  const { data, error } = await supabase
+    .from("lotes")
+    .select("codigo, activo, finca_id, estado_cultivo, area_ha, densidad_palmas_ha")
+    .eq("id", loteId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return actionError("Lote no encontrado.");
+  }
+  if (data.finca_id !== fincaId) {
+    return actionError("El lote no pertenece a la finca seleccionada.");
+  }
+  if (!data.activo) {
+    return actionError(
+      "Operación no permitida: el lote seleccionado no se encuentra activo."
+    );
+  }
+  if (data.estado_cultivo !== "en_produccion") {
+    return actionError(
+      "Solo se pueden registrar labores en lotes en producción."
+    );
+  }
+  return actionOk({
+    codigo: data.codigo,
+    area_ha: Number(data.area_ha),
+    densidad_palmas_ha:
+      data.densidad_palmas_ha != null ? Number(data.densidad_palmas_ha) : null,
+  });
 }
 
 export async function registrarLabor(
@@ -105,20 +154,8 @@ export async function registrarLabor(
     );
     if (!loteCheck.success) return loteCheck;
     loteCodigo = loteCheck.data.codigo;
-  } else if (role === "operario") {
-    catalogoItemId = null;
-    const { data: loteRow } = await supabase
-      .from("lotes")
-      .select("codigo")
-      .eq("id", input.lote_id)
-      .eq("finca_id", input.finca_id)
-      .maybeSingle();
-    if (!loteRow) {
-      return actionError("Lote no encontrado o no pertenece a la finca.");
-    }
-    loteCodigo = loteRow.codigo;
   } else {
-    return actionError("No tiene permiso para registrar labores.");
+    return actionError("No tiene permiso para programar labores.");
   }
 
   const { data, error } = await supabase
@@ -151,6 +188,175 @@ export async function registrarLabor(
       fechaEjecucion: input.fecha_ejecucion,
       notas: input.notas ?? null,
       catalogoItemId,
+    },
+  });
+
+  return actionOk({ id: data.id });
+}
+
+export async function registrarLaborEjecutada(
+  raw: unknown
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = registrarLaborEjecutadaSchema.safeParse(raw);
+  if (!parsed.success) {
+    return actionError(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const input: RegistrarLaborEjecutadaInput = parsed.data;
+
+  const session = await getSessionProfile();
+  if (!session?.profile?.is_active || !session.user) {
+    return actionError("Sesión no válida. Inicie sesión nuevamente.");
+  }
+  const { profile, user } = session;
+  if (profile.role !== "operario" && !isSuperAdmin(profile)) {
+    return actionError("Solo el operario de campo puede registrar ejecución de labores.");
+  }
+  if (profile.finca_id !== input.finca_id) {
+    return actionError("La finca no coincide con su asignación.");
+  }
+
+  const supabase = await createClient();
+  const ejecutadaAt = new Date().toISOString();
+
+  const cat = await fetchLaborCatalogItem(supabase, input.catalogo_item_id);
+  if (!cat.success) return cat;
+  const tipoResolved = cat.data.nombre;
+
+  if (input.labor_programada_id) {
+    const { data: programada, error: progErr } = await supabase
+      .from("labores_agronomicas")
+      .select(
+        "id, finca_id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada, is_voided"
+      )
+      .eq("id", input.labor_programada_id)
+      .maybeSingle();
+
+    if (progErr || !programada) {
+      return actionError(progErr?.message ?? "Labor programada no encontrada.");
+    }
+    if (programada.is_voided) {
+      return actionError("La labor programada está anulada.");
+    }
+    if (programada.finca_id !== input.finca_id) {
+      return actionError("La labor programada no pertenece a su finca.");
+    }
+    if (programada.cantidad_ejecutada != null) {
+      return actionError("Esta labor ya fue reportada como ejecutada.");
+    }
+    if (programada.catalogo_item_id !== input.catalogo_item_id) {
+      return actionError("El tipo de labor no coincide con la programación.");
+    }
+
+    const loteCheck = await assertLoteEjecutableLabor(
+      supabase,
+      programada.lote_id,
+      input.finca_id
+    );
+    if (!loteCheck.success) return loteCheck;
+
+    const rn61 = validarCantidadLaborVsLote(
+      input.cantidad_ejecutada,
+      input.unidad_medida as UnidadMedidaLabor,
+      loteCheck.data
+    );
+    if (rn61) return actionError(rn61);
+
+    const notasMerged =
+      input.notas?.trim() ||
+      programada.notas?.trim() ||
+      null;
+
+    const { data: updated, error: upErr } = await supabase
+      .from("labores_agronomicas")
+      .update({
+        cantidad_ejecutada: input.cantidad_ejecutada,
+        unidad_medida: input.unidad_medida,
+        ejecutada_at: ejecutadaAt,
+        fecha_ejecucion: input.fecha_ejecucion,
+        notas: notasMerged,
+        updated_at: ejecutadaAt,
+      })
+      .eq("id", input.labor_programada_id)
+      .is("cantidad_ejecutada", null)
+      .eq("is_voided", false)
+      .select("id, lote_id")
+      .single();
+
+    if (upErr || !updated) {
+      return actionError(upErr?.message ?? "No se pudo completar la labor programada.");
+    }
+
+    await registrarEventoFinca({
+      fincaId: input.finca_id,
+      actionKey: "labor.ejecutar",
+      titulo: "Ejecución de labor agronómica",
+      detalle: {
+        registroId: updated.id,
+        loteCodigo: loteCheck.data.codigo,
+        tipoLabor: tipoResolved,
+        cantidadEjecutada: input.cantidad_ejecutada,
+        unidadMedida: input.unidad_medida,
+        fechaEjecucion: input.fecha_ejecucion,
+        ejecutadaAt,
+        laborProgramadaId: input.labor_programada_id,
+        notas: notasMerged,
+        catalogoItemId: input.catalogo_item_id,
+      },
+    });
+
+    return actionOk({ id: updated.id });
+  }
+
+  const loteCheck = await assertLoteEjecutableLabor(
+    supabase,
+    input.lote_id,
+    input.finca_id
+  );
+  if (!loteCheck.success) return loteCheck;
+
+  const rn61 = validarCantidadLaborVsLote(
+    input.cantidad_ejecutada,
+    input.unidad_medida as UnidadMedidaLabor,
+    loteCheck.data
+  );
+  if (rn61) return actionError(rn61);
+
+  const { data, error } = await supabase
+    .from("labores_agronomicas")
+    .insert({
+      finca_id: input.finca_id,
+      lote_id: input.lote_id,
+      tipo: tipoResolved,
+      fecha_ejecucion: input.fecha_ejecucion,
+      notas: input.notas ?? null,
+      created_by: user.id,
+      source: input.source,
+      catalogo_item_id: input.catalogo_item_id,
+      cantidad_ejecutada: input.cantidad_ejecutada,
+      unidad_medida: input.unidad_medida,
+      ejecutada_at: ejecutadaAt,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  await registrarEventoFinca({
+    fincaId: input.finca_id,
+    actionKey: "labor.ejecutar",
+    titulo: "Ejecución de labor agronómica",
+    detalle: {
+      registroId: data.id,
+      loteCodigo: loteCheck.data.codigo,
+      tipoLabor: tipoResolved,
+      cantidadEjecutada: input.cantidad_ejecutada,
+      unidadMedida: input.unidad_medida,
+      fechaEjecucion: input.fecha_ejecucion,
+      ejecutadaAt,
+      notas: input.notas ?? null,
+      catalogoItemId: input.catalogo_item_id,
     },
   });
 

@@ -6,6 +6,7 @@ import {
   isInsumoFitosanitarioProducto,
   isInsumoNutricion,
 } from "@/lib/catalogo-insumo-fitosanitario";
+import { estimarTotalPalmasLote } from "@/lib/censo-sanitario";
 import { actionError, actionOk, type ActionResult } from "./types";
 
 export type LoteOption = { id: string; codigo: string };
@@ -111,6 +112,409 @@ export async function getLaboresRango(
   );
 }
 
+export type LaborPendienteRow = {
+  id: string;
+  lote_id: string;
+  lote_codigo: string;
+  tipo: string;
+  fecha_ejecucion: string;
+  notas: string | null;
+  catalogo_item_id: string;
+};
+
+/** HU21: labores programadas (HU11) pendientes de reporte de ejecución. */
+export async function getLaboresPendientesEjecucion(
+  fincaId: string,
+  hastaFecha: string
+): Promise<ActionResult<LaborPendienteRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hastaFecha)) {
+    return actionError("Fecha límite inválida.");
+  }
+
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("labores_agronomicas")
+    .select("id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id")
+    .eq("finca_id", fid)
+    .eq("is_voided", false)
+    .is("cantidad_ejecutada", null)
+    .not("catalogo_item_id", "is", null)
+    .lte("fecha_ejecucion", hastaFecha)
+    .order("fecha_ejecucion");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  const lr = (rows ?? []).filter(
+    (r): r is typeof r & { catalogo_item_id: string } =>
+      r.catalogo_item_id != null
+  );
+  const loteIds = [...new Set(lr.map((r) => r.lote_id))];
+  const { data: lotesRows } = loteIds.length
+    ? await supabase.from("lotes").select("id, codigo").in("id", loteIds)
+    : { data: [] as { id: string; codigo: string }[] };
+
+  const loteMap = new Map((lotesRows ?? []).map((l) => [l.id, l.codigo]));
+
+  return actionOk(
+    lr.map((r) => ({
+      id: r.id,
+      lote_id: r.lote_id,
+      lote_codigo: loteMap.get(r.lote_id) ?? "—",
+      tipo: r.tipo,
+      fecha_ejecucion: r.fecha_ejecucion,
+      notas: r.notas,
+      catalogo_item_id: r.catalogo_item_id,
+    }))
+  );
+}
+
+export type NutricionPendienteRow = {
+  plan_item_id: string;
+  plan_id: string;
+  lote_id: string;
+  lote_codigo: string;
+  insumo_nombre: string;
+  catalogo_insumo_id: string;
+  dosis_cantidad: number;
+  dosis_unidad: string;
+  fecha_objetivo: string | null;
+  unidad_medida: string | null;
+  plan_nombre: string | null;
+};
+
+/** HU22: líneas de fertilización programadas (HU12) pendientes de aplicación. */
+export async function getNutricionPendientesOperario(
+  fincaId: string,
+  hastaFecha: string
+): Promise<ActionResult<NutricionPendienteRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hastaFecha)) {
+    return actionError("Fecha límite inválida.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: planes, error: pe } = await supabase
+    .from("planes_nutricion")
+    .select("id, nombre, lote_id, lotes ( codigo, activo, estado_cultivo )")
+    .eq("finca_id", fid)
+    .eq("is_voided", false);
+
+  if (pe) return actionError(pe.message);
+
+  type PlanR = {
+    id: string;
+    nombre: string | null;
+    lote_id: string;
+    lotes: {
+      codigo: string;
+      activo: boolean;
+      estado_cultivo: string;
+    } | null;
+  };
+
+  const planesValidos = ((planes ?? []) as PlanR[]).filter(
+    (p) =>
+      p.lotes?.activo &&
+      p.lotes.estado_cultivo === "en_produccion"
+  );
+  const planIds = planesValidos.map((p) => p.id);
+  if (planIds.length === 0) {
+    return actionOk([]);
+  }
+
+  const planMap = new Map(
+    planesValidos.map((p) => [
+      p.id,
+      {
+        lote_id: p.lote_id,
+        lote_codigo: p.lotes?.codigo ?? "—",
+        plan_nombre: p.nombre,
+      },
+    ])
+  );
+
+  const [{ data: itemsRaw, error: ie }, { data: appsRaw, error: ae }] =
+    await Promise.all([
+      supabase
+        .from("planes_nutricion_items")
+        .select(
+          `
+        id,
+        plan_id,
+        catalogo_insumo_id,
+        dosis_cantidad,
+        dosis_unidad,
+        fecha_objetivo,
+        catalogo_items ( nombre, unidad_medida )
+      `
+        )
+        .in("plan_id", planIds)
+        .order("fecha_objetivo", { ascending: true }),
+      supabase
+        .from("aplicaciones_fertilizacion")
+        .select("plan_item_id")
+        .eq("finca_id", fid)
+        .eq("is_voided", false),
+    ]);
+
+  if (ie) return actionError(ie.message);
+  if (ae) return actionError(ae.message);
+
+  const appliedIds = new Set((appsRaw ?? []).map((a) => a.plan_item_id));
+
+  type ItemR = {
+    id: string;
+    plan_id: string;
+    catalogo_insumo_id: string;
+    dosis_cantidad: number | string;
+    dosis_unidad: string;
+    fecha_objetivo: string | null;
+    catalogo_items: { nombre: string; unidad_medida: string | null } | null;
+  };
+
+  const pendientes = ((itemsRaw ?? []) as ItemR[])
+    .filter((it) => !appliedIds.has(it.id))
+    .filter(
+      (it) =>
+        !it.fecha_objetivo || it.fecha_objetivo <= hastaFecha
+    )
+    .map((it) => {
+      const plan = planMap.get(it.plan_id);
+      if (!plan) return null;
+      return {
+        plan_item_id: it.id,
+        plan_id: it.plan_id,
+        lote_id: plan.lote_id,
+        lote_codigo: plan.lote_codigo,
+        insumo_nombre: it.catalogo_items?.nombre ?? "—",
+        catalogo_insumo_id: it.catalogo_insumo_id,
+        dosis_cantidad: Number(it.dosis_cantidad),
+        dosis_unidad: it.dosis_unidad,
+        fecha_objetivo: it.fecha_objetivo,
+        unidad_medida: it.catalogo_items?.unidad_medida ?? null,
+        plan_nombre: plan.plan_nombre,
+      };
+    })
+    .filter((r): r is NutricionPendienteRow => r != null);
+
+  return actionOk(pendientes);
+}
+
+export type PreparacionTerrenoPendienteRow = {
+  lote_id: string;
+  lote_codigo: string;
+  plan_siembra_id: string;
+  fecha_proyectada: string;
+  material_nombre: string;
+  pendiente_lote_pct: number | null;
+};
+
+/** HU19: lotes planificados (HU10) sin preparación de terreno registrada. */
+export async function getLotesPendientesPreparacionTerreno(
+  fincaId: string
+): Promise<ActionResult<PreparacionTerrenoPendienteRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: lotes, error: le } = await supabase
+    .from("lotes")
+    .select("id, codigo, pendiente_pct")
+    .eq("finca_id", fid)
+    .eq("activo", true)
+    .eq("estado_cultivo", "planificado_siembra")
+    .order("codigo");
+
+  if (le) return actionError(le.message);
+  if (!lotes?.length) return actionOk([]);
+
+  const loteIds = lotes.map((l) => l.id);
+
+  const [{ data: planes, error: pe }, { data: preps, error: pre }] =
+    await Promise.all([
+      supabase
+        .from("planes_siembra")
+        .select(
+          "id, lote_id, fecha_proyectada, catalogo_material_id, catalogo_items ( nombre )"
+        )
+        .in("lote_id", loteIds)
+        .eq("is_voided", false),
+      supabase
+        .from("preparaciones_terreno")
+        .select("lote_id")
+        .in("lote_id", loteIds)
+        .eq("is_voided", false),
+    ]);
+
+  if (pe) return actionError(pe.message);
+  if (pre) return actionError(pre.message);
+
+  const prepLoteIds = new Set((preps ?? []).map((p) => p.lote_id));
+  const planByLote = new Map(
+    (planes ?? []).map((p) => {
+      const mat = (p as { catalogo_items?: { nombre?: string } | null })
+        .catalogo_items?.nombre;
+      return [
+        p.lote_id,
+        {
+          plan_siembra_id: p.id,
+          fecha_proyectada: p.fecha_proyectada,
+          material_nombre: mat ?? "—",
+        },
+      ];
+    })
+  );
+
+  const rows: PreparacionTerrenoPendienteRow[] = [];
+  for (const l of lotes) {
+    if (prepLoteIds.has(l.id)) continue;
+    const plan = planByLote.get(l.id);
+    if (!plan) continue;
+    rows.push({
+      lote_id: l.id,
+      lote_codigo: l.codigo,
+      plan_siembra_id: plan.plan_siembra_id,
+      fecha_proyectada: plan.fecha_proyectada,
+      material_nombre: plan.material_nombre,
+      pendiente_lote_pct:
+        l.pendiente_pct != null ? Number(l.pendiente_pct) : null,
+    });
+  }
+
+  return actionOk(rows);
+}
+
+export type SiembraPendienteRow = {
+  lote_id: string;
+  lote_codigo: string;
+  plan_siembra_id: string;
+  preparacion_terreno_id: string;
+  material_nombre: string;
+  fecha_proyectada: string;
+  area_ha: number;
+  densidad_palmas_ha: number | null;
+  max_palmas: number | null;
+};
+
+/** HU20: lotes listos para siembra con plan HU10 y preparación HU19 aprobada. */
+export async function getLotesPendientesSiembra(
+  fincaId: string
+): Promise<ActionResult<SiembraPendienteRow[]>> {
+  const fid = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(fid)) {
+    return actionError("Finca no válida.");
+  }
+
+  const supabase = await createClient();
+
+  const { data: lotes, error: le } = await supabase
+    .from("lotes")
+    .select("id, codigo, area_ha, densidad_palmas_ha")
+    .eq("finca_id", fid)
+    .eq("activo", true)
+    .eq("estado_cultivo", "listo_para_siembra")
+    .order("codigo");
+
+  if (le) return actionError(le.message);
+  if (!lotes?.length) return actionOk([]);
+
+  const loteIds = lotes.map((l) => l.id);
+
+  const [{ data: preps, error: pe }, { data: siembras, error: se }] =
+    await Promise.all([
+      supabase
+        .from("preparaciones_terreno")
+        .select("id, lote_id, plan_siembra_id")
+        .in("lote_id", loteIds)
+        .eq("is_voided", false)
+        .eq("estado", "aprobado"),
+      supabase
+        .from("registros_siembra")
+        .select("lote_id")
+        .in("lote_id", loteIds)
+        .eq("is_voided", false),
+    ]);
+
+  if (pe) return actionError(pe.message);
+  if (se) return actionError(se.message);
+
+  const siembraLoteIds = new Set((siembras ?? []).map((s) => s.lote_id));
+  const prepByLote = new Map(
+    (preps ?? []).map((p) => [
+      p.lote_id,
+      { id: p.id, plan_siembra_id: p.plan_siembra_id },
+    ])
+  );
+
+  const planIds = [...new Set((preps ?? []).map((p) => p.plan_siembra_id))];
+  const { data: planes, error: plErr } = planIds.length
+    ? await supabase
+        .from("planes_siembra")
+        .select("id, lote_id, fecha_proyectada, catalogo_material_id")
+        .in("id", planIds)
+        .eq("is_voided", false)
+    : { data: [] as { id: string; lote_id: string; fecha_proyectada: string; catalogo_material_id: string }[], error: null };
+
+  if (plErr) return actionError(plErr.message);
+
+  const matIds = [...new Set((planes ?? []).map((p) => p.catalogo_material_id))];
+  const { data: mats } = matIds.length
+    ? await supabase.from("catalogo_items").select("id, nombre").in("id", matIds)
+    : { data: [] as { id: string; nombre: string }[] };
+
+  const matMap = new Map((mats ?? []).map((m) => [m.id, m.nombre]));
+  const planMap = new Map(
+    (planes ?? []).map((p) => [
+      p.id,
+      {
+        lote_id: p.lote_id,
+        fecha_proyectada: p.fecha_proyectada,
+        material_nombre: matMap.get(p.catalogo_material_id) ?? "—",
+      },
+    ])
+  );
+
+  const rows: SiembraPendienteRow[] = [];
+  for (const l of lotes) {
+    if (siembraLoteIds.has(l.id)) continue;
+    const prep = prepByLote.get(l.id);
+    if (!prep) continue;
+    const plan = planMap.get(prep.plan_siembra_id);
+    if (!plan || plan.lote_id !== l.id) continue;
+
+    const area = Number(l.area_ha);
+    const densidad =
+      l.densidad_palmas_ha != null ? Number(l.densidad_palmas_ha) : null;
+
+    rows.push({
+      lote_id: l.id,
+      lote_codigo: l.codigo,
+      plan_siembra_id: prep.plan_siembra_id,
+      preparacion_terreno_id: prep.id,
+      material_nombre: plan.material_nombre,
+      fecha_proyectada: plan.fecha_proyectada,
+      area_ha: area,
+      densidad_palmas_ha: densidad,
+      max_palmas: estimarTotalPalmasLote(area, densidad),
+    });
+  }
+
+  return actionOk(rows);
+}
+
 export type CatalogoFitosanidadOption = {
   id: string;
   nombre: string;
@@ -127,6 +531,44 @@ export async function getCatalogoFitosanidad(): Promise<
     .eq("activo", true)
     .in("categoria", ["plaga", "enfermedad", "otro"])
     .order("categoria")
+    .order("nombre");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk((data ?? []) as CatalogoFitosanidadOption[]);
+}
+
+/** HU25: plagas activas del catálogo fitosanitario (categoría plaga). */
+export async function getCatalogoPlagas(): Promise<
+  ActionResult<CatalogoFitosanidadOption[]>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select("id, nombre, categoria")
+    .eq("activo", true)
+    .eq("categoria", "plaga")
+    .order("nombre");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  return actionOk((data ?? []) as CatalogoFitosanidadOption[]);
+}
+
+/** HU26: enfermedades activas del catálogo fitosanitario (categoría enfermedad). */
+export async function getCatalogoEnfermedades(): Promise<
+  ActionResult<CatalogoFitosanidadOption[]>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select("id, nombre, categoria")
+    .eq("activo", true)
+    .eq("categoria", "enfermedad")
     .order("nombre");
 
   if (error) {
@@ -188,6 +630,7 @@ export async function getCatalogoMaterialGenetico(): Promise<
     .select("id, nombre")
     .eq("categoria", "material_genetico")
     .eq("activo", true)
+    .not("proveedor", "is", null)
     .order("nombre");
 
   if (error) {
@@ -428,7 +871,28 @@ export async function getUltimoAnalisisSueloPorLote(
     return actionError("Lote no válido.");
   }
 
+  const session = await getSessionProfile();
+  if (!session?.profile?.is_active) {
+    return actionError("Sesión no válida.");
+  }
+
   const supabase = await createClient();
+  const { data: lote, error: loteErr } = await supabase
+    .from("lotes")
+    .select("id, finca_id")
+    .eq("id", lid)
+    .maybeSingle();
+
+  if (loteErr || !lote) {
+    return actionError("Lote no encontrado.");
+  }
+
+  if (session.profile.role !== "superadmin") {
+    if (!session.profile.finca_id || session.profile.finca_id !== lote.finca_id) {
+      return actionError("No tiene acceso a este lote.");
+    }
+  }
+
   const { data, error } = await supabase
     .from("analisis_suelo")
     .select(

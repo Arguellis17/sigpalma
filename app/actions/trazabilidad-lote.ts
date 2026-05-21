@@ -38,9 +38,11 @@ function compareEvents(a: TimelineEvent, b: TimelineEvent): number {
 function emptyConteo(): Record<TimelineEventCategory, number> {
   return {
     material_plan: 0,
+    vivero: 0,
     labor: 0,
     nutricion: 0,
     sanidad: 0,
+    suelo: 0,
     cosecha: 0,
   };
 }
@@ -102,10 +104,15 @@ export async function getTrazabilidadTecnicaLote(
 
   const [
     planesSiembraRes,
+    preparacionesTerrenoRes,
+    registrosSiembraRes,
     laboresRes,
     planesNutRes,
     alertasRes,
     aplicacionesRes,
+    fertilizacionRes,
+    analisisSueloRes,
+    censosRes,
     cosechasRes,
     lotesFincaRes,
     cosechasFincaRes,
@@ -113,18 +120,35 @@ export async function getTrazabilidadTecnicaLote(
     supabase
       .from("planes_siembra")
       .select(
-        "id, fecha_proyectada, confirmacion_erosion, notas, created_at, catalogo_items ( nombre )"
+        "id, fecha_proyectada, confirmacion_erosion, notas, created_at, catalogo_material_id, catalogo_items ( nombre )"
       )
       .eq("lote_id", lid)
       .eq("is_voided", false)
       .order("fecha_proyectada", { ascending: false }),
     supabase
-      .from("labores_agronomicas")
+      .from("preparaciones_terreno")
       .select(
-        "id, tipo, fecha_ejecucion, notas, created_at, catalogo_item_id, catalogo_items ( nombre )"
+        "id, pendiente_final_pct, actividades, estado, notas, created_at"
       )
       .eq("lote_id", lid)
       .eq("is_voided", false)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("registros_siembra")
+      .select(
+        "id, fecha_siembra, cantidad_palmas, notas, created_at, catalogo_material_id, catalogo_items ( nombre )"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .order("fecha_siembra", { ascending: false }),
+    supabase
+      .from("labores_agronomicas")
+      .select(
+        "id, tipo, fecha_ejecucion, notas, created_at, catalogo_item_id, cantidad_ejecutada, unidad_medida, ejecutada_at, catalogo_items ( nombre )"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .not("cantidad_ejecutada", "is", null)
       .order("fecha_ejecucion", { ascending: false }),
     supabase
       .from("planes_nutricion")
@@ -174,6 +198,30 @@ export async function getTrazabilidadTecnicaLote(
       .eq("lote_id", lid)
       .order("fecha_aplicacion", { ascending: false }),
     supabase
+      .from("aplicaciones_fertilizacion")
+      .select(
+        "id, fecha_aplicacion, cantidad_aplicada, dosis_programada, dosis_unidad, desviacion_pct, metodo_aplicacion, notas, created_at, catalogo_insumo_id"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .order("fecha_aplicacion", { ascending: false }),
+    supabase
+      .from("analisis_suelo")
+      .select(
+        "id, fecha_analisis, ph, humedad_pct, compactacion, fertilidad_completa, textura, aluminio, cic, materia_organica_pct, drenaje_campo, notas, archivo_url, created_at"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .order("fecha_analisis", { ascending: false }),
+    supabase
+      .from("censos_sanitarios")
+      .select(
+        "id, fecha_censo, palmas_inspeccionadas, palmas_afectadas, incidencia_pct, supera_umbral, notas, created_at, catalogo_items ( nombre )"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .order("fecha_censo", { ascending: false }),
+    supabase
       .from("cosechas_rff")
       .select("id, fecha, peso_kg, conteo_racimos, observaciones_calidad, created_at")
       .eq("lote_id", lid)
@@ -191,16 +239,97 @@ export async function getTrazabilidadTecnicaLote(
 
   const errs = [
     planesSiembraRes.error,
+    preparacionesTerrenoRes.error,
+    registrosSiembraRes.error,
     laboresRes.error,
     planesNutRes.error,
     alertasRes.error,
     aplicacionesRes.error,
+    fertilizacionRes.error,
+    analisisSueloRes.error,
+    censosRes.error,
     cosechasRes.error,
     lotesFincaRes.error,
     cosechasFincaRes.error,
   ].filter(Boolean);
   if (errs.length) {
     return actionError(errs[0]!.message);
+  }
+
+  const fertilizacionInsumoIds = [
+    ...new Set(
+      (fertilizacionRes.data ?? [])
+        .map((r) => (r as { catalogo_insumo_id?: string }).catalogo_insumo_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const { data: fertilizacionInsumosRows } = fertilizacionInsumoIds.length
+    ? await supabase
+        .from("catalogo_items")
+        .select("id, nombre")
+        .in("id", fertilizacionInsumoIds)
+    : { data: [] as { id: string; nombre: string }[] };
+  const fertilizacionInsumoMap = new Map(
+    (fertilizacionInsumosRows ?? []).map((i) => [i.id, i.nombre])
+  );
+
+  const catalogoIdsPlan = [
+    ...new Set(
+      (planesSiembraRes.data ?? [])
+        .map((p) => (p as { catalogo_material_id?: string }).catalogo_material_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const germSelect =
+    "id, fecha_tratamiento, temperatura_max_c, dias_tratamiento, notas, created_at, catalogo_material_id, catalogo_items ( nombre )";
+
+  const germinacionesRes =
+    catalogoIdsPlan.length > 0
+      ? await supabase
+          .from("registros_germinacion")
+          .select(germSelect)
+          .eq("finca_id", fincaId)
+          .eq("is_voided", false)
+          .or(`lote_id.eq.${lid},catalogo_material_id.in.(${catalogoIdsPlan.join(",")})`)
+          .order("fecha_tratamiento", { ascending: false })
+      : await supabase
+          .from("registros_germinacion")
+          .select(germSelect)
+          .eq("lote_id", lid)
+          .eq("is_voided", false)
+          .order("fecha_tratamiento", { ascending: false });
+
+  if (germinacionesRes.error) {
+    return actionError(germinacionesRes.error.message);
+  }
+
+  const germRows = germinacionesRes.data ?? [];
+  const germIds = germRows.map((g) => g.id);
+
+  let evalRows: Array<{
+    id: string;
+    germinacion_id: string;
+    concepto: string;
+    pct_germinacion: string | number;
+    total_inicial: number;
+    unidades_germinadas: number;
+    created_at: string;
+  }> = [];
+
+  if (germIds.length > 0) {
+    const evaluacionesRes = await supabase
+      .from("evaluaciones_vivero")
+      .select(
+        "id, germinacion_id, concepto, pct_germinacion, total_inicial, unidades_germinadas, created_at"
+      )
+      .in("germinacion_id", germIds)
+      .eq("is_voided", false)
+      .order("created_at", { ascending: false });
+    if (evaluacionesRes.error) {
+      return actionError(evaluacionesRes.error.message);
+    }
+    evalRows = evaluacionesRes.data ?? [];
   }
 
   const eventos: TimelineEvent[] = [];
@@ -226,20 +355,119 @@ export async function getTrazabilidadTecnicaLote(
     });
   }
 
+  for (const pt of preparacionesTerrenoRes.data ?? []) {
+    const created = String(pt.created_at);
+    const acts = (pt.actividades ?? []).join(", ");
+    eventos.push({
+      id: `preparacion-terreno:${pt.id}`,
+      category: "material_plan",
+      sortAt: created,
+      displayDate: created.slice(0, 10),
+      title: "Preparación de terreno",
+      subtitle: `Pendiente ${pt.pendiente_final_pct}% · ${acts}`,
+      metadata: {
+        tipo: "preparacion_terreno",
+        preparacionId: pt.id,
+        pendienteFinalPct: Number(pt.pendiente_final_pct),
+        actividades: pt.actividades,
+        estado: pt.estado,
+        notas: pt.notas,
+      },
+    });
+  }
+
+  for (const rs of registrosSiembraRes.data ?? []) {
+    const mat = (rs as { catalogo_items?: { nombre?: string } | null }).catalogo_items
+      ?.nombre;
+    const fs = String(rs.fecha_siembra);
+    eventos.push({
+      id: `registro-siembra:${rs.id}`,
+      category: "material_plan",
+      sortAt: ymdToSortIso(fs),
+      displayDate: fs,
+      title: "Registro de siembra",
+      subtitle: mat
+        ? `${rs.cantidad_palmas} palmas · ${mat}`
+        : `${rs.cantidad_palmas} palmas`,
+      metadata: {
+        tipo: "registro_siembra",
+        registroSiembraId: rs.id,
+        fechaSiembra: fs,
+        cantidadPalmas: rs.cantidad_palmas,
+        materialNombre: mat ?? null,
+        notas: rs.notas,
+      },
+    });
+  }
+
+  for (const g of germRows) {
+    const mat = (g as { catalogo_items?: { nombre?: string } | null }).catalogo_items?.nombre;
+    const ft = String(g.fecha_tratamiento);
+    eventos.push({
+      id: `germinacion:${g.id}`,
+      category: "vivero",
+      sortAt: ymdToSortIso(ft),
+      displayDate: ft,
+      title: "Germinación / tratamiento térmico",
+      subtitle: mat ? `Material: ${mat}` : null,
+      metadata: {
+        tipo: "registro_germinacion",
+        germinacionId: g.id,
+        materialNombre: mat ?? null,
+        temperaturaMaxC: Number(g.temperatura_max_c),
+        diasTratamiento: g.dias_tratamiento,
+        notas: g.notas,
+      },
+    });
+  }
+
+  for (const ev of evalRows) {
+    const created = String(ev.created_at);
+    const conceptoLabel =
+      ev.concepto === "apto_trasplante"
+        ? "Apto para trasplante"
+        : String(ev.concepto).replaceAll("_", " ");
+    eventos.push({
+      id: `eval-vivero:${ev.id}`,
+      category: "vivero",
+      sortAt: created,
+      displayDate: created.slice(0, 10),
+      title: `Evaluación vivero: ${conceptoLabel}`,
+      subtitle: `${Number(ev.pct_germinacion).toFixed(1)}% germinación · ${ev.unidades_germinadas}/${ev.total_inicial} unidades`,
+      metadata: {
+        tipo: "evaluacion_vivero",
+        evaluacionId: ev.id,
+        germinacionId: ev.germinacion_id,
+        concepto: ev.concepto,
+        pctGerminacion: Number(ev.pct_germinacion),
+        totalInicial: ev.total_inicial,
+        unidadesGerminadas: ev.unidades_germinadas,
+      },
+    });
+  }
+
   for (const lb of laboresRes.data ?? []) {
     const cat = (lb as { catalogo_items?: { nombre?: string } | null }).catalogo_items?.nombre;
     const fe = String(lb.fecha_ejecucion);
+    const cantidad = (lb as { cantidad_ejecutada?: number | null }).cantidad_ejecutada;
+    const unidad = (lb as { unidad_medida?: string | null }).unidad_medida;
+    const avance =
+      cantidad != null && unidad
+        ? `${Number(cantidad)} ${unidad === "ha" ? "ha" : "palmas"}`
+        : null;
     eventos.push({
       id: `labor:${lb.id}`,
       category: "labor",
       sortAt: ymdToSortIso(fe),
       displayDate: fe,
       title: cat ?? lb.tipo,
-      subtitle: cat && cat !== lb.tipo ? lb.tipo : null,
+      subtitle: avance ?? (cat && cat !== lb.tipo ? lb.tipo : null),
       metadata: {
         tipo: "labor",
         tipoTexto: lb.tipo,
         catalogoNombre: cat ?? null,
+        cantidadEjecutada: cantidad != null ? Number(cantidad) : null,
+        unidadMedida: unidad ?? null,
         notas: lb.notas,
         laborId: lb.id,
       },
@@ -314,6 +542,32 @@ export async function getTrazabilidadTecnicaLote(
     }
   }
 
+  for (const af of fertilizacionRes.data ?? []) {
+    const fa = String(af.fecha_aplicacion);
+    const dosisUnidad = String(af.dosis_unidad ?? "");
+    const insumoId = (af as { catalogo_insumo_id?: string }).catalogo_insumo_id;
+    const insNombre = insumoId ? fertilizacionInsumoMap.get(insumoId) : undefined;
+    eventos.push({
+      id: `fertilizacion:${af.id}`,
+      category: "nutricion",
+      sortAt: ymdToSortIso(fa),
+      displayDate: fa,
+      title: insNombre ? `Fertilización aplicada: ${insNombre}` : "Fertilización aplicada",
+      subtitle: `Dosis ${af.cantidad_aplicada} ${dosisUnidad.replace("por_", "por ")} · plan ${af.dosis_programada}`,
+      metadata: {
+        tipo: "aplicacion_fertilizacion",
+        aplicacionId: af.id,
+        catalogoInsumoId: insumoId ?? null,
+        cantidadAplicada: Number(af.cantidad_aplicada),
+        dosisProgramada: Number(af.dosis_programada),
+        dosisUnidad,
+        desviacionPct: Number(af.desviacion_pct),
+        metodoAplicacion: af.metodo_aplicacion,
+        notas: af.notas,
+      },
+    });
+  }
+
   for (const al of alertasRes.data ?? []) {
     const plaga = (al as { catalogo_items?: { nombre?: string } | null }).catalogo_items?.nombre;
     const created = String(al.created_at);
@@ -331,6 +585,63 @@ export async function getTrazabilidadTecnicaLote(
         validacionEstado: al.validacion_estado,
         validacionDiagnostico: al.validacion_diagnostico,
         alertaId: al.id,
+      },
+    });
+  }
+
+  for (const cs of censosRes.data ?? []) {
+    const amenaza = (cs as { catalogo_items?: { nombre?: string } | null }).catalogo_items
+      ?.nombre;
+    const fa = String(cs.fecha_censo);
+    const pct = Number(cs.incidencia_pct);
+    eventos.push({
+      id: `censo:${cs.id}`,
+      category: "sanidad",
+      sortAt: ymdToSortIso(fa),
+      displayDate: fa,
+      title: amenaza ? `Censo sanitario: ${amenaza}` : "Censo sanitario",
+      subtitle: `${pct}% incidencia (${cs.palmas_afectadas}/${cs.palmas_inspeccionadas} palmas)`,
+      metadata: {
+        tipo: "censo_sanitario",
+        censoId: cs.id,
+        incidenciaPct: pct,
+        palmasInspeccionadas: cs.palmas_inspeccionadas,
+        palmasAfectadas: cs.palmas_afectadas,
+        superaUmbral: cs.supera_umbral,
+        notas: cs.notas,
+      },
+    });
+  }
+
+  for (const as of analisisSueloRes.data ?? []) {
+    const fa = String(as.fecha_analisis);
+    const ph = as.ph != null ? Number(as.ph) : null;
+    const hum = as.humedad_pct != null ? Number(as.humedad_pct) : null;
+    const parts: string[] = [];
+    if (ph != null && Number.isFinite(ph)) parts.push(`pH ${ph}`);
+    if (hum != null && Number.isFinite(hum)) parts.push(`Humedad ${hum}%`);
+    eventos.push({
+      id: `analisis-suelo:${as.id}`,
+      category: "suelo",
+      sortAt: ymdToSortIso(fa),
+      displayDate: fa,
+      title: "Análisis de suelo",
+      subtitle: parts.length ? parts.join(" · ") : null,
+      metadata: {
+        tipo: "analisis_suelo",
+        analisisId: as.id,
+        ph,
+        humedadPct: hum,
+        compactacion: as.compactacion,
+        fertilidadCompleta: as.fertilidad_completa,
+        textura: as.textura,
+        aluminio: as.aluminio != null ? Number(as.aluminio) : null,
+        cic: as.cic != null ? Number(as.cic) : null,
+        materiaOrganicaPct:
+          as.materia_organica_pct != null ? Number(as.materia_organica_pct) : null,
+        drenajeCampo: as.drenaje_campo,
+        notas: as.notas,
+        tieneArchivo: Boolean(as.archivo_url),
       },
     });
   }
@@ -496,7 +807,7 @@ export async function getTrazabilidadTecnicaLote(
     await registrarEventoFinca({
       fincaId,
       actionKey: "trazabilidad.consulta",
-      titulo: "Consulta trazabilidad técnica (HU17)",
+      titulo: "Consulta trazabilidad técnica",
       detalle: {
         loteId: lote.id,
         loteCodigo: lote.codigo,
