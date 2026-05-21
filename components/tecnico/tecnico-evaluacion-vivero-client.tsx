@@ -22,6 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Props = {
   fincaId: string;
@@ -51,6 +59,30 @@ export function TecnicoEvaluacionViveroClient({
   const [pending, setPending] = useState(false);
   const [pendingVoid, setPendingVoid] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  function resetForm() {
+    setGerminacionId(germinacionesDisponibles[0]?.id ?? "");
+    setTotalInicial("100");
+    setUnidadesGerminadas("85");
+    setUnidadesDescartadas("5");
+    setMotivoDescarte("");
+    setObsFitosanitarias("");
+    setConcepto("apto_trasplante");
+    setEvidenciaPaths([]);
+    setUploadMsg(null);
+    setErr(null);
+  }
+
+  function openCreate() {
+    resetForm();
+    setDialogOpen(true);
+  }
+
+  function onDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) setErr(null);
+  }
 
   useEffect(() => {
     const first = germinacionesDisponibles[0]?.id ?? "";
@@ -110,10 +142,8 @@ export function TecnicoEvaluacionViveroClient({
       setErr(res.error);
       return;
     }
-    setMotivoDescarte("");
-    setObsFitosanitarias("");
-    setEvidenciaPaths([]);
-    setUploadMsg(null);
+    setDialogOpen(false);
+    resetForm();
     router.refresh();
   }
 
@@ -130,139 +160,162 @@ export function TecnicoEvaluacionViveroClient({
   }
 
   return (
-    <div className="space-y-8">
-      <form
-        onSubmit={onSubmit}
-        className="surface-panel space-y-4 rounded-2xl p-5 sm:p-6"
-      >
-        <h3 className="text-lg font-semibold text-foreground">Nueva evaluación</h3>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Solo aparecen germinaciones sin evaluación activa. Las rutas de evidencia se guardan en el
-          bucket evidencia-tecnica.
+          {germinacionesDisponibles.length === 0
+            ? "No hay germinaciones pendientes de evaluación."
+            : `${germinacionesDisponibles.length} germinación(es) disponible(s) para evaluar.`}
         </p>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Germinación</Label>
-            {germinacionesDisponibles.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                No hay germinaciones sin evaluación activa. Registre primero la germinación (operario)
-                o anule una evaluación existente para volver a evaluar.
-              </p>
-            ) : (
-              <Select value={germinacionId} onValueChange={setGerminacionId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione registro…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {germinacionesDisponibles.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.material_nombre} · {g.fecha_tratamiento}
-                      {g.lote_codigo ? ` · lote ${g.lote_codigo}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ti">Total inicial (unidades)</Label>
-            <Input
-              id="ti"
-              type="number"
-              min={1}
-              value={totalInicial}
-              onChange={(e) => setTotalInicial(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ug">Unidades germinadas</Label>
-            <Input
-              id="ug"
-              type="number"
-              min={0}
-              value={unidadesGerminadas}
-              onChange={(e) => setUnidadesGerminadas(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ud">Unidades descartadas</Label>
-            <Input
-              id="ud"
-              type="number"
-              min={0}
-              value={unidadesDescartadas}
-              onChange={(e) => setUnidadesDescartadas(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Concepto</Label>
-            <Select
-              value={concepto}
-              onValueChange={(v) => setConcepto(v as "apto_trasplante" | "no_apto")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="apto_trasplante">Apto para trasplante</SelectItem>
-                <SelectItem value="no_apto">No apto</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="motivo">Motivo descarte (si hay descartes)</Label>
-          <Textarea
-            id="motivo"
-            value={motivoDescarte}
-            onChange={(e) => setMotivoDescarte(e.target.value)}
-            rows={2}
-            maxLength={5000}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="obs">Observaciones fitosanitarias</Label>
-          <Textarea
-            id="obs"
-            value={obsFitosanitarias}
-            onChange={(e) => setObsFitosanitarias(e.target.value)}
-            rows={2}
-            maxLength={5000}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="fotos">Evidencia fotográfica (opcional)</Label>
-          <Input
-            id="fotos"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            onChange={(e) => onFilesChange(e.target.files)}
-          />
-          {uploadMsg ? (
-            <p className="text-xs text-muted-foreground">{uploadMsg}</p>
-          ) : null}
-        </div>
-        {err ? (
-          <p className="text-sm font-medium text-destructive" role="alert">
-            {err}
-          </p>
-        ) : null}
-        <Button
-          type="submit"
-          disabled={
-            pending ||
-            germinacionesDisponibles.length === 0 ||
-            !germinacionesDisponibles.some((g) => g.id === germinacionId)
-          }
-        >
-          {pending ? "Guardando…" : "Registrar evaluación"}
+        <Button type="button" onClick={openCreate} disabled={germinacionesDisponibles.length === 0}>
+          Nueva evaluación
         </Button>
-      </form>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={onDialogOpenChange}>
+        <DialogContent className="max-h-[min(90vh,720px)] max-w-2xl overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Nueva evaluación</DialogTitle>
+            <DialogDescription>
+              Solo aparecen germinaciones sin evaluación activa. Las rutas de evidencia se guardan en
+              el bucket evidencia-tecnica.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Germinación</Label>
+                {germinacionesDisponibles.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+                    No hay germinaciones sin evaluación activa. Registre primero la germinación
+                    (operario) o anule una evaluación existente para volver a evaluar.
+                  </p>
+                ) : (
+                  <Select value={germinacionId} onValueChange={setGerminacionId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione registro…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {germinacionesDisponibles.map((g) => (
+                        <SelectItem key={g.id} value={g.id}>
+                          {g.material_nombre} · {g.fecha_tratamiento}
+                          {g.lote_codigo ? ` · lote ${g.lote_codigo}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ti">Total inicial (unidades)</Label>
+                <Input
+                  id="ti"
+                  type="number"
+                  min={1}
+                  value={totalInicial}
+                  onChange={(e) => setTotalInicial(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ug">Unidades germinadas</Label>
+                <Input
+                  id="ug"
+                  type="number"
+                  min={0}
+                  value={unidadesGerminadas}
+                  onChange={(e) => setUnidadesGerminadas(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ud">Unidades descartadas</Label>
+                <Input
+                  id="ud"
+                  type="number"
+                  min={0}
+                  value={unidadesDescartadas}
+                  onChange={(e) => setUnidadesDescartadas(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Concepto</Label>
+                <Select
+                  value={concepto}
+                  onValueChange={(v) => setConcepto(v as "apto_trasplante" | "no_apto")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="apto_trasplante">Apto para trasplante</SelectItem>
+                    <SelectItem value="no_apto">No apto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="motivo">Motivo descarte (si hay descartes)</Label>
+              <Textarea
+                id="motivo"
+                value={motivoDescarte}
+                onChange={(e) => setMotivoDescarte(e.target.value)}
+                rows={2}
+                maxLength={5000}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="obs">Observaciones fitosanitarias</Label>
+              <Textarea
+                id="obs"
+                value={obsFitosanitarias}
+                onChange={(e) => setObsFitosanitarias(e.target.value)}
+                rows={2}
+                maxLength={5000}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fotos">Evidencia fotográfica (opcional)</Label>
+              <Input
+                id="fotos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(e) => onFilesChange(e.target.files)}
+              />
+              {uploadMsg ? (
+                <p className="text-xs text-muted-foreground">{uploadMsg}</p>
+              ) : null}
+            </div>
+            {err ? (
+              <p className="text-sm font-medium text-destructive" role="alert">
+                {err}
+              </p>
+            ) : null}
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDialogOpen(false)}
+                disabled={pending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  pending ||
+                  germinacionesDisponibles.length === 0 ||
+                  !germinacionesDisponibles.some((g) => g.id === germinacionId)
+                }
+              >
+                {pending ? "Guardando…" : "Registrar evaluación"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="surface-panel overflow-hidden rounded-2xl">
         <div className="border-b border-border/60 px-4 py-3">
