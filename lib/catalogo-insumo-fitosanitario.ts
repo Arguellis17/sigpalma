@@ -43,12 +43,14 @@ function norm(s: string | null | undefined): string {
 export function isInsumoNutricion(subcategoria: string | null | undefined): boolean {
   const s = norm(subcategoria);
   if (!s) return false;
+  if (s === "nutricion") return true;
   return NUTRICION_TOKENS.some((t) => s.includes(t));
 }
 
 export function isInsumoHerramienta(subcategoria: string | null | undefined): boolean {
   const s = norm(subcategoria);
   if (!s) return false;
+  if (s === "herramienta") return true;
   return HERRAMIENTA_TOKENS.some((t) => s.includes(t));
 }
 
@@ -65,9 +67,10 @@ export function isInsumoFitosanitarioProducto(row: {
   if (!s) return false;
   if (isInsumoNutricion(s)) return false;
   if (isInsumoHerramienta(s)) return false;
+  if (s === "fitosanitario") return true;
   return FITOSANITARIO_TOKENS.some((t) => s.includes(t));
 }
 
 /** Texto para UI / documentación interna. */
 export const SUBCATEGORIA_INSUMO_GUIA =
-  "Indique Nutrición, Fitosanitario (o tipo: Herbicida, Fungicida…) o Herramienta en subcategoría.";
+  "Seleccione Nutrición, Fitosanitario o Herramienta. Detalle el producto (herbicida, urea…) en descripción si aplica.";

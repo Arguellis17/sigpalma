@@ -56,6 +56,20 @@ export const alertaFitosanitariaSchema = z.object({
   source: registroSourceSchema.optional().default("web"),
 });
 
+/** HU25 / RF25 RN71: plaga obligatoria del catálogo fitosanitario. */
+export const reportePlagaSchema = alertaFitosanitariaSchema.extend({
+  catalogo_item_id: uuid,
+});
+
+export type ReportePlagaInput = z.infer<typeof reportePlagaSchema>;
+
+/** HU26 / RF26 RN74: enfermedad obligatoria del catálogo fitosanitario. */
+export const reporteEnfermedadSchema = alertaFitosanitariaSchema.extend({
+  catalogo_item_id: uuid,
+});
+
+export type ReporteEnfermedadInput = z.infer<typeof reporteEnfermedadSchema>;
+
 export const anularRegistroCampoSchema = z.object({
   id: uuid,
 });

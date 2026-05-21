@@ -58,6 +58,7 @@ export const loteEstadoCultivoEnum = pgEnum("lote_estado_cultivo", [
   "vacante",
   "disponible",
   "planificado_siembra",
+  "listo_para_siembra",
   "en_produccion",
 ]);
 
@@ -75,6 +76,18 @@ export const planNutricionFrecuenciaEnum = pgEnum("plan_nutricion_frecuencia", [
   "personalizado",
 ]);
 
+/** HU22 RN64: método de aplicación de fertilizante */
+export const metodoAplicacionFertilizacionEnum = pgEnum(
+  "metodo_aplicacion_fertilizacion",
+  ["manual", "equipada", "fertirriego", "otro"]
+);
+
+/** HU19: estado del registro de preparación de terreno */
+export const preparacionTerrenoEstadoEnum = pgEnum("preparacion_terreno_estado", [
+  "aprobado",
+  "pendiente_validacion_tecnico",
+]);
+
 /** HU13: inspección fitosanitaria programada */
 export const monitoreoFitosanitarioEstadoEnum = pgEnum("monitoreo_fitosanitario_estado", [
   "pendiente",
@@ -86,6 +99,14 @@ export const monitoreoFitosanitarioEstadoEnum = pgEnum("monitoreo_fitosanitario_
 export const viveroConceptoEvaluacionEnum = pgEnum("vivero_concepto_evaluacion", [
   "apto_trasplante",
   "no_apto",
+]);
+
+/** HU18 RF28 RN80: estado de activo en inventario de herramientas */
+export const inventarioHerramientaEstadoEnum = pgEnum("inventario_herramienta_estado", [
+  "disponible",
+  "en_uso",
+  "danada",
+  "perdida",
 ]);
 
 export const fincas = pgTable(
@@ -197,6 +218,9 @@ export const laboresAgronomicas = pgTable("labores_agronomicas", {
   }),
   tipo: text("tipo").notNull(),
   fechaEjecucion: date("fecha_ejecucion").notNull(),
+  cantidadEjecutada: numeric("cantidad_ejecutada", { precision: 14, scale: 4 }),
+  unidadMedida: text("unidad_medida"),
+  ejecutadaAt: timestamp("ejecutada_at", { withTimezone: true }),
   notas: text("notas"),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
@@ -222,6 +246,70 @@ export const planesSiembra = pgTable("planes_siembra", {
     .references(() => catalogoItems.id, { onDelete: "restrict" }),
   fechaProyectada: date("fecha_proyectada").notNull(),
   confirmacionErosion: boolean("confirmacion_erosion").notNull().default(false),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** HU19 RF19: adecuación física del lote previa a siembra */
+export const preparacionesTerreno = pgTable("preparaciones_terreno", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  planSiembraId: uuid("plan_siembra_id")
+    .notNull()
+    .references(() => planesSiembra.id, { onDelete: "restrict" }),
+  pendienteFinalPct: numeric("pendiente_final_pct", { precision: 5, scale: 2 }).notNull(),
+  actividades: text("actividades").array().notNull(),
+  estado: preparacionTerrenoEstadoEnum("estado").notNull(),
+  notas: text("notas"),
+  validadoPor: uuid("validado_por"),
+  validadoEn: timestamp("validado_en", { withTimezone: true }),
+  observacionValidacion: text("observacion_validacion"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** HU20 RF20: siembra de plántulas en campo */
+export const registrosSiembra = pgTable("registros_siembra", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  planSiembraId: uuid("plan_siembra_id")
+    .notNull()
+    .references(() => planesSiembra.id, { onDelete: "restrict" }),
+  preparacionTerrenoId: uuid("preparacion_terreno_id")
+    .notNull()
+    .references(() => preparacionesTerreno.id, { onDelete: "restrict" }),
+  catalogoMaterialId: uuid("catalogo_material_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  fechaSiembra: date("fecha_siembra").notNull(),
+  cantidadPalmas: integer("cantidad_palmas").notNull(),
+  confirmacionProfundidad: boolean("confirmacion_profundidad").notNull(),
+  confirmacionOrientacion: boolean("confirmacion_orientacion").notNull(),
   notas: text("notas"),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
@@ -525,3 +613,113 @@ export const aplicacionesFitosanitarias = pgTable(
       .defaultNow(),
   }
 );
+
+/** HU22 RF22: aplicación de fertilización ejecutada en campo */
+export const aplicacionesFertilizacion = pgTable("aplicaciones_fertilizacion", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  planId: uuid("plan_id")
+    .notNull()
+    .references(() => planesNutricion.id, { onDelete: "restrict" }),
+  planItemId: uuid("plan_item_id")
+    .notNull()
+    .references(() => planesNutricionItems.id, { onDelete: "restrict" }),
+  catalogoInsumoId: uuid("catalogo_insumo_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  fechaAplicacion: date("fecha_aplicacion").notNull(),
+  cantidadAplicada: numeric("cantidad_aplicada", {
+    precision: 14,
+    scale: 4,
+  }).notNull(),
+  dosisProgramada: numeric("dosis_programada", {
+    precision: 14,
+    scale: 4,
+  }).notNull(),
+  dosisUnidad: planNutricionDosisUnidadEnum("dosis_unidad").notNull(),
+  desviacionPct: numeric("desviacion_pct", { precision: 6, scale: 2 })
+    .notNull()
+    .default("0"),
+  justificacionDesviacion: text("justificacion_desviacion"),
+  metodoAplicacion: metodoAplicacionFertilizacionEnum("metodo_aplicacion").notNull(),
+  unidadMedida: text("unidad_medida"),
+  latitud: numeric("latitud", { precision: 10, scale: 7 }).notNull(),
+  longitud: numeric("longitud", { precision: 10, scale: 7 }).notNull(),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const inventarioHerramientas = pgTable(
+  "inventario_herramientas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fincaId: uuid("finca_id")
+      .notNull()
+      .references(() => fincas.id, { onDelete: "restrict" }),
+    catalogoItemId: uuid("catalogo_item_id")
+      .notNull()
+      .references(() => catalogoItems.id, { onDelete: "restrict" }),
+    codigo: text("codigo").notNull(),
+    estado: inventarioHerramientaEstadoEnum("estado").notNull().default("disponible"),
+    assignedTo: uuid("assigned_to").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    notasDano: text("notas_dano"),
+    createdBy: uuid("created_by").notNull(),
+    source: registroSourceEnum("source").notNull().default("web"),
+    isVoided: boolean("is_voided").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("inventario_herramientas_finca_codigo_lower_uidx").on(
+      t.fincaId,
+      sql`lower(${t.codigo})`
+    ),
+  ]
+);
+
+export const censosSanitarios = pgTable("censos_sanitarios", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  catalogoItemId: uuid("catalogo_item_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  fechaCenso: date("fecha_censo").notNull(),
+  palmasInspeccionadas: integer("palmas_inspeccionadas").notNull(),
+  palmasAfectadas: integer("palmas_afectadas").notNull().default(0),
+  incidenciaPct: numeric("incidencia_pct", { precision: 6, scale: 2 }).notNull(),
+  superaUmbral: boolean("supera_umbral").notNull().default(false),
+  notas: text("notas"),
+  createdBy: uuid("created_by").notNull(),
+  source: registroSourceEnum("source").notNull().default("web"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

@@ -1,9 +1,11 @@
 /** HU17 — categorías alineadas con RN02 (≥5 fuentes integradas). */
 export type TimelineEventCategory =
   | "material_plan"
+  | "vivero"
   | "labor"
   | "nutricion"
   | "sanidad"
+  | "suelo"
   | "cosecha";
 
 export type TimelineEvent = {

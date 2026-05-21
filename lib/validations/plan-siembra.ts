@@ -6,6 +6,7 @@ export const loteEstadoCultivoSchema = z.enum([
   "vacante",
   "disponible",
   "planificado_siembra",
+  "listo_para_siembra",
   "en_produccion",
 ]);
 

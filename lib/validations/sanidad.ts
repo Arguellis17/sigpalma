@@ -44,13 +44,25 @@ export const registrarAplicacionFitosanitariaSchema = z
     unidad_medida: z.string().max(50).optional().nullable(),
     epp_confirmado: z.boolean(),
     notas: z.string().max(5000).optional().nullable(),
-    latitud: z.coerce.number().optional().nullable(),
-    longitud: z.coerce.number().optional().nullable(),
+    latitud: z.coerce.number().min(-90).max(90).optional().nullable(),
+    longitud: z.coerce.number().min(-180).max(180).optional().nullable(),
     source: z.enum(["web", "mobile", "api"]).optional().default("web"),
   })
   .refine((d) => d.epp_confirmado === true, {
-    message: "Debe confirmar uso de EPP para registrar la aplicación.",
+    message: "Debe confirmar uso de EPP para registrar la aplicación (RN67).",
     path: ["epp_confirmado"],
+  })
+  .superRefine((data, ctx) => {
+    const hasLat = data.latitud != null && Number.isFinite(data.latitud);
+    const hasLng = data.longitud != null && Number.isFinite(data.longitud);
+    if (!hasLat || !hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Active la ubicación GPS del dispositivo antes de registrar la aplicación en campo.",
+        path: ["latitud"],
+      });
+    }
   });
 
 export type RegistrarAplicacionFitosanitariaInput = z.infer<

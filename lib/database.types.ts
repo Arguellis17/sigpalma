@@ -139,6 +139,7 @@ export type Database = {
             | "vacante"
             | "disponible"
             | "planificado_siembra"
+            | "listo_para_siembra"
             | "en_produccion";
           created_at: string;
           updated_at: string;
@@ -157,6 +158,7 @@ export type Database = {
             | "vacante"
             | "disponible"
             | "planificado_siembra"
+            | "listo_para_siembra"
             | "en_produccion";
           created_at?: string;
           updated_at?: string;
@@ -175,6 +177,7 @@ export type Database = {
             | "vacante"
             | "disponible"
             | "planificado_siembra"
+            | "listo_para_siembra"
             | "en_produccion";
           created_at?: string;
           updated_at?: string;
@@ -255,6 +258,120 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      preparaciones_terreno: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          plan_siembra_id: string;
+          pendiente_final_pct: number;
+          actividades: string[];
+          estado: Database["public"]["Enums"]["preparacion_terreno_estado"];
+          notas: string | null;
+          validado_por: string | null;
+          validado_en: string | null;
+          observacion_validacion: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          plan_siembra_id: string;
+          pendiente_final_pct: number;
+          actividades: string[];
+          estado: Database["public"]["Enums"]["preparacion_terreno_estado"];
+          notas?: string | null;
+          validado_por?: string | null;
+          validado_en?: string | null;
+          observacion_validacion?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          plan_siembra_id?: string;
+          pendiente_final_pct?: number;
+          actividades?: string[];
+          estado?: Database["public"]["Enums"]["preparacion_terreno_estado"];
+          notas?: string | null;
+          validado_por?: string | null;
+          validado_en?: string | null;
+          observacion_validacion?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      registros_siembra: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          plan_siembra_id: string;
+          preparacion_terreno_id: string;
+          catalogo_material_id: string;
+          fecha_siembra: string;
+          cantidad_palmas: number;
+          confirmacion_profundidad: boolean;
+          confirmacion_orientacion: boolean;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          plan_siembra_id: string;
+          preparacion_terreno_id: string;
+          catalogo_material_id: string;
+          fecha_siembra: string;
+          cantidad_palmas: number;
+          confirmacion_profundidad?: boolean;
+          confirmacion_orientacion?: boolean;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          plan_siembra_id?: string;
+          preparacion_terreno_id?: string;
+          catalogo_material_id?: string;
+          fecha_siembra?: string;
+          cantidad_palmas?: number;
+          confirmacion_profundidad?: boolean;
+          confirmacion_orientacion?: boolean;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       planes_nutricion: {
         Row: {
@@ -755,6 +872,9 @@ export type Database = {
           catalogo_item_id: string | null;
           tipo: string;
           fecha_ejecucion: string;
+          cantidad_ejecutada: number | null;
+          unidad_medida: string | null;
+          ejecutada_at: string | null;
           notas: string | null;
           created_by: string;
           source: Database["public"]["Enums"]["registro_source"];
@@ -769,6 +889,9 @@ export type Database = {
           catalogo_item_id?: string | null;
           tipo: string;
           fecha_ejecucion: string;
+          cantidad_ejecutada?: number | null;
+          unidad_medida?: string | null;
+          ejecutada_at?: string | null;
           notas?: string | null;
           created_by: string;
           source?: Database["public"]["Enums"]["registro_source"];
@@ -783,6 +906,9 @@ export type Database = {
           catalogo_item_id?: string | null;
           tipo?: string;
           fecha_ejecucion?: string;
+          cantidad_ejecutada?: number | null;
+          unidad_medida?: string | null;
+          ejecutada_at?: string | null;
           notas?: string | null;
           created_by?: string;
           source?: Database["public"]["Enums"]["registro_source"];
@@ -1009,6 +1135,180 @@ export type Database = {
         };
         Relationships: [];
       };
+      aplicaciones_fertilizacion: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          plan_id: string;
+          plan_item_id: string;
+          catalogo_insumo_id: string;
+          fecha_aplicacion: string;
+          cantidad_aplicada: number;
+          dosis_programada: number;
+          dosis_unidad: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          desviacion_pct: number;
+          justificacion_desviacion: string | null;
+          metodo_aplicacion: Database["public"]["Enums"]["metodo_aplicacion_fertilizacion"];
+          unidad_medida: string | null;
+          latitud: number;
+          longitud: number;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          plan_id: string;
+          plan_item_id: string;
+          catalogo_insumo_id: string;
+          fecha_aplicacion: string;
+          cantidad_aplicada: number;
+          dosis_programada: number;
+          dosis_unidad: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          desviacion_pct?: number;
+          justificacion_desviacion?: string | null;
+          metodo_aplicacion: Database["public"]["Enums"]["metodo_aplicacion_fertilizacion"];
+          unidad_medida?: string | null;
+          latitud: number;
+          longitud: number;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          plan_id?: string;
+          plan_item_id?: string;
+          catalogo_insumo_id?: string;
+          fecha_aplicacion?: string;
+          cantidad_aplicada?: number;
+          dosis_programada?: number;
+          dosis_unidad?: Database["public"]["Enums"]["plan_nutricion_dosis_unidad"];
+          desviacion_pct?: number;
+          justificacion_desviacion?: string | null;
+          metodo_aplicacion?: Database["public"]["Enums"]["metodo_aplicacion_fertilizacion"];
+          unidad_medida?: string | null;
+          latitud?: number;
+          longitud?: number;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      inventario_herramientas: {
+        Row: {
+          id: string;
+          finca_id: string;
+          catalogo_item_id: string;
+          codigo: string;
+          estado: Database["public"]["Enums"]["inventario_herramienta_estado"];
+          assigned_to: string | null;
+          notas_dano: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          catalogo_item_id: string;
+          codigo: string;
+          estado?: Database["public"]["Enums"]["inventario_herramienta_estado"];
+          assigned_to?: string | null;
+          notas_dano?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          catalogo_item_id?: string;
+          codigo?: string;
+          estado?: Database["public"]["Enums"]["inventario_herramienta_estado"];
+          assigned_to?: string | null;
+          notas_dano?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      censos_sanitarios: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          fecha_censo: string;
+          palmas_inspeccionadas: number;
+          palmas_afectadas: number;
+          incidencia_pct: number | string;
+          supera_umbral: boolean;
+          notas: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          fecha_censo?: string;
+          palmas_inspeccionadas: number;
+          palmas_afectadas?: number;
+          incidencia_pct: number | string;
+          supera_umbral?: boolean;
+          notas?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          catalogo_item_id?: string;
+          fecha_censo?: string;
+          palmas_inspeccionadas?: number;
+          palmas_afectadas?: number;
+          incidencia_pct?: number | string;
+          supera_umbral?: boolean;
+          notas?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -1032,6 +1332,7 @@ export type Database = {
         | "vacante"
         | "disponible"
         | "planificado_siembra"
+        | "listo_para_siembra"
         | "en_produccion";
       plan_nutricion_dosis_unidad: "por_ha" | "por_palma";
       plan_nutricion_frecuencia:
@@ -1042,6 +1343,9 @@ export type Database = {
         | "personalizado";
       monitoreo_fitosanitario_estado: "pendiente" | "completada" | "anulada";
       vivero_concepto_evaluacion: "apto_trasplante" | "no_apto";
+      inventario_herramienta_estado: "disponible" | "en_uso" | "danada" | "perdida";
+      metodo_aplicacion_fertilizacion: "manual" | "equipada" | "fertirriego" | "otro";
+      preparacion_terreno_estado: "aprobado" | "pendiente_validacion_tecnico";
     };
     CompositeTypes: Record<string, never>;
   };
