@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { CatalogoReadonlyList } from "@/components/operario/catalogo-readonly-list";
+import { labelCategoriaFitosanitaria } from "@/lib/validations/catalogo";
 
 export default async function OperarioCatalogoFitosanitarioPage() {
   const supabase = await createClient();
@@ -11,11 +12,16 @@ export default async function OperarioCatalogoFitosanitarioPage() {
     .order("categoria")
     .order("nombre");
 
+  const rows = (data ?? []).map((r) => ({
+    ...r,
+    categoria: labelCategoriaFitosanitaria(r.categoria),
+  }));
+
   return (
     <CatalogoReadonlyList
       title="Catálogo fitosanitario (consulta)"
       description="Referencia homologada de plagas, enfermedades y demás ítems fitosanitarios del catálogo corporativo. Modo consulta."
-      rows={data ?? []}
+      rows={rows}
       extraColumns={[{ key: "categoria", label: "Tipo" }]}
     />
   );

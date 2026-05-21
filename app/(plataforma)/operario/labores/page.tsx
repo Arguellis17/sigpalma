@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
+import { todayColombiaYmd } from "@/lib/date-colombia";
+import {
+  getCatalogoLabores,
+  getLaboresPendientesEjecucion,
+} from "@/app/actions/queries";
 import { LaboresOperarioClient } from "@/components/operario/labores-operario-client";
 
 async function getFincas(fincaId: string | null) {
@@ -16,16 +21,40 @@ export default async function OperarioLaboresPage() {
   const fincaId = session?.profile?.finca_id ?? null;
   const fincas = await getFincas(fincaId);
   const supabase = await createClient();
+  const hoy = todayColombiaYmd();
+
+  const catalogoRes = fincaId ? await getCatalogoLabores() : { success: true as const, data: [] };
+  const pendientesRes = fincaId
+    ? await getLaboresPendientesEjecucion(fincaId, hoy)
+    : { success: true as const, data: [] };
+
+  const catalogoLabores = catalogoRes.success ? catalogoRes.data : [];
+  const pendientes = pendientesRes.success ? pendientesRes.data : [];
 
   const { data: laboresRaw } = fincaId
     ? await supabase
         .from("labores_agronomicas")
-        .select("id, lote_id, tipo, fecha_ejecucion, notas, created_at")
+        .select(
+          "id, lote_id, tipo, fecha_ejecucion, notas, created_at, cantidad_ejecutada, unidad_medida, ejecutada_at"
+        )
         .eq("finca_id", fincaId)
         .eq("is_voided", false)
-        .order("fecha_ejecucion", { ascending: false })
+        .not("cantidad_ejecutada", "is", null)
+        .order("ejecutada_at", { ascending: false })
         .limit(200)
-    : { data: [] as { id: string; lote_id: string; tipo: string; fecha_ejecucion: string; notas: string | null; created_at: string }[] };
+    : {
+        data: [] as {
+          id: string;
+          lote_id: string;
+          tipo: string;
+          fecha_ejecucion: string;
+          notas: string | null;
+          created_at: string;
+          cantidad_ejecutada: number;
+          unidad_medida: string;
+          ejecutada_at: string;
+        }[],
+      };
 
   const lr = laboresRaw ?? [];
   const loteIds = [...new Set(lr.map((l) => l.lote_id))];
@@ -42,6 +71,9 @@ export default async function OperarioLaboresPage() {
     notas: l.notas,
     lote_codigo: loteMap.get(l.lote_id) ?? "—",
     created_at: l.created_at,
+    cantidad_ejecutada: Number(l.cantidad_ejecutada),
+    unidad_medida: l.unidad_medida ?? "",
+    ejecutada_at: l.ejecutada_at ?? l.created_at,
   }));
 
   return (
@@ -51,14 +83,16 @@ export default async function OperarioLaboresPage() {
           Labores agronómicas
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Registre la ejecución de labores en lote; el listado refleja los registros activos de su
-          finca.
+          Reporte la ejecución de labores de mantenimiento; las tareas programadas
+          por el técnico aparecen al registrar una nueva labor.
         </p>
       </div>
       <LaboresOperarioClient
         initialRows={initialRows}
         fincas={fincas}
         defaultFincaId={fincaId}
+        catalogoLabores={catalogoLabores}
+        pendientes={pendientes}
       />
     </div>
   );

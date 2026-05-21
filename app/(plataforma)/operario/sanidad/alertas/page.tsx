@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { getCatalogoFitosanidad } from "@/app/actions/queries";
+import { getCatalogoEnfermedades, getCatalogoFitosanidad, getCatalogoPlagas } from "@/app/actions/queries";
 import { AlertasOperarioClient } from "@/components/operario/alertas-operario-client";
 import {
   createSignedUrlsForStoragePaths,
@@ -12,8 +12,16 @@ export default async function OperarioSanidadAlertasPage() {
   const fincaId = session?.profile?.finca_id ?? null;
   const supabase = await createClient();
 
-  const catalogoRes = await getCatalogoFitosanidad();
+  const [catalogoRes, catalogoPlagasRes, catalogoEnfermedadesRes] = await Promise.all([
+    getCatalogoFitosanidad(),
+    getCatalogoPlagas(),
+    getCatalogoEnfermedades(),
+  ]);
   const catalogo = catalogoRes.success ? catalogoRes.data : [];
+  const catalogoPlagas = catalogoPlagasRes.success ? catalogoPlagasRes.data : [];
+  const catalogoEnfermedades = catalogoEnfermedadesRes.success
+    ? catalogoEnfermedadesRes.data
+    : [];
 
   let fincas: { id: string; nombre: string }[] = [];
   if (fincaId) {
@@ -90,8 +98,8 @@ export default async function OperarioSanidadAlertasPage() {
           Alertas fitosanitarias
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Registre hallazgos en campo; el técnico validará el caso y, de ser necesario, emitirá una
-          orden de aplicación.
+          Reporte de plagas y enfermedades con evidencia fotográfica; el técnico validará el caso y,
+          de ser necesario, emitirá una orden de aplicación.
         </p>
       </div>
       <AlertasOperarioClient
@@ -99,6 +107,8 @@ export default async function OperarioSanidadAlertasPage() {
         fincas={fincas}
         defaultFincaId={fincaId}
         catalogo={catalogo}
+        catalogoPlagas={catalogoPlagas}
+        catalogoEnfermedades={catalogoEnfermedades}
       />
     </div>
   );

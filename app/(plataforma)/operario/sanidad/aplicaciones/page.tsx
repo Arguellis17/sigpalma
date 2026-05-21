@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { AplicacionFitosanitariaForm } from "@/components/operario/aplicacion-fitosanitaria-form";
+import { listAplicacionesFitosanitariasForFinca } from "@/app/actions/fitosanidad";
+import { AplicacionesOperarioClient } from "@/components/operario/aplicaciones-operario-client";
 
 export default async function OperarioSanidadAplicacionesPage() {
   const session = await getSessionProfile();
@@ -15,12 +16,15 @@ export default async function OperarioSanidadAplicacionesPage() {
   }
 
   const supabase = await createClient();
-  const { data: ordenesRaw } = await supabase
-    .from("ordenes_control")
-    .select("id, lote_id, insumo_catalogo_id, dosis_recomendada, estado")
-    .eq("finca_id", fincaId)
-    .eq("estado", "autorizada")
-    .order("created_at", { ascending: false });
+  const [{ data: ordenesRaw }, historialRes] = await Promise.all([
+    supabase
+      .from("ordenes_control")
+      .select("id, lote_id, insumo_catalogo_id, dosis_recomendada, estado")
+      .eq("finca_id", fincaId)
+      .eq("estado", "autorizada")
+      .order("created_at", { ascending: false }),
+    listAplicacionesFitosanitariasForFinca(fincaId),
+  ]);
 
   const ordenesList = ordenesRaw ?? [];
   const loteIds = [...new Set(ordenesList.map((o) => o.lote_id))];
@@ -51,6 +55,8 @@ export default async function OperarioSanidadAplicacionesPage() {
     unidad_medida: insumoMap.get(o.insumo_catalogo_id)?.um ?? null,
   }));
 
+  const historial = historialRes.success ? historialRes.data : [];
+
   return (
     <div className="fade-up-enter space-y-6">
       <div>
@@ -58,11 +64,11 @@ export default async function OperarioSanidadAplicacionesPage() {
           Aplicación fitosanitaria
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ejecute las órdenes de control autorizadas por el técnico tras la validación del
-          monitoreo. Confirme el uso del equipo de protección personal (EPP) antes de registrar.
+          Ejecute órdenes de control autorizadas tras la validación del técnico (RF15). Confirme
+          EPP, registre cantidad aplicada y capture la ubicación GPS en campo.
         </p>
       </div>
-      <AplicacionFitosanitariaForm ordenes={ordenes} />
+      <AplicacionesOperarioClient ordenes={ordenes} initialHistorial={historial} />
     </div>
   );
 }
