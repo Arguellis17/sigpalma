@@ -16,7 +16,13 @@ import { registrarEventoFinca } from "./audit";
 
 const MAX_IMG_BYTES = 4 * 1024 * 1024;
 
-/** Sube una imagen al bucket evidencia-tecnica bajo fincas/{finca_id}/alertas-fitosanitarias/ (operario o agrónomo de la finca). */
+/**
+ * Sube evidencia fotográfica de alerta fitosanitaria al bucket evidencia-tecnica.
+ *
+ * @param formData - Debe incluir `finca_id` (UUID) y `archivo` (imagen JPEG/PNG/WebP, máx. 4 MB)
+ * @returns Ruta de storage bajo `fincas/{finca_id}/alertas-fitosanitarias/`
+ * @throws No lanza; errores de validación, sesión o Storage se devuelven en ActionResult
+ */
 export async function subirEvidenciaAlertaFitosanitaria(
   formData: FormData
 ): Promise<ActionResult<{ path: string }>> {

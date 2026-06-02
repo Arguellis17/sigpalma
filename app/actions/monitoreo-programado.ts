@@ -2,6 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, isSuperAdmin } from "@/lib/auth/session-profile";
+import {
+  assertActiveSession,
+  assertActionRoles,
+} from "@/lib/auth/action-guards";
+import {
+  actionErrorFromPostgrest,
+} from "@/lib/postgres-errors";
 import { todayColombiaYmd } from "@/lib/date-colombia";
 import {
   actualizarMonitoreoProgramadoSchema,
@@ -18,10 +25,16 @@ import { registrarEventoFinca } from "./audit";
 const DUP_MSG =
   "Ya existe una inspección pendiente para este lote en la misma fecha. Cambie la fecha o anule la anterior.";
 
-function isUniqueViolation(err: { code?: string; message?: string } | null): boolean {
-  return err?.code === "23505" || Boolean(err?.message?.includes("monitoreos_fitos_prog_lote_fecha_pendiente"));
-}
+const MONITOREO_UNIQUE_CONSTRAINT = "monitoreos_fitos_prog_lote_fecha_pendiente";
 
+/**
+ * Verifica que el lote exista, pertenezca a la finca indicada y esté activo.
+ *
+ * @param supabase - Cliente Supabase del servidor
+ * @param fincaId - UUID de la finca esperada
+ * @param loteId - UUID del lote a validar
+ * @returns Código del lote si la validación pasa
+ */
 async function assertLoteActivoFinca(
   supabase: Awaited<ReturnType<typeof createClient>>,
   fincaId: string,
@@ -121,8 +134,10 @@ export async function crearMonitoreoProgramado(
     .single();
 
   if (insErr || !inserted) {
-    if (isUniqueViolation(insErr)) return actionError(DUP_MSG);
-    return actionError(insErr?.message ?? "No se pudo crear la programación.");
+    return actionErrorFromPostgrest(insErr, "No se pudo crear la programación.", {
+      uniqueMessage: DUP_MSG,
+      constraintName: MONITOREO_UNIQUE_CONSTRAINT,
+    });
   }
 
   await registrarEventoFinca({
@@ -153,12 +168,14 @@ export async function actualizarMonitoreoProgramado(
   if (!fechaOk.success) return fechaOk;
 
   const session = await getSessionProfile();
-  if (!session?.profile?.is_active || !session.user) {
-    return actionError("Sesión no válida.");
-  }
-  if (!isSuperAdmin(session.profile) && session.profile.role !== "agronomo") {
-    return actionError("Sin permiso para actualizar la programación.");
-  }
+  const sessionOk = assertActiveSession(session, { requireUser: true });
+  if (!sessionOk.success) return sessionOk;
+  const roleOk = assertActionRoles(sessionOk.data, {
+    roles: ["agronomo"],
+    message: "Sin permiso para actualizar la programación.",
+  });
+  if (!roleOk.success) return roleOk;
+  const activeSession = sessionOk.data;
 
   const supabase = await createClient();
 
@@ -172,14 +189,14 @@ export async function actualizarMonitoreoProgramado(
   if (prev.is_voided || prev.estado !== "pendiente") {
     return actionError("Solo se pueden editar programaciones pendientes y no anuladas.");
   }
-  if (!isSuperAdmin(session.profile) && session.profile.finca_id !== prev.finca_id) {
+  if (!isSuperAdmin(activeSession.profile) && activeSession.profile!.finca_id !== prev.finca_id) {
     return actionError("No puede editar programaciones de otra finca.");
   }
   if (input.finca_id !== prev.finca_id) {
     return actionError("No se permite cambiar la finca del registro.");
   }
 
-  if (session.profile.role === "agronomo" && session.profile.finca_id !== input.finca_id) {
+  if (activeSession.profile!.role === "agronomo" && activeSession.profile!.finca_id !== input.finca_id) {
     return actionError("La finca no coincide con su asignación.");
   }
 
@@ -205,8 +222,10 @@ export async function actualizarMonitoreoProgramado(
     .single();
 
   if (ue || !updated) {
-    if (isUniqueViolation(ue)) return actionError(DUP_MSG);
-    return actionError(ue?.message ?? "No se pudo actualizar la programación.");
+    return actionErrorFromPostgrest(ue, "No se pudo actualizar la programación.", {
+      uniqueMessage: DUP_MSG,
+      constraintName: MONITOREO_UNIQUE_CONSTRAINT,
+    });
   }
 
   await registrarEventoFinca({
@@ -234,12 +253,14 @@ export async function anularMonitoreoProgramado(
   const { id } = parsed.data;
 
   const session = await getSessionProfile();
-  if (!session?.profile?.is_active) {
-    return actionError("Sesión no válida.");
-  }
-  if (!isSuperAdmin(session.profile) && session.profile.role !== "agronomo") {
-    return actionError("Sin permiso para anular la programación.");
-  }
+  const sessionOk = assertActiveSession(session);
+  if (!sessionOk.success) return sessionOk;
+  const roleOk = assertActionRoles(sessionOk.data, {
+    roles: ["agronomo"],
+    message: "Sin permiso para anular la programación.",
+  });
+  if (!roleOk.success) return roleOk;
+  const activeSession = sessionOk.data;
 
   const supabase = await createClient();
 
@@ -254,7 +275,7 @@ export async function anularMonitoreoProgramado(
   if (prev.estado === "completada") {
     return actionError("No se puede anular una inspección ya marcada como completada.");
   }
-  if (!isSuperAdmin(session.profile) && session.profile.finca_id !== prev.finca_id) {
+  if (!isSuperAdmin(activeSession.profile) && activeSession.profile!.finca_id !== prev.finca_id) {
     return actionError("No puede anular programaciones de otra finca.");
   }
 
@@ -303,12 +324,15 @@ export async function marcarMonitoreoCompletado(
   const { id } = parsed.data;
 
   const session = await getSessionProfile();
-  if (!session?.profile?.is_active || !session.user) {
-    return actionError("Sesión no válida.");
-  }
-  if (session.profile.role !== "operario") {
-    return actionError("Solo el operario asignado puede marcar la inspección como realizada.");
-  }
+  const sessionOk = assertActiveSession(session, { requireUser: true });
+  if (!sessionOk.success) return sessionOk;
+  const roleOk = assertActionRoles(sessionOk.data, {
+    roles: ["operario"],
+    superadminBypass: false,
+    message: "Solo el operario asignado puede marcar la inspección como realizada.",
+  });
+  if (!roleOk.success) return roleOk;
+  const activeSession = sessionOk.data;
 
   const supabase = await createClient();
 
@@ -323,7 +347,7 @@ export async function marcarMonitoreoCompletado(
   if (prev.estado !== "pendiente") {
     return actionError("Solo puede completar inspecciones pendientes.");
   }
-  if (session.profile.finca_id !== prev.finca_id) {
+  if (activeSession.profile!.finca_id !== prev.finca_id) {
     return actionError("La programación no pertenece a su finca.");
   }
 
@@ -340,7 +364,7 @@ export async function marcarMonitoreoCompletado(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("assigned_to", session.user.id)
+    .eq("assigned_to", activeSession.user.id)
     .eq("estado", "pendiente")
     .eq("is_voided", false)
     .select("id")

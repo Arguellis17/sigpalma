@@ -15,6 +15,12 @@ import type {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Convierte fecha calendario YYYY-MM-DD a ISO UTC mediodía para ordenar eventos del timeline.
+ *
+ * @param ymd - Fecha en formato YYYY-MM-DD (zona Colombia en origen de datos)
+ * @returns ISO string; si el formato es inválido, devuelve now() como fallback de orden
+ */
 function ymdToSortIso(ymd: string): string {
   const p = ymd.split("-").map(Number);
   if (p.length !== 3 || p.some((n) => !Number.isFinite(n))) {

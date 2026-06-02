@@ -6,6 +6,7 @@ import {
   getSessionProfile,
   isAdmin,
   isSuperAdmin,
+  type SessionProfile,
 } from "@/lib/auth/session-profile";
 import {
   cambiarContrasenaObligatoriaSchema,
@@ -16,6 +17,7 @@ import {
   rolesAsignablesPorAdmin,
   rolesAsignablesPorSuperadmin,
   type CrearUsuarioAdminInput,
+  type ActualizarUsuarioInput,
 } from "@/lib/validations/usuario";
 import { actionError, actionOk, type ActionResult } from "./types";
 
@@ -121,8 +123,50 @@ export async function crearUsuarioConRol(
   return actionOk({ id: userId });
 }
 
-// ─── HU02: Actualizar datos de usuario ───────────────────────────────────────
+/**
+ * Valida que un admin de finca pueda editar el usuario objetivo (HU02).
+ * Superadmin omite restricciones de finca y rol.
+ */
+async function assertAdminCanEditTarget(
+  session: SessionProfile,
+  input: Pick<ActualizarUsuarioInput, "id" | "finca_id">
+): Promise<ActionResult<void>> {
+  if (isSuperAdmin(session.profile)) {
+    return actionOk(undefined);
+  }
 
+  const adminFincaId = session.profile?.finca_id;
+  if (!adminFincaId) {
+    return actionError("El administrador actual no tiene finca asignada.");
+  }
+
+  const supabase = await createClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("role, finca_id")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (!target) {
+    return actionError("Usuario no encontrado.");
+  }
+
+  if (target.role === "admin" || target.role === "superadmin") {
+    return actionError("No tiene permisos para editar este usuario.");
+  }
+
+  if (target.finca_id !== adminFincaId) {
+    return actionError("Solo puede editar usuarios de su propia finca.");
+  }
+
+  if (input.finca_id !== undefined && input.finca_id !== adminFincaId) {
+    return actionError("No puede mover usuarios a otra finca.");
+  }
+
+  return actionOk(undefined);
+}
+
+/** HU02 — Gestión de usuarios. Ver docs/15-04-2026/documentacion/primer-corte/LINEAMIENTO */
 export async function actualizarUsuario(
   raw: unknown
 ): Promise<ActionResult<void>> {
@@ -136,35 +180,8 @@ export async function actualizarUsuario(
     return actionError("Acción no permitida.");
   }
 
-  if (!isSuperAdmin(session.profile)) {
-    const adminFincaId = session.profile.finca_id;
-    if (!adminFincaId) {
-      return actionError("El administrador actual no tiene finca asignada.");
-    }
-
-    const supabase = await createClient();
-    const { data: target } = await supabase
-      .from("profiles")
-      .select("role, finca_id")
-      .eq("id", parsed.data.id)
-      .maybeSingle();
-
-    if (!target) {
-      return actionError("Usuario no encontrado.");
-    }
-
-    if (target.role === "admin" || target.role === "superadmin") {
-      return actionError("No tiene permisos para editar este usuario.");
-    }
-
-    if (target.finca_id !== adminFincaId) {
-      return actionError("Solo puede editar usuarios de su propia finca.");
-    }
-
-    if (parsed.data.finca_id !== undefined && parsed.data.finca_id !== adminFincaId) {
-      return actionError("No puede mover usuarios a otra finca.");
-    }
-  }
+  const permOk = await assertAdminCanEditTarget(session, parsed.data);
+  if (!permOk.success) return permOk;
 
   const supabase = await createClient();
   type ProfileUpdate = { full_name?: string; finca_id?: string | null; documento_identidad?: string | null };

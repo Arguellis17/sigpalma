@@ -14,6 +14,7 @@ import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 import { assertCadenaViveroAptoParaPlanSiembra } from "@/lib/vivero-gate";
 
+/** Estados de lote elegibles para planificar siembra (RN: solo vacante o disponible). */
 const PLANIFICABLE = ["vacante", "disponible"] as const;
 
 async function fetchMaterialGeneticoValido(
@@ -108,6 +109,7 @@ export async function crearPlanSiembra(
     return viveroGate;
   }
 
+  /** Insert + update lote; si falla el lote se anula el plan (compensación lógica). */
   const { data: inserted, error: insErr } = await supabase
     .from("planes_siembra")
     .insert({
@@ -138,7 +140,24 @@ export async function crearPlanSiembra(
     .eq("finca_id", input.finca_id);
 
   if (upLote) {
-    return actionError(upLote.message);
+    const { error: voidErr } = await supabase
+      .from("planes_siembra")
+      .update({ is_voided: true, updated_at: new Date().toISOString() })
+      .eq("id", inserted.id)
+      .eq("is_voided", false);
+
+    if (voidErr) {
+      console.error(
+        "[crearPlanSiembra] Falló update lote y revertir plan:",
+        upLote.message,
+        voidErr.message
+      );
+      return actionError(
+        "No se pudo actualizar el lote y el plan quedó pendiente de revisión manual. Contacte al administrador."
+      );
+    }
+
+    return actionError("No se pudo actualizar el lote; el plan fue revertido.");
   }
 
   await registrarEventoFinca({

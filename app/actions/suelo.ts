@@ -15,9 +15,15 @@ import { z } from "zod";
 
 type AnalisisSueloRow = Database["public"]["Tables"]["analisis_suelo"]["Row"];
 
+/** Bucket Supabase para PDFs de laboratorio y evidencia técnica (políticas RLS por finca). */
 const EVIDENCIA_BUCKET = "evidencia-tecnica";
+/** Límite de tamaño para adjuntos PDF de análisis de suelo (5 MB, alineado a Storage). */
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Reglas de lectura/consulta de análisis de suelo por finca:
+ * superadmin ve todo; demás roles solo su finca asignada.
+ */
 function canAccessAnalisisSueloFinca(
   profile: Tables<"profiles"> | null,
   fincaId: string

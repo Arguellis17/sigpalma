@@ -3,6 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import {
+  createSignedUrlsForStoragePaths,
+  parseEvidenciaPaths,
+} from "@/lib/storage-evidencia-tecnica";
+import {
   isInsumoFitosanitarioProducto,
   isInsumoNutricion,
 } from "@/lib/catalogo-insumo-fitosanitario";
@@ -652,6 +656,98 @@ export async function getCatalogoEnfermedades(): Promise<
   }
 
   return actionOk((data ?? []) as CatalogoFitosanidadOption[]);
+}
+
+/** Fila enriquecida para listado de alertas fitosanitarias del operario. */
+export type AlertaFitosanitariaOperarioRow = {
+  id: string;
+  created_at: string;
+  severidad: string;
+  descripcion: string | null;
+  validacion_estado: string | null;
+  validacion_diagnostico: string | null;
+  lote_codigo: string;
+  amenaza: string | null;
+  amenaza_categoria: string | null;
+  evidencia_signed_urls: string[];
+};
+
+/**
+ * Lista alertas fitosanitarias de una finca con lote, catálogo y URLs firmadas de evidencia.
+ *
+ * @param fincaId - UUID de la finca del operario
+ */
+export async function getAlertasFitosanitariasOperario(
+  fincaId: string | null
+): Promise<ActionResult<AlertaFitosanitariaOperarioRow[]>> {
+  if (!fincaId) {
+    return actionOk([]);
+  }
+
+  const supabase = await createClient();
+
+  const { data: alertasRaw, error: alertErr } = await supabase
+    .from("alertas_fitosanitarias")
+    .select(
+      "id, created_at, severidad, descripcion, validacion_estado, validacion_diagnostico, lote_id, catalogo_item_id, evidencia_urls"
+    )
+    .eq("finca_id", fincaId)
+    .eq("is_voided", false)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (alertErr) {
+    return actionError(alertErr.message);
+  }
+
+  const ar = alertasRaw ?? [];
+  const loteIds = [...new Set(ar.map((a) => a.lote_id))];
+  const catIds = [
+    ...new Set(
+      ar.map((a) => a.catalogo_item_id).filter((x): x is string => Boolean(x))
+    ),
+  ];
+
+  const [{ data: lotesRows }, { data: catRows }] = await Promise.all([
+    loteIds.length
+      ? supabase.from("lotes").select("id, codigo").in("id", loteIds)
+      : Promise.resolve({ data: [] as { id: string; codigo: string }[] }),
+    catIds.length
+      ? supabase
+          .from("catalogo_items")
+          .select("id, nombre, categoria")
+          .in("id", catIds)
+      : Promise.resolve(
+          { data: [] as { id: string; nombre: string; categoria: string }[] }
+        ),
+  ]);
+
+  const loteMap = new Map((lotesRows ?? []).map((l) => [l.id, l.codigo]));
+  const catMap = new Map(
+    (catRows ?? []).map((c) => [c.id, { nombre: c.nombre, categoria: c.categoria }])
+  );
+
+  const rows: AlertaFitosanitariaOperarioRow[] = [];
+  for (const a of ar) {
+    const cat = a.catalogo_item_id ? catMap.get(a.catalogo_item_id) : undefined;
+    const paths = parseEvidenciaPaths(a.evidencia_urls);
+    const evidenciaSignedUrls =
+      paths.length > 0 ? await createSignedUrlsForStoragePaths(supabase, paths) : [];
+    rows.push({
+      id: a.id,
+      created_at: a.created_at,
+      severidad: a.severidad,
+      descripcion: a.descripcion,
+      validacion_estado: a.validacion_estado,
+      validacion_diagnostico: a.validacion_diagnostico,
+      lote_codigo: loteMap.get(a.lote_id) ?? "—",
+      amenaza: cat?.nombre ?? null,
+      amenaza_categoria: cat?.categoria ?? null,
+      evidencia_signed_urls: evidenciaSignedUrls,
+    });
+  }
+
+  return actionOk(rows);
 }
 
 export type InsumoFitosanitarioOption = {
