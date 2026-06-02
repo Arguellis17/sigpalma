@@ -51,7 +51,7 @@ type Props = {
   layout?: "page" | "dialog";
   /** When set, form runs in edit mode (multipart + PDF opcional). */
   record?: AnalisisSueloFormRecord | null;
-  /** Preselecciona lote al crear (p. ej. enlace desde plan nutrición HU12). */
+  /** Preselecciona lote al crear (p. ej. enlace desde plan nutrición). */
   defaultLoteId?: string | null;
   onSuccess: () => void;
   onCancel: () => void;

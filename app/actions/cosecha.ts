@@ -3,6 +3,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, isSuperAdmin } from "@/lib/auth/session-profile";
 import {
+  filasIncluyenLaborCosechaPendiente,
+  loteAptoParaCosecha,
+  mensajePesoInusual,
+  pesoEsInusual,
+} from "@/lib/cosecha-validacion";
+import { rendimientoTonHa } from "@/lib/productividad";
+import {
   anularRegistroCampoSchema,
   reportarCosechaSchema,
   type ReportarCosechaInput,
@@ -35,7 +42,7 @@ export async function reportarCosecha(
 
   const { data: lote, error: loteErr } = await supabase
     .from("lotes")
-    .select("id, area_ha, codigo")
+    .select("id, area_ha, codigo, activo, estado_cultivo, anio_siembra")
     .eq("id", input.lote_id)
     .eq("finca_id", input.finca_id)
     .maybeSingle();
@@ -45,6 +52,60 @@ export async function reportarCosecha(
   }
   if (!lote) {
     return actionError("Lote no encontrado para la finca indicada.");
+  }
+
+  const aptitud = loteAptoParaCosecha(
+    {
+      activo: lote.activo,
+      estado_cultivo: lote.estado_cultivo,
+      anio_siembra: lote.anio_siembra,
+    },
+    input.fecha
+  );
+  if (!aptitud.ok) {
+    return actionError(aptitud.error);
+  }
+
+  const { data: laboresPendientes, error: labErr } = await supabase
+    .from("labores_agronomicas")
+    .select("id, catalogo_items ( nombre )")
+    .eq("finca_id", input.finca_id)
+    .eq("lote_id", input.lote_id)
+    .eq("is_voided", false)
+    .is("cantidad_ejecutada", null)
+    .not("catalogo_item_id", "is", null)
+    .lte("fecha_ejecucion", input.fecha);
+
+  if (labErr) {
+    return actionError(labErr.message);
+  }
+  if (
+    !filasIncluyenLaborCosechaPendiente(
+      (laboresPendientes ?? []) as { catalogo_items: { nombre: string } | null }[]
+    )
+  ) {
+    return actionError(
+      "No hay una labor «Cosecha RFF» programada y pendiente para este lote. Solicite al agrónomo programarla en la agenda (HU11)."
+    );
+  }
+
+  const { data: maxRow } = await supabase
+    .from("cosechas_rff")
+    .select("peso_kg")
+    .eq("lote_id", input.lote_id)
+    .eq("is_voided", false)
+    .order("peso_kg", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const maxHistorico =
+    maxRow?.peso_kg != null ? Number(maxRow.peso_kg) : null;
+  if (
+    pesoEsInusual(input.peso_kg, maxHistorico) &&
+    !input.confirmar_peso_inusual
+  ) {
+    const max = maxHistorico ?? 0;
+    return actionError(mensajePesoInusual(input.peso_kg, max));
   }
 
   const areaHa = Number(lote.area_ha);
@@ -63,6 +124,9 @@ export async function reportarCosecha(
       madurez_frutos_caidos_min: input.madurez_frutos_caidos_min ?? null,
       madurez_frutos_caidos_max: input.madurez_frutos_caidos_max ?? null,
       observaciones_calidad: input.observaciones_calidad ?? null,
+      latitud: input.latitud ?? null,
+      longitud: input.longitud ?? null,
+      estado_acopio: "en_centro_acopio",
       created_by: user.id,
       source: input.source,
     })
@@ -73,8 +137,7 @@ export async function reportarCosecha(
     return actionError(error.message);
   }
 
-  const pesoT = input.peso_kg / 1000;
-  const rendimiento_ton_ha = pesoT / areaHa;
+  const rendimiento_ton_ha = rendimientoTonHa(input.peso_kg, areaHa);
 
   await registrarEventoFinca({
     fincaId: input.finca_id,
@@ -86,7 +149,10 @@ export async function reportarCosecha(
       fecha: input.fecha,
       pesoKg: input.peso_kg,
       racimos: input.conteo_racimos,
-      rendimientoTonHa: Math.round(rendimiento_ton_ha * 1000) / 1000,
+      rendimientoTonHa: rendimiento_ton_ha,
+      latitud: input.latitud,
+      longitud: input.longitud,
+      pesoInusualConfirmado: input.confirmar_peso_inusual,
       observacionesCalidad: input.observaciones_calidad ?? null,
     },
   });
@@ -124,7 +190,7 @@ export async function anularCosecha(
 
   const { data: row, error: fetchErr } = await supabase
     .from("cosechas_rff")
-    .select("id, finca_id, is_voided")
+    .select("id, finca_id, is_voided, estado_acopio, remision_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -133,6 +199,11 @@ export async function anularCosecha(
   }
   if (row.is_voided) {
     return actionError("Este registro ya está anulado.");
+  }
+  if (row.estado_acopio === "en_transito" || row.remision_id) {
+    return actionError(
+      "No se puede anular: la fruta ya fue despachada o está en tránsito (HU29)."
+    );
   }
   if (!isSuperAdmin(profile) && profile.finca_id !== row.finca_id) {
     return actionError("No puede anular registros de otra finca.");

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, isSuperAdmin } from "@/lib/auth/session-profile";
 import { registrarEventoFinca } from "@/app/actions/audit";
 import { actionError, actionOk, type ActionResult } from "@/app/actions/types";
+import { rendimientoTonHa } from "@/lib/productividad";
 import type {
   TimelineEvent,
   TimelineEventCategory,
@@ -23,11 +24,6 @@ function ymdToSortIso(ymd: string): string {
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0)).toISOString();
 }
 
-function rendimientoTonHa(pesoKg: number, areaHa: number): number {
-  if (!Number.isFinite(areaHa) || areaHa <= 0 || !Number.isFinite(pesoKg)) return 0;
-  return (pesoKg / 1000) / areaHa;
-}
-
 function compareEvents(a: TimelineEvent, b: TimelineEvent): number {
   const ta = new Date(a.sortAt).getTime();
   const tb = new Date(b.sortAt).getTime();
@@ -44,6 +40,7 @@ function emptyConteo(): Record<TimelineEventCategory, number> {
     sanidad: 0,
     suelo: 0,
     cosecha: 0,
+    logistica: 0,
   };
 }
 
@@ -72,8 +69,12 @@ export async function getTrazabilidadTecnicaLote(
   }
 
   const { profile } = session;
-  if (profile.role !== "agronomo" && !isSuperAdmin(profile)) {
-    return actionError("Solo el técnico agrónomo puede consultar la trazabilidad técnica.");
+  const puedeConsultar =
+    profile.role === "agronomo" ||
+    profile.role === "admin" ||
+    isSuperAdmin(profile);
+  if (!puedeConsultar) {
+    return actionError("No tiene permiso para consultar la trazabilidad técnica.");
   }
 
   const supabase = await createClient();
@@ -91,7 +92,7 @@ export async function getTrazabilidadTecnicaLote(
   }
 
   if (!isSuperAdmin(profile)) {
-    if (profile.role !== "agronomo" || !profile.finca_id) {
+    if (!profile.finca_id) {
       return actionError("No tiene finca asignada para consultar trazabilidad.");
     }
     if (profile.finca_id !== loteRow.finca_id) {
@@ -107,13 +108,17 @@ export async function getTrazabilidadTecnicaLote(
     preparacionesTerrenoRes,
     registrosSiembraRes,
     laboresRes,
+    laboresProgramadasRes,
     planesNutRes,
     alertasRes,
     aplicacionesRes,
     fertilizacionRes,
     analisisSueloRes,
     censosRes,
+    monitoreosRes,
+    ordenesRes,
     cosechasRes,
+    cosechasRemisionIdsRes,
     lotesFincaRes,
     cosechasFincaRes,
   ] = await Promise.all([
@@ -149,6 +154,15 @@ export async function getTrazabilidadTecnicaLote(
       .eq("lote_id", lid)
       .eq("is_voided", false)
       .not("cantidad_ejecutada", "is", null)
+      .order("fecha_ejecucion", { ascending: false }),
+    supabase
+      .from("labores_agronomicas")
+      .select(
+        "id, tipo, fecha_ejecucion, notas, created_at, catalogo_item_id, catalogo_items ( nombre )"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .is("cantidad_ejecutada", null)
       .order("fecha_ejecucion", { ascending: false }),
     supabase
       .from("planes_nutricion")
@@ -222,11 +236,32 @@ export async function getTrazabilidadTecnicaLote(
       .eq("is_voided", false)
       .order("fecha_censo", { ascending: false }),
     supabase
+      .from("monitoreos_fitosanitarios_programados")
+      .select(
+        "id, fecha_inspeccion, estado, notas, created_at, assigned_to, updated_at"
+      )
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .order("fecha_inspeccion", { ascending: false }),
+    supabase
+      .from("ordenes_control")
+      .select(
+        "id, dosis_recomendada, observaciones_tecnico, estado, created_at, insumo_catalogo_id"
+      )
+      .eq("lote_id", lid)
+      .order("created_at", { ascending: false }),
+    supabase
       .from("cosechas_rff")
-      .select("id, fecha, peso_kg, conteo_racimos, observaciones_calidad, created_at")
+      .select("id, fecha, peso_kg, conteo_racimos, observaciones_calidad, created_at, remision_id")
       .eq("lote_id", lid)
       .eq("is_voided", false)
       .order("fecha", { ascending: false }),
+    supabase
+      .from("cosechas_rff")
+      .select("remision_id")
+      .eq("lote_id", lid)
+      .eq("is_voided", false)
+      .not("remision_id", "is", null),
     supabase.from("lotes").select("id, area_ha").eq("finca_id", fincaId),
     supabase
       .from("cosechas_rff")
@@ -242,13 +277,17 @@ export async function getTrazabilidadTecnicaLote(
     preparacionesTerrenoRes.error,
     registrosSiembraRes.error,
     laboresRes.error,
+    laboresProgramadasRes.error,
     planesNutRes.error,
     alertasRes.error,
     aplicacionesRes.error,
     fertilizacionRes.error,
     analisisSueloRes.error,
     censosRes.error,
+    monitoreosRes.error,
+    ordenesRes.error,
     cosechasRes.error,
+    cosechasRemisionIdsRes.error,
     lotesFincaRes.error,
     cosechasFincaRes.error,
   ].filter(Boolean);
@@ -271,6 +310,20 @@ export async function getTrazabilidadTecnicaLote(
     : { data: [] as { id: string; nombre: string }[] };
   const fertilizacionInsumoMap = new Map(
     (fertilizacionInsumosRows ?? []).map((i) => [i.id, i.nombre])
+  );
+
+  const ordenInsumoIds = [
+    ...new Set(
+      (ordenesRes.data ?? [])
+        .map((o) => (o as { insumo_catalogo_id?: string }).insumo_catalogo_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const { data: ordenInsumosRows } = ordenInsumoIds.length
+    ? await supabase.from("catalogo_items").select("id, nombre").in("id", ordenInsumoIds)
+    : { data: [] as { id: string; nombre: string }[] };
+  const ordenInsumoMap = new Map(
+    (ordenInsumosRows ?? []).map((i) => [i.id, i.nombre])
   );
 
   const catalogoIdsPlan = [
@@ -455,19 +508,41 @@ export async function getTrazabilidadTecnicaLote(
       cantidad != null && unidad
         ? `${Number(cantidad)} ${unidad === "ha" ? "ha" : "palmas"}`
         : null;
+    const nombreLabor = cat ?? lb.tipo;
     eventos.push({
-      id: `labor:${lb.id}`,
+      id: `labor-ej:${lb.id}`,
       category: "labor",
       sortAt: ymdToSortIso(fe),
       displayDate: fe,
-      title: cat ?? lb.tipo,
+      title: `Labor ejecutada: ${nombreLabor}`,
       subtitle: avance ?? (cat && cat !== lb.tipo ? lb.tipo : null),
       metadata: {
-        tipo: "labor",
+        tipo: "labor_ejecutada",
         tipoTexto: lb.tipo,
         catalogoNombre: cat ?? null,
         cantidadEjecutada: cantidad != null ? Number(cantidad) : null,
         unidadMedida: unidad ?? null,
+        notas: lb.notas,
+        laborId: lb.id,
+      },
+    });
+  }
+
+  for (const lb of laboresProgramadasRes.data ?? []) {
+    const cat = (lb as { catalogo_items?: { nombre?: string } | null }).catalogo_items?.nombre;
+    const fe = String(lb.fecha_ejecucion);
+    const nombreLabor = cat ?? lb.tipo;
+    eventos.push({
+      id: `labor-prog:${lb.id}`,
+      category: "labor",
+      sortAt: ymdToSortIso(fe),
+      displayDate: fe,
+      title: `Labor programada: ${nombreLabor}`,
+      subtitle: lb.notas?.slice(0, 120) ?? "Pendiente de ejecución",
+      metadata: {
+        tipo: "labor_programada",
+        tipoTexto: lb.tipo,
+        catalogoNombre: cat ?? null,
         notas: lb.notas,
         laborId: lb.id,
       },
@@ -613,6 +688,54 @@ export async function getTrazabilidadTecnicaLote(
     });
   }
 
+  for (const mp of monitoreosRes.data ?? []) {
+    const fi = String(mp.fecha_inspeccion);
+    const estadoLabel =
+      mp.estado === "completada"
+        ? "Completada"
+        : mp.estado === "pendiente"
+          ? "Pendiente"
+          : String(mp.estado);
+    eventos.push({
+      id: `monitoreo:${mp.id}`,
+      category: "sanidad",
+      sortAt: ymdToSortIso(fi),
+      displayDate: fi,
+      title: "Monitoreo fitosanitario programado",
+      subtitle: `Estado: ${estadoLabel}`,
+      metadata: {
+        tipo: "monitoreo_programado",
+        monitoreoId: mp.id,
+        fechaInspeccion: fi,
+        estado: mp.estado,
+        notas: mp.notas,
+        updatedAt: mp.updated_at,
+      },
+    });
+  }
+
+  for (const oc of ordenesRes.data ?? []) {
+    const insumoId = (oc as { insumo_catalogo_id?: string }).insumo_catalogo_id;
+    const insumo = insumoId ? ordenInsumoMap.get(insumoId) : undefined;
+    const created = String(oc.created_at);
+    eventos.push({
+      id: `orden:${oc.id}`,
+      category: "sanidad",
+      sortAt: created,
+      displayDate: created.slice(0, 10),
+      title: insumo ? `Orden de control: ${insumo}` : "Orden de control fitosanitaria",
+      subtitle: `Estado: ${oc.estado} · Dosis: ${oc.dosis_recomendada}`,
+      metadata: {
+        tipo: "orden_control",
+        ordenId: oc.id,
+        insumoNombre: insumo ?? null,
+        dosisRecomendada: oc.dosis_recomendada,
+        observacionesTecnico: oc.observaciones_tecnico,
+        estado: oc.estado,
+      },
+    });
+  }
+
   for (const as of analisisSueloRes.data ?? []) {
     const fa = String(as.fecha_analisis);
     const ph = as.ph != null ? Number(as.ph) : null;
@@ -690,6 +813,49 @@ export async function getTrazabilidadTecnicaLote(
         rendimientoTonHa: Math.round(r * 1000) / 1000,
         observaciones: c.observaciones_calidad,
         cosechaId: c.id,
+      },
+    });
+  }
+
+  const remisionIds = [
+    ...new Set(
+      (cosechasRemisionIdsRes.data ?? [])
+        .map((r) => r.remision_id)
+        .filter((id): id is string => id != null)
+    ),
+  ];
+  const { data: remisionesRows } = remisionIds.length
+    ? await supabase
+        .from("remisiones_despacho")
+        .select(
+          "id, numero_remision, fecha_despacho, hora_salida, placa_vehiculo, conductor_identificacion, conductor_nombre, peso_total_kg, total_racimos, destino"
+        )
+        .in("id", remisionIds)
+        .eq("is_voided", false)
+    : { data: [] };
+
+  for (const rem of remisionesRows ?? []) {
+    const sortAt =
+      rem.hora_salida && !Number.isNaN(new Date(rem.hora_salida).getTime())
+        ? rem.hora_salida
+        : ymdToSortIso(rem.fecha_despacho);
+    const ton = Number(rem.peso_total_kg) / 1000;
+    eventos.push({
+      id: `logistica:${rem.id}`,
+      category: "logistica",
+      sortAt,
+      displayDate: rem.fecha_despacho,
+      title: `Remisión ${rem.numero_remision}`,
+      subtitle: `Placa ${rem.placa_vehiculo} · ${ton.toFixed(3)} t · ${rem.total_racimos} racimos`,
+      metadata: {
+        tipo: "remision_despacho",
+        remisionId: rem.id,
+        numeroRemision: rem.numero_remision,
+        placa: rem.placa_vehiculo,
+        conductorId: rem.conductor_identificacion,
+        conductorNombre: rem.conductor_nombre,
+        pesoTotalKg: Number(rem.peso_total_kg),
+        destino: rem.destino,
       },
     });
   }

@@ -51,7 +51,7 @@ type Props = {
   initialRows: AnalisisSueloListRow[];
   fincas: Finca[];
   lotesPorFinca: Record<string, Lote[]>;
-  /** Desde HU12: abrir formulario con lote preseleccionado (?lote=uuid) */
+  /** Abrir formulario con lote preseleccionado (?lote=uuid) */
   initialLoteId?: string | null;
 };
 

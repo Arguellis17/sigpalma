@@ -926,6 +926,80 @@ export type Database = {
           },
         ];
       };
+      remisiones_despacho: {
+        Row: {
+          id: string;
+          finca_id: string;
+          numero_remision: string;
+          fecha_despacho: string;
+          hora_salida: string;
+          placa_vehiculo: string;
+          conductor_identificacion: string;
+          conductor_nombre: string | null;
+          peso_total_kg: string;
+          total_racimos: number;
+          capacidad_vehiculo_kg: string | null;
+          latitud: number | null;
+          longitud: number | null;
+          destino: string | null;
+          created_by: string;
+          source: Database["public"]["Enums"]["registro_source"];
+          is_voided: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          numero_remision: string;
+          fecha_despacho: string;
+          hora_salida?: string;
+          placa_vehiculo: string;
+          conductor_identificacion: string;
+          conductor_nombre?: string | null;
+          peso_total_kg: number | string;
+          total_racimos: number;
+          capacidad_vehiculo_kg?: number | string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          destino?: string | null;
+          created_by: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          numero_remision?: string;
+          fecha_despacho?: string;
+          hora_salida?: string;
+          placa_vehiculo?: string;
+          conductor_identificacion?: string;
+          conductor_nombre?: string | null;
+          peso_total_kg?: number | string;
+          total_racimos?: number;
+          capacidad_vehiculo_kg?: number | string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          destino?: string | null;
+          created_by?: string;
+          source?: Database["public"]["Enums"]["registro_source"];
+          is_voided?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "remisiones_despacho_finca_id_fkey";
+            columns: ["finca_id"];
+            isOneToOne: false;
+            referencedRelation: "fincas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cosechas_rff: {
         Row: {
           id: string;
@@ -937,6 +1011,10 @@ export type Database = {
           madurez_frutos_caidos_min: number | null;
           madurez_frutos_caidos_max: number | null;
           observaciones_calidad: string | null;
+          latitud: number | null;
+          longitud: number | null;
+          estado_acopio: Database["public"]["Enums"]["cosecha_estado_acopio"];
+          remision_id: string | null;
           created_by: string;
           source: Database["public"]["Enums"]["registro_source"];
           is_voided: boolean;
@@ -953,6 +1031,10 @@ export type Database = {
           madurez_frutos_caidos_min?: number | null;
           madurez_frutos_caidos_max?: number | null;
           observaciones_calidad?: string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          estado_acopio?: Database["public"]["Enums"]["cosecha_estado_acopio"];
+          remision_id?: string | null;
           created_by: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
@@ -969,13 +1051,25 @@ export type Database = {
           madurez_frutos_caidos_min?: number | null;
           madurez_frutos_caidos_max?: number | null;
           observaciones_calidad?: string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          estado_acopio?: Database["public"]["Enums"]["cosecha_estado_acopio"];
+          remision_id?: string | null;
           created_by?: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "cosechas_rff_remision_id_fkey";
+            columns: ["remision_id"];
+            isOneToOne: false;
+            referencedRelation: "remisiones_despacho";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       alertas_fitosanitarias: {
         Row: {
@@ -1315,6 +1409,26 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_superadmin: { Args: Record<string, never>; Returns: boolean };
       current_user_finca_id: { Args: Record<string, never>; Returns: string | null };
+      crear_remision_despacho: {
+        Args: {
+          p_finca_id: string;
+          p_numero_remision: string;
+          p_fecha_despacho: string;
+          p_placa: string;
+          p_conductor_id: string;
+          p_conductor_nombre: string | null;
+          p_peso_total: number;
+          p_total_racimos: number;
+          p_capacidad: number | null;
+          p_lat: number | null;
+          p_lng: number | null;
+          p_destino: string | null;
+          p_created_by: string;
+          p_source: Database["public"]["Enums"]["registro_source"];
+          p_cosecha_ids: string[];
+        };
+        Returns: string;
+      };
     };
     Enums: {
       user_role: "superadmin" | "admin" | "agronomo" | "operario";
@@ -1346,6 +1460,7 @@ export type Database = {
       inventario_herramienta_estado: "disponible" | "en_uso" | "danada" | "perdida";
       metodo_aplicacion_fertilizacion: "manual" | "equipada" | "fertirriego" | "otro";
       preparacion_terreno_estado: "aprobado" | "pendiente_validacion_tecnico";
+      cosecha_estado_acopio: "en_centro_acopio" | "en_transito";
     };
     CompositeTypes: Record<string, never>;
   };

@@ -10,6 +10,7 @@ import {
 import { registrarCensoSanitarioSchema } from "@/lib/validations/censo-sanitario";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
+import { crearAlertaDesdeCensoUmbral } from "./alertas";
 
 export type CensoSanitarioListRow = {
   id: string;
@@ -93,6 +94,7 @@ export async function registrarCensoSanitario(
     id: string;
     incidencia_pct: number;
     supera_umbral: boolean;
+    alerta_generada_id?: string | null;
   }>
 > {
   const parsed = registrarCensoSanitarioSchema.safeParse(raw);
@@ -183,10 +185,27 @@ export async function registrarCensoSanitario(
     },
   });
 
+  let alerta_generada_id: string | null = null;
+  if (supera_umbral) {
+    alerta_generada_id = await crearAlertaDesdeCensoUmbral(supabase, {
+      fincaId: input.finca_id,
+      loteId: input.lote_id,
+      loteCodigo: lote.codigo,
+      catalogoItemId: input.catalogo_item_id,
+      amenazaNombre: catalogo.data.nombre,
+      censoId: data.id,
+      incidenciaPct: incidencia_pct,
+      palmasInspeccionadas: input.palmas_inspeccionadas,
+      palmasAfectadas: input.palmas_afectadas,
+      createdBy: session.user.id,
+    });
+  }
+
   return actionOk({
     id: data.id,
     incidencia_pct: Number(data.incidencia_pct),
     supera_umbral: data.supera_umbral,
+    alerta_generada_id,
   });
 }
 

@@ -1,36 +1,50 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getLotesPorFinca } from "@/app/actions/queries";
 
 type FincaMini = { id: string };
+type LoteMini = { id: string; codigo: string };
 
 export function useFincaLoteOptions(
   fincas: FincaMini[],
-  defaultFincaId?: string | null
+  defaultFincaId?: string | null,
+  initialLotes?: LoteMini[]
 ) {
   const initial = useMemo(() => {
     if (fincas.length === 0) return "";
-    if (
-      defaultFincaId &&
-      fincas.some((f) => f.id === defaultFincaId)
-    ) {
+    if (defaultFincaId && fincas.some((f) => f.id === defaultFincaId)) {
       return defaultFincaId;
     }
     return fincas[0]?.id ?? "";
   }, [fincas, defaultFincaId]);
 
+  const prefetchedFincaId = useRef<string | null>(
+    initialLotes?.length && defaultFincaId ? defaultFincaId : null
+  );
+
   const [fincaId, setFincaId] = useState(initial);
-  const [lotes, setLotes] = useState<{ id: string; codigo: string }[]>([]);
-  const [loteId, setLoteId] = useState("");
-  const [loadingLotes, setLoadingLotes] = useState(false);
+  const [lotes, setLotes] = useState<LoteMini[]>(initialLotes ?? []);
+  const [loteId, setLoteId] = useState(() => initialLotes?.[0]?.id ?? "");
+  const [loadingLotes, setLoadingLotes] = useState(
+    () => !(initialLotes?.length && defaultFincaId)
+  );
 
   useEffect(() => {
     if (!fincaId) {
       return;
     }
+
+    if (prefetchedFincaId.current === fincaId && initialLotes?.length) {
+      setLotes(initialLotes);
+      setLoteId((prev) =>
+        initialLotes.some((l) => l.id === prev) ? prev : (initialLotes[0]?.id ?? "")
+      );
+      setLoadingLotes(false);
+      return;
+    }
+
     let cancelled = false;
-    // Loading flag for the async fetch; setting here avoids stale "Cargando" when finca changes.
     queueMicrotask(() => {
       if (!cancelled) setLoadingLotes(true);
     });
@@ -48,7 +62,7 @@ export function useFincaLoteOptions(
     return () => {
       cancelled = true;
     };
-  }, [fincaId]);
+  }, [fincaId, initialLotes]);
 
   const displayLotes = fincaId ? lotes : [];
   const displayLoteId = fincaId ? loteId : "";

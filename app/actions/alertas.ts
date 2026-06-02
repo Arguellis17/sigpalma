@@ -194,6 +194,85 @@ async function crearAlertaFitosanitariaInternal(
   });
 }
 
+export type AlertaDesdeCensoInput = {
+  fincaId: string;
+  loteId: string;
+  loteCodigo: string;
+  catalogoItemId: string;
+  amenazaNombre: string;
+  censoId: string;
+  incidenciaPct: number;
+  palmasInspeccionadas: number;
+  palmasAfectadas: number;
+  createdBy: string;
+};
+
+/**
+ * HU24: genera alerta pendiente en bandeja HU15 cuando el censo supera umbral.
+ * Evita duplicados si ya hay alerta pendiente para mismo lote + amenaza.
+ */
+export async function crearAlertaDesdeCensoUmbral(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  input: AlertaDesdeCensoInput
+): Promise<string | null> {
+  const { count } = await supabase
+    .from("alertas_fitosanitarias")
+    .select("id", { count: "exact", head: true })
+    .eq("lote_id", input.loteId)
+    .eq("catalogo_item_id", input.catalogoItemId)
+    .eq("validacion_estado", "pendiente")
+    .eq("is_voided", false);
+
+  if ((count ?? 0) > 0) {
+    return null;
+  }
+
+  const descripcion =
+    `Alerta automática por censo sanitario (${input.incidenciaPct}% incidencia, ` +
+    `${input.palmasAfectadas}/${input.palmasInspeccionadas} palmas). ` +
+    `Amenaza: ${input.amenazaNombre}. Censo ID: ${input.censoId}.`;
+
+  const { data, error } = await supabase
+    .from("alertas_fitosanitarias")
+    .insert({
+      finca_id: input.fincaId,
+      lote_id: input.loteId,
+      catalogo_item_id: input.catalogoItemId,
+      severidad: "alta",
+      descripcion,
+      evidencia_urls: [],
+      lote_estado_alerta: false,
+      validacion_estado: "pendiente",
+      created_by: input.createdBy,
+      source: "web",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("[alerta_desde_censo]", error?.message);
+    return null;
+  }
+
+  await registrarEventoFinca({
+    fincaId: input.fincaId,
+    actionKey: "alerta.crear",
+    titulo: "Alerta por umbral de censo sanitario",
+    detalle: {
+      alertaId: data.id,
+      origen: "censo_sanitario",
+      censoId: input.censoId,
+      loteCodigo: input.loteCodigo,
+      amenaza: input.amenazaNombre,
+      incidenciaPct: input.incidenciaPct,
+      severidad: "alta",
+      validacionEstado: "pendiente",
+    },
+  });
+
+  return data.id;
+}
+
 export async function crearAlertaFitosanitaria(
   raw: unknown
 ): Promise<ActionResult<{ id: string; lote_estado_alerta: boolean }>> {

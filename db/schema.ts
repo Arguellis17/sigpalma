@@ -88,6 +88,12 @@ export const preparacionTerrenoEstadoEnum = pgEnum("preparacion_terreno_estado",
   "pendiente_validacion_tecnico",
 ]);
 
+/** HU27 / HU29: inventario de fruta cosechada en finca */
+export const cosechaEstadoAcopioEnum = pgEnum("cosecha_estado_acopio", [
+  "en_centro_acopio",
+  "en_transito",
+]);
+
 /** HU13: inspección fitosanitaria programada */
 export const monitoreoFitosanitarioEstadoEnum = pgEnum("monitoreo_fitosanitario_estado", [
   "pendiente",
@@ -462,6 +468,49 @@ export const evaluacionesVivero = pgTable("evaluaciones_vivero", {
     .defaultNow(),
 });
 
+/** HU29: remisión de despacho de fruta cosechada */
+export const remisionesDespacho = pgTable(
+  "remisiones_despacho",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fincaId: uuid("finca_id")
+      .notNull()
+      .references(() => fincas.id, { onDelete: "restrict" }),
+    numeroRemision: text("numero_remision").notNull(),
+    fechaDespacho: date("fecha_despacho").notNull(),
+    horaSalida: timestamp("hora_salida", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    placaVehiculo: text("placa_vehiculo").notNull(),
+    conductorIdentificacion: text("conductor_identificacion").notNull(),
+    conductorNombre: text("conductor_nombre"),
+    pesoTotalKg: numeric("peso_total_kg", { precision: 14, scale: 3 }).notNull(),
+    totalRacimos: integer("total_racimos").notNull(),
+    capacidadVehiculoKg: numeric("capacidad_vehiculo_kg", {
+      precision: 14,
+      scale: 3,
+    }),
+    latitud: numeric("latitud", { precision: 10, scale: 7 }),
+    longitud: numeric("longitud", { precision: 10, scale: 7 }),
+    destino: text("destino"),
+    createdBy: uuid("created_by").notNull(),
+    source: registroSourceEnum("source").notNull().default("web"),
+    isVoided: boolean("is_voided").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("remisiones_despacho_finca_numero_uidx").on(
+      t.fincaId,
+      t.numeroRemision
+    ),
+  ]
+);
+
 export const cosechasRff = pgTable("cosechas_rff", {
   id: uuid("id").primaryKey().defaultRandom(),
   fincaId: uuid("finca_id")
@@ -476,6 +525,14 @@ export const cosechasRff = pgTable("cosechas_rff", {
   madurezFrutosCaidosMin: integer("madurez_frutos_caidos_min"),
   madurezFrutosCaidosMax: integer("madurez_frutos_caidos_max"),
   observacionesCalidad: text("observaciones_calidad"),
+  latitud: numeric("latitud", { precision: 10, scale: 7 }),
+  longitud: numeric("longitud", { precision: 10, scale: 7 }),
+  estadoAcopio: cosechaEstadoAcopioEnum("estado_acopio")
+    .notNull()
+    .default("en_centro_acopio"),
+  remisionId: uuid("remision_id").references(() => remisionesDespacho.id, {
+    onDelete: "restrict",
+  }),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),

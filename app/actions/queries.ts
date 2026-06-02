@@ -7,6 +7,7 @@ import {
   isInsumoNutricion,
 } from "@/lib/catalogo-insumo-fitosanitario";
 import { estimarTotalPalmasLote } from "@/lib/censo-sanitario";
+import { loteAptoParaCosecha } from "@/lib/cosecha-validacion";
 import { actionError, actionOk, type ActionResult } from "./types";
 
 export type LoteOption = { id: string; codigo: string };
@@ -32,6 +33,76 @@ export async function getLotesPorFinca(
   }
 
   return actionOk(data ?? []);
+}
+
+/** HU27: lotes en producción, activos y con edad mínima de cosecha (RN78). */
+export async function getLotesCosechables(
+  fincaId: string,
+  fechaCosecha?: string
+): Promise<ActionResult<LoteOption[]>> {
+  const id = fincaId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return actionError("Finca no válida.");
+  }
+  const fecha =
+    fechaCosecha?.trim() && /^\d{4}-\d{2}-\d{2}$/.test(fechaCosecha.trim())
+      ? fechaCosecha.trim()
+      : new Date().toISOString().slice(0, 10);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lotes")
+    .select("id, codigo, activo, estado_cultivo, anio_siembra")
+    .eq("finca_id", id)
+    .eq("activo", true)
+    .eq("estado_cultivo", "en_produccion")
+    .order("codigo");
+
+  if (error) {
+    return actionError(error.message);
+  }
+
+  const aptos = (data ?? []).filter((l) =>
+    loteAptoParaCosecha(
+      {
+        activo: l.activo,
+        estado_cultivo: l.estado_cultivo,
+        anio_siembra: l.anio_siembra,
+      },
+      fecha
+    ).ok
+  );
+
+  return actionOk(aptos.map((l) => ({ id: l.id, codigo: l.codigo })));
+}
+
+/** HU27: máximo peso histórico no anulado del lote (alerta de peso inusual). */
+export async function getMaxPesoCosechaLote(
+  loteId: string
+): Promise<ActionResult<number | null>> {
+  const lid = loteId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(lid)) {
+    return actionError("Lote no válido.");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cosechas_rff")
+    .select("peso_kg")
+    .eq("lote_id", lid)
+    .eq("is_voided", false)
+    .order("peso_kg", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return actionError(error.message);
+  }
+  if (!data) {
+    return actionOk(null);
+  }
+  const n = Number(data.peso_kg);
+  return actionOk(Number.isFinite(n) ? n : null);
 }
 
 export type CatalogoLaborOption = { id: string; nombre: string };
@@ -62,6 +133,7 @@ export type LaborAgendaRow = {
   fecha_ejecucion: string;
   notas: string | null;
   catalogo_item_id: string | null;
+  pendiente_ejecucion: boolean;
 };
 
 export async function getLaboresRango(
@@ -80,7 +152,9 @@ export async function getLaboresRango(
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("labores_agronomicas")
-    .select("id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id")
+    .select(
+      "id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada"
+    )
     .eq("finca_id", fid)
     .eq("is_voided", false)
     .gte("fecha_ejecucion", desde)
@@ -108,6 +182,8 @@ export async function getLaboresRango(
       fecha_ejecucion: r.fecha_ejecucion,
       notas: r.notas,
       catalogo_item_id: r.catalogo_item_id,
+      pendiente_ejecucion:
+        r.cantidad_ejecutada == null && r.catalogo_item_id != null,
     }))
   );
 }

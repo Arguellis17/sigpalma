@@ -46,8 +46,7 @@ export default async function TecnicoPreparacionTerrenoPage() {
           Validación preparación de terreno
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Apruebe registros con pendiente ≥ 12 % para habilitar el lote a siembra (HU19 escenario
-          2).
+          Apruebe registros con pendiente ≥ 12 % para habilitar el lote a siembra.
         </p>
       </div>
       <PreparacionTerrenoValidacionClient pendientes={pendientes} />

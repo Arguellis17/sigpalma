@@ -12,6 +12,7 @@ import {
   type CrearItemCatalogoInput,
 } from "@/lib/validations/catalogo";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { registrarEventoFinca } from "./audit";
 import type { Database } from "@/lib/database.types";
 
 type CatalogoItemRow = Database["public"]["Tables"]["catalogo_items"]["Row"];
@@ -31,8 +32,8 @@ function mensajeErrorCatalogo(error: { code?: string; message?: string } | null)
 async function referenciasMaterialGeneticoVigentes(
   supabase: Awaited<ReturnType<typeof createClient>>,
   catalogoItemId: string
-): Promise<{ planes: number; germinaciones: number }> {
-  const [planesRes, germRes] = await Promise.all([
+): Promise<{ planes: number; germinaciones: number; siembras: number }> {
+  const [planesRes, germRes, siembrasRes] = await Promise.all([
     supabase
       .from("planes_siembra")
       .select("id", { count: "exact", head: true })
@@ -43,12 +44,28 @@ async function referenciasMaterialGeneticoVigentes(
       .select("id", { count: "exact", head: true })
       .eq("catalogo_material_id", catalogoItemId)
       .eq("is_voided", false),
+    supabase
+      .from("registros_siembra")
+      .select("id", { count: "exact", head: true })
+      .eq("catalogo_material_id", catalogoItemId)
+      .eq("is_voided", false),
   ]);
 
   return {
     planes: planesRes.count ?? 0,
     germinaciones: germRes.count ?? 0,
+    siembras: siembrasRes.count ?? 0,
   };
+}
+
+async function auditarCatalogoSiFinca(
+  fincaId: string | null | undefined,
+  actionKey: "catalogo.crear" | "catalogo.actualizar" | "catalogo.inactivar",
+  titulo: string,
+  detalle: Record<string, unknown>
+): Promise<void> {
+  if (!fincaId) return;
+  await registrarEventoFinca({ fincaId, actionKey, titulo, detalle });
 }
 
 /** RN20 / HU07: alertas vigentes que referencian la amenaza. */
@@ -99,6 +116,13 @@ export async function crearItemCatalogo(
     .single();
 
   if (error || !data) return actionError(mensajeErrorCatalogo(error));
+
+  await auditarCatalogoSiFinca(session.profile.finca_id, "catalogo.crear", "Ítem de catálogo creado", {
+    catalogoItemId: data.id,
+    nombre: input.nombre.trim(),
+    categoria: input.categoria,
+  });
+
   return actionOk({ id: data.id });
 }
 
@@ -122,7 +146,7 @@ export async function actualizarItemCatalogo(
 
   const { data: existing, error: exErr } = await supabase
     .from("catalogo_items")
-    .select("categoria, proveedor, subcategoria, unidad_medida, sintomas")
+    .select("categoria, nombre, proveedor, subcategoria, unidad_medida, sintomas")
     .eq("id", id)
     .maybeSingle();
   if (exErr || !existing) {
@@ -171,6 +195,14 @@ export async function actualizarItemCatalogo(
     .eq("id", id);
 
   if (error) return actionError(mensajeErrorCatalogo(error));
+
+  await auditarCatalogoSiFinca(session.profile.finca_id, "catalogo.actualizar", "Ítem de catálogo actualizado", {
+    catalogoItemId: id,
+    nombre: existing.nombre,
+    categoria: existing.categoria,
+    camposActualizados: Object.keys(updates),
+  });
+
   return actionOk(undefined);
 }
 
@@ -199,7 +231,7 @@ export async function inactivarItemCatalogo(
 
   if (item.categoria === "material_genetico") {
     const refs = await referenciasMaterialGeneticoVigentes(supabase, id);
-    if (refs.planes > 0 || refs.germinaciones > 0) {
+    if (refs.planes > 0 || refs.germinaciones > 0 || refs.siembras > 0) {
       const partes: string[] = [];
       if (refs.planes > 0) {
         partes.push(
@@ -209,6 +241,11 @@ export async function inactivarItemCatalogo(
       if (refs.germinaciones > 0) {
         partes.push(
           `${refs.germinaciones} registro${refs.germinaciones === 1 ? "" : "s"} de germinación vigente${refs.germinaciones === 1 ? "" : "s"}`
+        );
+      }
+      if (refs.siembras > 0) {
+        partes.push(
+          `${refs.siembras} registro${refs.siembras === 1 ? "" : "s"} de siembra vigente${refs.siembras === 1 ? "" : "s"}`
         );
       }
       return actionError(
@@ -232,6 +269,13 @@ export async function inactivarItemCatalogo(
     .eq("id", id);
 
   if (error) return actionError(mensajeErrorCatalogo(error));
+
+  await auditarCatalogoSiFinca(session.profile.finca_id, "catalogo.inactivar", "Ítem de catálogo inactivado", {
+    catalogoItemId: id,
+    nombre: item.nombre,
+    categoria: item.categoria,
+  });
+
   return actionOk(undefined);
 }
 
