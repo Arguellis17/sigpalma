@@ -7,6 +7,7 @@ const projectRoot = path.dirname(require.resolve("./package.json"));
 const canvasStub = path.join(projectRoot, "stubs/canvas-empty.js");
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@react-pdf/renderer"],
   experimental: {
     serverActions: {
       // Default 1 MB trunca PDFs multipart hasta 5 MB (RN46). Margen sobre el tope de producto.

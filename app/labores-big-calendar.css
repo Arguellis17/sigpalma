@@ -1,0 +1,159 @@
+/* Theme overrides for react-big-calendar inside SIG-Palma (dark mode). */
+
+.dark .rbc-wrapper {
+  color: var(--foreground);
+}
+
+.dark .rbc-wrapper .rbc-calendar {
+  background: transparent;
+  color: inherit;
+}
+
+.dark .rbc-wrapper .rbc-toolbar {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.75rem 0;
+  gap: 0.5rem;
+}
+
+.dark .rbc-wrapper .rbc-toolbar-label {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.dark .rbc-wrapper .rbc-toolbar button {
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.dark .rbc-wrapper .rbc-toolbar button:hover,
+.dark .rbc-wrapper .rbc-toolbar button:focus {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.dark .rbc-wrapper .rbc-toolbar button.rbc-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.dark .rbc-wrapper .rbc-header {
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  background: color-mix(in oklch, var(--muted) 40%, var(--background));
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dark .rbc-wrapper .rbc-month-view,
+.dark .rbc-wrapper .rbc-time-view,
+.dark .rbc-wrapper .rbc-agenda-view {
+  border-color: var(--border);
+}
+
+.dark .rbc-wrapper .rbc-month-row + .rbc-month-row,
+.dark .rbc-wrapper .rbc-day-bg + .rbc-day-bg,
+.dark .rbc-wrapper .rbc-time-content > * + * > *,
+.dark .rbc-wrapper .rbc-timeslot-group {
+  border-color: var(--border);
+}
+
+.dark .rbc-wrapper .rbc-day-bg {
+  background: var(--background);
+}
+
+.dark .rbc-wrapper .rbc-off-range-bg {
+  background: color-mix(in oklch, var(--muted) 35%, var(--background));
+}
+
+.dark .rbc-wrapper .rbc-off-range {
+  color: var(--muted-foreground);
+}
+
+.dark .rbc-wrapper .rbc-date-cell {
+  color: var(--foreground);
+  padding: 0.25rem 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.dark .rbc-wrapper .rbc-date-cell.rbc-off-range {
+  color: var(--muted-foreground);
+}
+
+.dark .rbc-wrapper .rbc-today {
+  background: color-mix(in oklch, var(--primary) 14%, var(--background));
+}
+
+.dark .rbc-wrapper .rbc-today .rbc-date-cell > a,
+.dark .rbc-wrapper .rbc-today .rbc-date-cell > button {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.dark .rbc-wrapper .rbc-event {
+  background: color-mix(in oklch, var(--primary) 18%, var(--background));
+  color: var(--foreground);
+  border: none;
+}
+
+.dark .rbc-wrapper .rbc-event.rbc-selected {
+  background: color-mix(in oklch, var(--primary) 28%, var(--background));
+}
+
+.dark .rbc-wrapper .rbc-show-more {
+  color: var(--primary);
+  background: transparent;
+}
+
+.dark .rbc-wrapper .rbc-overlay {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.dark .rbc-wrapper .rbc-overlay-header {
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .rbc-wrapper .rbc-agenda-table {
+  border-color: var(--border);
+}
+
+.dark .rbc-wrapper .rbc-agenda-date-cell,
+.dark .rbc-wrapper .rbc-agenda-time-cell {
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+
+.dark .rbc-wrapper .rbc-agenda-event-cell {
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .rbc-wrapper .rbc-time-header-content,
+.dark .rbc-wrapper .rbc-time-content,
+.dark .rbc-wrapper .rbc-time-gutter,
+.dark .rbc-wrapper .rbc-time-header-gutter {
+  border-color: var(--border);
+}
+
+.dark .rbc-wrapper .rbc-time-slot {
+  color: var(--muted-foreground);
+}
+
+.dark .rbc-wrapper .rbc-time-content > .rbc-time-gutter,
+.dark .rbc-wrapper .rbc-time-header-gutter {
+  background: var(--background);
+}
+
+.dark .rbc-wrapper .rbc-current-time-indicator {
+  background-color: var(--primary);
+}

@@ -1,7 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { FlaskConical, MapPinned, Package, ScrollText, Sprout, Users } from "lucide-react";
+import {
+  BarChart3,
+  FlaskConical,
+  MapPinned,
+  Package,
+  ScrollText,
+  ShieldCheck,
+  Sprout,
+  Users,
+} from "lucide-react";
 
 async function getAdminStats(fincaId: string | null) {
   const supabase = await createClient();
@@ -91,6 +100,18 @@ export default async function AdminDashboardPage() {
       icon: ScrollText,
       title: "Actividad de campo",
       description: "Qué hicieron agrónomos y operarios en su finca.",
+    },
+    {
+      href: "/admin/reportes/productividad",
+      icon: BarChart3,
+      title: "Productividad RFF",
+      description: "Rendimiento t/ha por lote y periodo.",
+    },
+    {
+      href: "/admin/reportes/rspo",
+      icon: ShieldCheck,
+      title: "Expediente RSPO",
+      description: "Trazabilidad documentada para auditoría.",
     },
   ];
 

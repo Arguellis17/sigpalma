@@ -16,15 +16,25 @@ export default async function PlataformaLayout({
   }
 
   let fincaName: string | null = null;
+  let monitoreosPendientesCount = 0;
   const fincaId = session.profile?.finca_id ?? null;
+  const supabase = await createClient();
   if (fincaId) {
-    const supabase = await createClient();
     const { data: finca } = await supabase
       .from("fincas")
       .select("nombre")
       .eq("id", fincaId)
       .maybeSingle();
     fincaName = finca?.nombre ?? null;
+  }
+  if (session.profile?.role === "operario" && session.user) {
+    const { count } = await supabase
+      .from("monitoreos_fitosanitarios_programados")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_to", session.user.id)
+      .eq("estado", "pendiente")
+      .eq("is_voided", false);
+    monitoreosPendientesCount = count ?? 0;
   }
 
   return (
@@ -35,6 +45,7 @@ export default async function PlataformaLayout({
           fullName: session.profile?.full_name ?? null,
           role: session.profile?.role ?? null,
           fincaName,
+          monitoreosPendientesCount,
           isActive: Boolean(session.profile?.is_active),
           isAdmin: isAdmin(session.profile ?? null),
           isSuperAdmin: isSuperAdmin(session.profile ?? null),

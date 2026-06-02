@@ -18,7 +18,7 @@ export default async function CatalogoMaterialGeneticoPage() {
       <div className="surface-panel rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
         <p>
           Registre variedades con <strong className="text-foreground">proveedor certificado</strong> (RN16).
-          Los ítems activos alimentan la planificación de siembra del técnico agrónomo (RN27 / HU10) y la
+          Los ítems activos alimentan la planificación de siembra del técnico agrónomo (RN27) y la
           cadena vivero → germinación → evaluación.
         </p>
       </div>

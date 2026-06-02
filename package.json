@@ -13,6 +13,7 @@
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.2",
     "class-variance-authority": "^0.7.1",
