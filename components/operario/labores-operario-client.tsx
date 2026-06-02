@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Search, Trash2 } from "lucide-react";
+import { CalendarDays, Eye, LayoutList, Plus, Search, Trash2 } from "lucide-react";
 import { anularLabor } from "@/app/actions/labores";
+import type { LaborAgendaRow, LaborPendienteRow, LoteOption } from "@/app/actions/queries";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { LaborForm } from "@/components/campo/labor-form";
+import { LaboresOperarioSchedule } from "@/components/operario/labores-operario-schedule";
 import { formatCantidadLabor } from "@/lib/labor-ejecucion";
-import type { LaborPendienteRow } from "@/app/actions/queries";
+import { todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 export type LaborListRow = {
   id: string;
@@ -35,12 +38,19 @@ export type LaborListRow = {
 type Finca = { id: string; nombre: string };
 type CatalogoRow = { id: string; nombre: string };
 
+type CreateDefaults = {
+  fecha: string;
+  pendienteId?: string;
+};
+
 type Props = {
   initialRows: LaborListRow[];
   fincas: Finca[];
   defaultFincaId: string | null;
   catalogoLabores: CatalogoRow[];
   pendientes: LaborPendienteRow[];
+  lotes: LoteOption[];
+  initialAgendaLabores: LaborAgendaRow[];
 };
 
 function formatDate(iso: string) {
@@ -59,14 +69,20 @@ export function LaboresOperarioClient({
   defaultFincaId,
   catalogoLabores,
   pendientes,
+  lotes,
+  initialAgendaLabores,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [rows, setRows] = useServerPropsState(initialRows);
   const [search, setSearch] = useState("");
+  const [pageView, setPageView] = useState<"table" | "agenda">("agenda");
   const [createOpen, setCreateOpen] = useState(false);
-  const [createKey, setCreateKey] = useState(0);
+  const [createDefaults, setCreateDefaults] = useState<CreateDefaults>(() => ({
+    fecha: todayLocalYmd(),
+  }));
   const [viewRow, setViewRow] = useState<LaborListRow | null>(null);
+  const [agendaPreview, setAgendaPreview] = useState<LaborAgendaRow | null>(null);
   const [confirmAnular, setConfirmAnular] = useState<LaborListRow | null>(null);
   const [pendingAnular, setPendingAnular] = useState(false);
 
@@ -79,10 +95,27 @@ export function LaboresOperarioClient({
     });
   }, [rows, search]);
 
+  function openCreate(opts?: { fecha?: string; pendienteId?: string }) {
+    setCreateDefaults({
+      fecha: opts?.fecha ?? todayLocalYmd(),
+      pendienteId: opts?.pendienteId,
+    });
+    setCreateOpen(true);
+  }
+
   function afterCreate() {
     setCreateOpen(false);
     toast("Labor registrada.", "success");
     router.refresh();
+  }
+
+  function handleViewFromAgenda(row: LaborAgendaRow) {
+    const match = rows.find((r) => r.id === row.id);
+    if (match) {
+      setViewRow(match);
+      return;
+    }
+    setAgendaPreview(row);
   }
 
   async function handleAnular() {
@@ -116,105 +149,141 @@ export function LaboresOperarioClient({
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative min-w-0 flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar por tipo, lote, notas…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={pageView === "agenda" ? "default" : "outline"}
+            size="sm"
+            className="rounded-xl gap-1.5"
+            onClick={() => setPageView("agenda")}
+          >
+            <CalendarDays className="size-4" />
+            Agenda
+          </Button>
+          <Button
+            type="button"
+            variant={pageView === "table" ? "default" : "outline"}
+            size="sm"
+            className="rounded-xl gap-1.5"
+            onClick={() => setPageView("table")}
+          >
+            <LayoutList className="size-4" />
+            Tabla
+          </Button>
         </div>
-        <Button
-          type="button"
-          className="shrink-0 gap-1.5"
-          onClick={() => {
-            setCreateKey((k) => k + 1);
-            setCreateOpen(true);
-          }}
-        >
-          <Plus className="size-4" />
-          Nueva labor
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1 sm:justify-end">
+          {pageView === "table" ? (
+            <div className="relative min-w-0 flex-1 sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por tipo, lote, notas…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
+              />
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            className="shrink-0 gap-1.5"
+            onClick={() => openCreate()}
+          >
+            <Plus className="size-4" />
+            Nueva labor
+          </Button>
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="surface-panel rounded-2xl py-14 text-center">
-          <p className="text-sm font-medium text-muted-foreground">
-            {search
-              ? "No hay resultados para esa búsqueda."
-              : "No hay labores registradas. Use «Nueva labor» para el primero."}
-          </p>
-        </div>
-      ) : (
-        <div className="surface-panel overflow-hidden rounded-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-3">Fecha ejecución</th>
-                  <th className="px-4 py-3">Lote</th>
-                  <th className="px-4 py-3">Tipo</th>
-                  <th className="px-4 py-3">Avance</th>
-                  <th className="px-4 py-3">Notas</th>
-                  <th className="px-4 py-3">Reporte</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, idx) => (
-                  <tr
-                    key={r.id}
-                    className={`border-b border-border/40 last:border-0 ${
-                      idx % 2 !== 0 ? "bg-muted/15" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                      {formatDate(r.fecha_ejecucion)}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
-                    <td className="px-4 py-3">{r.tipo}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {formatCantidadLabor(r.cantidad_ejecutada, r.unidad_medida)}
-                    </td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-muted-foreground">
-                      {r.notas ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {formatDate(r.ejecutada_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2"
-                          onClick={() => setViewRow(r)}
-                          aria-label="Ver detalle"
-                        >
-                          <Eye className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-destructive hover:text-destructive"
-                          onClick={() => setConfirmAnular(r)}
-                          aria-label="Anular"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {pageView === "agenda" && defaultFincaId ? (
+        <LaboresOperarioSchedule
+          fincaId={defaultFincaId}
+          lotes={lotes}
+          initialLabores={initialAgendaLabores}
+          onOpenCreate={openCreate}
+          onViewExecuted={handleViewFromAgenda}
+        />
+      ) : null}
+
+      {pageView === "table" ? (
+        filtered.length === 0 ? (
+          <div className="surface-panel rounded-2xl py-14 text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+              {search
+                ? "No hay resultados para esa búsqueda."
+                : "No hay labores registradas. Use «Nueva labor» para el primero."}
+            </p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="surface-panel overflow-hidden rounded-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-3">Fecha ejecución</th>
+                    <th className="px-4 py-3">Lote</th>
+                    <th className="px-4 py-3">Tipo</th>
+                    <th className="px-4 py-3">Avance</th>
+                    <th className="px-4 py-3">Notas</th>
+                    <th className="px-4 py-3">Reporte</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, idx) => (
+                    <tr
+                      key={r.id}
+                      className={cn(
+                        "border-b border-border/40 last:border-0",
+                        idx % 2 !== 0 && "bg-muted/15"
+                      )}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                        {formatDate(r.fecha_ejecucion)}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
+                      <td className="px-4 py-3">{r.tipo}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {formatCantidadLabor(r.cantidad_ejecutada, r.unidad_medida)}
+                      </td>
+                      <td className="max-w-[200px] truncate px-4 py-3 text-muted-foreground">
+                        {r.notas ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {formatDate(r.ejecutada_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2"
+                            onClick={() => setViewRow(r)}
+                            aria-label="Ver detalle"
+                          >
+                            <Eye className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-destructive hover:text-destructive"
+                            onClick={() => setConfirmAnular(r)}
+                            aria-label="Anular"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : null}
 
       <Dialog open={createOpen} onOpenChange={(v) => !v && setCreateOpen(false)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
@@ -224,15 +293,20 @@ export function LaboresOperarioClient({
               Registre la ejecución en campo. Puede cerrar sin guardar.
             </DialogDescription>
           </DialogHeader>
-          <LaborForm
-            key={createKey}
-            fincas={fincas}
-            defaultFincaId={defaultFincaId}
-            catalogoLabores={catalogoLabores}
-            pendientes={pendientes}
-            embedded
-            onSuccess={afterCreate}
-          />
+          {createOpen ? (
+            <LaborForm
+              fincas={fincas}
+              defaultFincaId={defaultFincaId}
+              catalogoLabores={catalogoLabores}
+              pendientes={pendientes}
+              initialLotes={lotes}
+              embedded
+              open={createOpen}
+              defaultFechaYmd={createDefaults.fecha}
+              defaultPendienteId={createDefaults.pendienteId}
+              onSuccess={afterCreate}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -277,6 +351,41 @@ export function LaboresOperarioClient({
                     dateStyle: "short",
                     timeStyle: "short",
                   })}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!agendaPreview} onOpenChange={(v) => !v && setAgendaPreview(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Labor ejecutada</DialogTitle>
+            <DialogDescription>
+              Resumen desde la agenda. Para avance completo consulte la vista Tabla.
+            </DialogDescription>
+          </DialogHeader>
+          {agendaPreview ? (
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">Lote</dt>
+                <dd className="mt-0.5 font-medium">{agendaPreview.lote_codigo}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">Tipo</dt>
+                <dd className="mt-0.5">{agendaPreview.tipo}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">
+                  Fecha ejecución
+                </dt>
+                <dd className="mt-0.5">{formatDate(agendaPreview.fecha_ejecucion)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">Notas</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap text-muted-foreground">
+                  {agendaPreview.notas ?? "—"}
                 </dd>
               </div>
             </dl>

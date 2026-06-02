@@ -24,6 +24,8 @@ import {
   Tractor,
   Users,
   Wheat,
+  Truck,
+  BarChart3,
   ScrollText,
   ClipboardCheck,
   Waypoints,
@@ -69,6 +71,8 @@ type AppShellProps = {
     role: UserRole | null;
     /** Finca asignada (admin, agrónomo, operario); null para superadmin sin finca */
     fincaName: string | null;
+    /** HU13 RN37: monitoreos pendientes asignados al operario */
+    monitoreosPendientesCount?: number;
     isActive: boolean;
     isAdmin: boolean;
     isSuperAdmin: boolean;
@@ -79,6 +83,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<React.ComponentProps<"svg">>;
+  badgeCount?: number;
 };
 
 type NavGroup = {
@@ -103,7 +108,7 @@ const roleLabels: Record<UserRole, string> = {
   operario: "Operario",
 };
 
-function buildNavGroups(role: UserRole | null): NavGroup[] {
+function buildNavGroups(role: UserRole | null, monitoreosPendientesCount = 0): NavGroup[] {
   switch (role) {
     case "superadmin":
       return [
@@ -115,6 +120,16 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/superadmin/usuarios", label: "Usuarios", icon: Users },
             { href: "/superadmin/fincas", label: "Fincas", icon: MapPinned },
             { href: "/superadmin/auditoria", label: "Auditoría por finca", icon: ScrollText },
+            {
+              href: "/superadmin/reportes/productividad",
+              label: "Productividad RFF",
+              icon: BarChart3,
+            },
+            {
+              href: "/superadmin/reportes/rspo",
+              label: "Expediente RSPO",
+              icon: ShieldCheck,
+            },
           ],
         },
       ];
@@ -128,6 +143,16 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             { href: "/admin/usuarios", label: "Usuarios", icon: Users },
             { href: "/admin/fincas", label: "Fincas", icon: MapPinned },
             { href: "/admin/auditoria", label: "Actividad de campo", icon: ScrollText },
+            {
+              href: "/admin/reportes/productividad",
+              label: "Productividad RFF",
+              icon: BarChart3,
+            },
+            {
+              href: "/admin/reportes/rspo",
+              label: "Expediente RSPO",
+              icon: ShieldCheck,
+            },
           ],
         },
         {
@@ -157,6 +182,11 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/tecnico/trazabilidad",
               label: "Trazabilidad por lote",
               icon: Waypoints,
+            },
+            {
+              href: "/tecnico/reportes/productividad",
+              label: "Productividad RFF",
+              icon: BarChart3,
             },
             {
               href: "/tecnico/planificacion-siembra",
@@ -213,6 +243,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
             },
             { href: "/operario/siembra", label: "Siembra", icon: Sprout },
             { href: "/operario/cosecha", label: "Cosecha", icon: Wheat },
+            { href: "/operario/despacho", label: "Despacho", icon: Truck },
             {
               href: "/operario/inventario-herramientas",
               label: "Inventario herramientas",
@@ -251,6 +282,7 @@ function buildNavGroups(role: UserRole | null): NavGroup[] {
               href: "/operario/sanidad/monitoreos-pendientes",
               label: "Monitoreos pendientes",
               icon: Calendar,
+              badgeCount: monitoreosPendientesCount,
             },
             {
               href: "/operario/sanidad/aplicaciones",
@@ -307,6 +339,10 @@ const breadcrumbLabels: Record<string, string> = {
   "programacion-monitoreos": "Programación monitoreos",
   labores: "Labores",
   cosecha: "Cosecha",
+  despacho: "Despacho",
+  reportes: "Reportes",
+  productividad: "Productividad",
+  rspo: "RSPO",
   "inventario-herramientas": "Inventario herramientas",
   vivero: "Vivero",
   germinacion: "Germinación",
@@ -426,6 +462,34 @@ function getPageMeta(pathname: string): PageMeta {
     return {
       title: "Labores agronómicas",
       description: "Tipos de labor de mantenimiento (poda, malezas, etc.) para la programación en agenda.",
+    };
+  }
+  if (
+    pathname === "/admin/reportes/productividad" ||
+    pathname === "/tecnico/reportes/productividad" ||
+    pathname === "/superadmin/reportes/productividad"
+  ) {
+    return {
+      title: "Productividad RFF",
+      description:
+        "Rendimiento en t/ha por lote y periodo (RN21), agregado desde registros de cosecha no anulados.",
+    };
+  }
+  if (
+    pathname === "/admin/reportes/rspo" ||
+    pathname === "/superadmin/reportes/rspo"
+  ) {
+    return {
+      title: "Expediente RSPO",
+      description:
+        "Genealogía técnica del lote para auditoría: siembra, labores, sanidad, cosecha y despacho (RN23–RN25).",
+    };
+  }
+  if (pathname === "/operario/despacho") {
+    return {
+      title: "Despacho y remisiones",
+      description:
+        "Consolide cosechas en acopio, registre transporte y genere remisión PDF.",
     };
   }
   if (pathname === "/tecnico/agenda") {
@@ -581,7 +645,10 @@ function getPageMeta(pathname: string): PageMeta {
 export function AppShell({ children, session }: AppShellProps) {
   const pathname = usePathname();
 
-  const navGroups = useMemo(() => buildNavGroups(session.role), [session.role]);
+  const navGroups = useMemo(
+    () => buildNavGroups(session.role, session.monitoreosPendientesCount ?? 0),
+    [session.role, session.monitoreosPendientesCount]
+  );
   const pageMeta = useMemo(() => getPageMeta(pathname), [pathname]);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname), [pathname]);
 
@@ -655,9 +722,19 @@ export function AppShell({ children, session }: AppShellProps) {
                           tooltip={item.label}
                           size="lg"
                         >
-                          <Link href={item.href}>
-                            <Icon />
-                            <span>{item.label}</span>
+                          <Link href={item.href} className="flex w-full items-center justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <Icon />
+                              <span>{item.label}</span>
+                            </span>
+                            {item.badgeCount != null && item.badgeCount > 0 ? (
+                              <Badge
+                                variant="secondary"
+                                className="h-5 min-w-5 shrink-0 justify-center rounded-full px-1.5 text-[10px] tabular-nums"
+                              >
+                                {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                              </Badge>
+                            ) : null}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

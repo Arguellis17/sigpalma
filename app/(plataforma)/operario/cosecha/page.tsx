@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { CosechaOperarioClient } from "@/components/operario/cosecha-operario-client";
+import { rendimientoTonHa } from "@/lib/productividad";
 
 async function getFincas(fincaId: string | null) {
   const supabase = await createClient();
@@ -20,6 +21,8 @@ type CosechaRaw = {
   madurez_frutos_caidos_min: number | null;
   madurez_frutos_caidos_max: number | null;
   observaciones_calidad: string | null;
+  latitud: number | null;
+  longitud: number | null;
   created_at: string;
 };
 
@@ -33,7 +36,7 @@ export default async function OperarioCosechaPage() {
     ? await supabase
         .from("cosechas_rff")
         .select(
-          "id, lote_id, fecha, peso_kg, conteo_racimos, madurez_frutos_caidos_min, madurez_frutos_caidos_max, observaciones_calidad, created_at"
+          "id, lote_id, fecha, peso_kg, conteo_racimos, madurez_frutos_caidos_min, madurez_frutos_caidos_max, observaciones_calidad, latitud, longitud, created_at"
         )
         .eq("finca_id", fincaId)
         .eq("is_voided", false)
@@ -61,10 +64,7 @@ export default async function OperarioCosechaPage() {
     const lote = loteMap.get(c.lote_id);
     const areaHa = lote?.area_ha ?? 0;
     const pesoKg = Number(c.peso_kg);
-    const rendimiento_ton_ha =
-      Number.isFinite(areaHa) && areaHa > 0 && Number.isFinite(pesoKg)
-        ? pesoKg / 1000 / areaHa
-        : 0;
+    const rendimiento_ton_ha = rendimientoTonHa(pesoKg, areaHa);
     return {
       id: c.id,
       fecha: c.fecha,
@@ -73,6 +73,8 @@ export default async function OperarioCosechaPage() {
       madurez_frutos_caidos_min: c.madurez_frutos_caidos_min,
       madurez_frutos_caidos_max: c.madurez_frutos_caidos_max,
       observaciones_calidad: c.observaciones_calidad,
+      latitud: c.latitud != null ? Number(c.latitud) : null,
+      longitud: c.longitud != null ? Number(c.longitud) : null,
       lote_codigo: lote?.codigo ?? "—",
       area_ha: areaHa,
       rendimiento_ton_ha,
@@ -85,7 +87,8 @@ export default async function OperarioCosechaPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Cosecha RFF</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Reporte de fruto fresco: peso, racimos y rendimiento estimado (t/ha) según área del lote.
+          Registro de fruto fresco con GPS obligatorio. Solo lotes en producción con al menos 3
+          años desde la siembra y labor «Cosecha RFF» programada.
         </p>
       </div>
       <CosechaOperarioClient

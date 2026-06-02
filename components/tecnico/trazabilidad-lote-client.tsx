@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Tractor,
   Wheat,
+  Truck,
   Info,
   ExternalLink,
   Layers,
@@ -43,6 +44,54 @@ import { cn } from "@/lib/utils";
 
 const IDLE = "__idle__";
 
+const METADATA_KEY_LABELS: Record<string, string> = {
+  tipo: "Tipo de evento",
+  laborId: "ID labor",
+  catalogoNombre: "Labor",
+  cantidadEjecutada: "Cantidad ejecutada",
+  unidadMedida: "Unidad",
+  monitoreoId: "ID monitoreo",
+  fechaInspeccion: "Fecha inspección",
+  estado: "Estado",
+  completedAt: "Completado el",
+  ordenId: "ID orden",
+  insumoNombre: "Insumo",
+  dosisRecomendada: "Dosis recomendada",
+  observacionesTecnico: "Observaciones técnico",
+  incidenciaPct: "Incidencia (%)",
+  palmasInspeccionadas: "Palmas inspeccionadas",
+  palmasAfectadas: "Palmas afectadas",
+  superaUmbral: "Supera umbral",
+  validacionEstado: "Validación",
+  severidad: "Severidad",
+  notas: "Notas",
+};
+
+function formatMetadataValue(key: string, v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "boolean") return v ? "Sí" : "No";
+  if (key === "tipo") {
+    const labels: Record<string, string> = {
+      labor_programada: "Labor programada",
+      labor_ejecutada: "Labor ejecutada",
+      monitoreo_programado: "Monitoreo programado",
+      orden_control: "Orden de control",
+      censo_sanitario: "Censo sanitario",
+      alerta_fitosanitaria: "Alerta fitosanitaria",
+    };
+    return labels[String(v)] ?? String(v);
+  }
+  if (typeof v === "object") return JSON.stringify(v, null, 2);
+  return String(v);
+}
+
+function formatMetadataRows(metadata: Record<string, unknown>) {
+  return Object.entries(metadata).map(([k, v]) => ({
+    label: METADATA_KEY_LABELS[k] ?? k,
+    value: formatMetadataValue(k, v),
+  }));
+}
+
 const CATEGORY_LABEL: Record<TimelineEventCategory, string> = {
   material_plan: "Genética / plan siembra",
   vivero: "Vivero",
@@ -51,6 +100,7 @@ const CATEGORY_LABEL: Record<TimelineEventCategory, string> = {
   sanidad: "Sanidad",
   suelo: "Suelo",
   cosecha: "Cosecha",
+  logistica: "Logística / despacho",
 };
 
 function categoryIcon(cat: TimelineEventCategory) {
@@ -69,6 +119,8 @@ function categoryIcon(cat: TimelineEventCategory) {
       return Layers;
     case "cosecha":
       return Wheat;
+    case "logistica":
+      return Truck;
     default:
       return Sprout;
   }
@@ -250,16 +302,12 @@ export function TrazabilidadLoteClient({
                   Fecha: <strong>{formatDisplayDate(detail.displayDate)}</strong>
                 </p>
                 <dl className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-4">
-                  {Object.entries(detail.metadata).map(([k, v]) => (
-                    <div key={k}>
+                  {formatMetadataRows(detail.metadata).map((r) => (
+                    <div key={r.label}>
                       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {k}
+                        {r.label}
                       </dt>
-                      <dd className="mt-0.5 break-words text-foreground">
-                        {typeof v === "object" && v !== null
-                          ? JSON.stringify(v, null, 2)
-                          : String(v ?? "—")}
-                      </dd>
+                      <dd className="mt-0.5 break-words text-foreground">{r.value}</dd>
                     </div>
                   ))}
                 </dl>

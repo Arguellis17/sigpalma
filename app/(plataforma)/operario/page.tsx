@@ -1,31 +1,46 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import Link from "next/link";
-import { Bug, ClipboardList, MapPinned, Package, Tractor, Wheat } from "lucide-react";
+import { Bug, Calendar, ClipboardList, MapPinned, Package, Tractor, Wheat } from "lucide-react";
 
-async function getOperarioStats(fincaId: string | null) {
+async function getOperarioStats(userId: string, fincaId: string | null) {
   const supabase = await createClient();
 
   const baseLabores = supabase
     .from("labores_agronomicas")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true })
+    .eq("is_voided", false);
 
   const baseCosechas = supabase
-    .from("cosechas")
-    .select("id", { count: "exact", head: true });
+    .from("cosechas_rff")
+    .select("id", { count: "exact", head: true })
+    .eq("is_voided", false);
 
-  const [{ count: labores }, { count: cosechas }] = await Promise.all([
+  const baseMonitoreos = supabase
+    .from("monitoreos_fitosanitarios_programados")
+    .select("id", { count: "exact", head: true })
+    .eq("assigned_to", userId)
+    .eq("estado", "pendiente")
+    .eq("is_voided", false);
+
+  const [{ count: labores }, { count: cosechas }, { count: monitoreos }] = await Promise.all([
     fincaId ? baseLabores.eq("finca_id", fincaId) : baseLabores,
     fincaId ? baseCosechas.eq("finca_id", fincaId) : baseCosechas,
+    baseMonitoreos,
   ]);
 
-  return { labores: labores ?? 0, cosechas: cosechas ?? 0 };
+  return {
+    labores: labores ?? 0,
+    cosechas: cosechas ?? 0,
+    monitoreos: monitoreos ?? 0,
+  };
 }
 
 export default async function OperarioDashboardPage() {
   const session = await getSessionProfile();
   const fincaId = session?.profile?.finca_id ?? null;
-  const stats = await getOperarioStats(fincaId);
+  const userId = session?.user?.id ?? "";
+  const stats = await getOperarioStats(userId, fincaId);
 
   return (
     <div className="fade-up-enter space-y-6">
@@ -34,7 +49,7 @@ export default async function OperarioDashboardPage() {
           Panel operativo
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Registro de labores y cosecha del día.
+          Registro de labores, cosecha y tareas de sanidad asignadas.
         </p>
       </div>
 
@@ -64,7 +79,21 @@ export default async function OperarioDashboardPage() {
             <p className="font-semibold text-foreground">Cosechas</p>
           </div>
           <p className="text-3xl font-semibold text-foreground">{stats.cosechas}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">registros de cosecha</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">registros RFF</p>
+        </Link>
+
+        <Link
+          href="/operario/sanidad/monitoreos-pendientes"
+          className="surface-panel group rounded-2xl p-5 ring-1 ring-transparent transition-all hover:-translate-y-0.5 hover:ring-primary/30"
+        >
+          <div className="mb-3 flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+              <Calendar className="size-5" />
+            </div>
+            <p className="font-semibold text-foreground">Monitoreos pendientes</p>
+          </div>
+          <p className="text-3xl font-semibold text-foreground">{stats.monitoreos}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">inspecciones asignadas</p>
         </Link>
 
         <Link

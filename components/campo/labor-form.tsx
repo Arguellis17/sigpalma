@@ -33,7 +33,11 @@ type Props = {
   defaultFincaId: string | null;
   catalogoLabores: CatalogoRow[];
   pendientes: LaborPendienteRow[];
+  initialLotes?: { id: string; codigo: string }[];
   embedded?: boolean;
+  open?: boolean;
+  defaultFechaYmd?: string;
+  defaultPendienteId?: string;
   onSuccess?: () => void;
 };
 
@@ -42,11 +46,15 @@ export function LaborForm({
   defaultFincaId,
   catalogoLabores,
   pendientes,
+  initialLotes,
   embedded = false,
+  open = true,
+  defaultFechaYmd,
+  defaultPendienteId,
   onSuccess,
 }: Props) {
   const { fincaId, setFincaId, loteId, setLoteId, lotes, loadingLotes } =
-    useFincaLoteOptions(fincas, defaultFincaId);
+    useFincaLoteOptions(fincas, defaultFincaId, initialLotes);
 
   const [pendienteId, setPendienteId] = useState(PENDIENTE_SELECT_IDLE);
   const [catalogoId, setCatalogoId] = useState(CATALOGO_SELECT_IDLE);
@@ -62,6 +70,22 @@ export function LaborForm({
     pendienteId !== PENDIENTE_SELECT_IDLE
       ? pendientes.find((p) => p.id === pendienteId)
       : undefined;
+
+  useEffect(() => {
+    if (!open) return;
+    setFecha(defaultFechaYmd ?? todayLocalYmd());
+    setCantidad("");
+    setUnidad("palmas");
+    setError(null);
+    setMessage(null);
+    if (defaultPendienteId) {
+      setPendienteId(defaultPendienteId);
+    } else {
+      setPendienteId(PENDIENTE_SELECT_IDLE);
+      setCatalogoId(CATALOGO_SELECT_IDLE);
+      setNotas("");
+    }
+  }, [open, defaultFechaYmd, defaultPendienteId]);
 
   useEffect(() => {
     if (!pendienteSeleccionada) return;

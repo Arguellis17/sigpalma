@@ -124,7 +124,9 @@ export function CensoSanitarioForm({
     }
     setMessage(
       res.data.supera_umbral
-        ? `Censo registrado. Incidencia ${labelIncidenciaPct(res.data.incidencia_pct)} — supera umbral (${UMBRAL_INCIDENCIA_CENSO_PCT}%).`
+        ? res.data.alerta_generada_id
+          ? `Censo registrado. Incidencia ${labelIncidenciaPct(res.data.incidencia_pct)} — supera umbral (${UMBRAL_INCIDENCIA_CENSO_PCT}%). Se generó alerta para revisión del técnico.`
+          : `Censo registrado. Incidencia ${labelIncidenciaPct(res.data.incidencia_pct)} — supera umbral (${UMBRAL_INCIDENCIA_CENSO_PCT}%). Ya existe alerta pendiente para esta amenaza.`
         : `Censo registrado. Incidencia ${labelIncidenciaPct(res.data.incidencia_pct)}.`
     );
   }

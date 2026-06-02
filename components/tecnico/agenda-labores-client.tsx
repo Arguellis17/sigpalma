@@ -1,27 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import {
-  Calendar,
-  dateFnsLocalizer,
-  Views,
-  type SlotInfo,
-  type View,
-} from "react-big-calendar";
-import {
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  getDay,
-  parseISO,
-  startOfMonth,
-  startOfWeek,
-  subMonths,
-} from "date-fns";
-import { es } from "date-fns/locale";
-import "react-big-calendar/lib/css/react-big-calendar.css";
+import { addMonths, format, subMonths } from "date-fns";
+import { Views, type SlotInfo, type View } from "react-big-calendar";
 
 import { actualizarLabor, registrarLabor } from "@/app/actions/labores";
 import { getLaboresRango } from "@/app/actions/queries";
@@ -30,6 +11,12 @@ import type {
   LaborAgendaRow,
   LoteOption,
 } from "@/app/actions/queries";
+import {
+  LaboresBigCalendar,
+  type CalendarEvent,
+} from "@/components/labores/labores-big-calendar";
+import { LaboresGanttChart } from "@/components/labores/labores-gantt-chart";
+import { LaboresScheduleToolbar } from "@/components/labores/labores-schedule-toolbar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,41 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { rangeForView, rowsToEvents, tecnicoEventClassName } from "@/lib/labores-schedule";
 import { useToast } from "@/components/ui/toast";
-
-const locales = { es };
-
-const localizer = dateFnsLocalizer({
-  format,
-  startOfWeek,
-  getDay,
-  locales,
-});
-
-const messages = {
-  allDay: "Todo el día",
-  previous: "Anterior",
-  next: "Siguiente",
-  today: "Hoy",
-  month: "Mes",
-  week: "Semana",
-  day: "Día",
-  agenda: "Agenda",
-  date: "Fecha",
-  time: "Hora",
-  event: "Labor",
-  showMore: (n: number) => `+${n} más`,
-  noEventsInRange: "No hay labores en este rango.",
-};
-
-type CalendarEvent = {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-  allDay: boolean;
-  resource: LaborAgendaRow;
-};
 
 type Props = {
   fincaId: string;
@@ -94,152 +48,6 @@ type Props = {
 
 const IDLE_LOTE = "__lote_idle__";
 const IDLE_CAT = "__cat_idle__";
-
-function LaborGanttChart({
-  calendarDate,
-  lotes,
-  labores,
-  onPrevMonth,
-  onNextMonth,
-  onSelectLabor,
-}: {
-  calendarDate: Date;
-  lotes: LoteOption[];
-  labores: LaborAgendaRow[];
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  onSelectLabor: (row: LaborAgendaRow) => void;
-}) {
-  const monthStart = startOfMonth(calendarDate);
-  const monthEnd = endOfMonth(calendarDate);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const desde = format(monthStart, "yyyy-MM-dd");
-  const hasta = format(monthEnd, "yyyy-MM-dd");
-  const inMonth = labores.filter(
-    (r) => r.fecha_ejecucion >= desde && r.fecha_ejecucion <= hasta
-  );
-  const loteIdsUsed = [...new Set(inMonth.map((r) => r.lote_id))];
-  const rowLotes = lotes
-    .filter((l) => loteIdsUsed.includes(l.id))
-    .sort((a, b) => a.codigo.localeCompare(b.codigo));
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onPrevMonth}>
-            ← Mes anterior
-          </Button>
-          <span className="min-w-[10rem] text-center text-sm font-medium capitalize">
-            {format(calendarDate, "MMMM yyyy", { locale: es })}
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={onNextMonth}>
-            Mes siguiente →
-          </Button>
-        </div>
-        <p className="max-w-md text-xs text-muted-foreground">
-          Barras por lote y día. Mismos datos que la agenda; pulse una barra
-          para editar.
-        </p>
-      </div>
-      <div className="overflow-x-auto rounded-[1.25rem] ring-1 ring-border/60">
-        <table className="w-full min-w-[720px] border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border/60 bg-muted/30">
-              <th className="sticky left-0 z-10 bg-muted/30 px-2 py-2 text-left font-medium text-muted-foreground">
-                Lote
-              </th>
-              {days.map((d) => (
-                <th
-                  key={d.toISOString()}
-                  className="min-w-[26px] px-0.5 py-2 text-center font-normal text-muted-foreground"
-                >
-                  {format(d, "d")}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rowLotes.map((lote) => (
-              <tr key={lote.id} className="border-b border-border/40">
-                <td className="sticky left-0 z-10 bg-background px-2 py-1 font-medium">
-                  {lote.codigo}
-                </td>
-                {days.map((d) => {
-                  const ymd = format(d, "yyyy-MM-dd");
-                  const cell = inMonth.filter(
-                    (r) => r.lote_id === lote.id && r.fecha_ejecucion === ymd
-                  );
-                  return (
-                    <td key={ymd} className="align-top p-0.5">
-                      <div className="flex min-h-[36px] flex-col gap-0.5">
-                        {cell.map((r) => (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => onSelectLabor(r)}
-                            className="truncate rounded bg-primary/15 px-0.5 py-0.5 text-left text-[10px] leading-tight ring-1 ring-primary/20 hover:bg-primary/25"
-                            title={r.tipo}
-                          >
-                            {r.tipo.length > 12 ? `${r.tipo.slice(0, 12)}…` : r.tipo}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rowLotes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No hay labores programadas en este mes.</p>
-      ) : null}
-    </div>
-  );
-}
-
-function rowsToEvents(rows: LaborAgendaRow[]): CalendarEvent[] {
-  return rows.map((row) => {
-    const dayStart = parseISO(`${row.fecha_ejecucion}T00:00:00`);
-    const dayEnd = parseISO(`${row.fecha_ejecucion}T23:59:59`);
-    return {
-      id: row.id,
-      title: `${row.tipo} · ${row.lote_codigo}`,
-      start: dayStart,
-      end: dayEnd,
-      allDay: true,
-      resource: row,
-    };
-  });
-}
-
-function rangeForView(view: View, date: Date): { desde: string; hasta: string } {
-  if (view === Views.MONTH) {
-    return {
-      desde: format(startOfMonth(date), "yyyy-MM-dd"),
-      hasta: format(endOfMonth(date), "yyyy-MM-dd"),
-    };
-  }
-  if (view === Views.WEEK) {
-    const wkStart = startOfWeek(date, { locale: es });
-    const wkEnd = endOfWeek(date, { locale: es });
-    return {
-      desde: format(wkStart, "yyyy-MM-dd"),
-      hasta: format(wkEnd, "yyyy-MM-dd"),
-    };
-  }
-  if (view === Views.DAY) {
-    const ymd = format(date, "yyyy-MM-dd");
-    return { desde: ymd, hasta: ymd };
-  }
-  /* agenda */
-  return {
-    desde: format(startOfMonth(date), "yyyy-MM-dd"),
-    hasta: format(endOfMonth(date), "yyyy-MM-dd"),
-  };
-}
 
 export function AgendaLaboresClient({
   fincaId,
@@ -406,71 +214,44 @@ export function AgendaLaboresClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant={layoutMode === "calendar" ? "default" : "outline"}
-          size="sm"
-          className="rounded-xl"
-          onClick={() => setLayoutMode("calendar")}
-        >
-          Calendario
-        </Button>
-        <Button
-          type="button"
-          variant={layoutMode === "gantt" ? "default" : "outline"}
-          size="sm"
-          className="rounded-xl"
-          onClick={() => {
-            setLayoutMode("gantt");
-            setCurrentView(Views.MONTH);
-            void reloadRange(Views.MONTH, calendarDate);
-          }}
-        >
-          Vista Gantt
-        </Button>
-      </div>
+      <LaboresScheduleToolbar
+        layoutMode={layoutMode}
+        onCalendar={() => setLayoutMode("calendar")}
+        onGantt={() => {
+          setLayoutMode("gantt");
+          setCurrentView(Views.MONTH);
+          void reloadRange(Views.MONTH, calendarDate);
+        }}
+      />
 
       {layoutMode === "gantt" ? (
         <div className={cn(loadingRange && "opacity-70")}>
-          <LaborGanttChart
+          <LaboresGanttChart
             calendarDate={calendarDate}
             lotes={lotes}
             labores={rows}
             onPrevMonth={() => shiftGanttMonth(-1)}
             onNextMonth={() => shiftGanttMonth(1)}
             onSelectLabor={openEditFromRow}
+            emptyMessage="No hay labores programadas en este mes."
+            hint="Barras por lote y día. Mismos datos que la agenda; pulse una barra para editar."
+            getBarClassName={() =>
+              "truncate rounded bg-primary/15 px-0.5 py-0.5 text-left text-[10px] leading-tight ring-1 ring-primary/20 hover:bg-primary/25"
+            }
           />
         </div>
       ) : (
-        <div
-          className={cn(
-            "rbc-wrapper surface-panel overflow-hidden rounded-[1.25rem] ring-1 ring-border/60",
-            loadingRange && "opacity-70"
-          )}
-        >
-          <Calendar
-            culture="es"
-            localizer={localizer}
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ minHeight: "min(70vh, 640px)" }}
-            views={[Views.MONTH, Views.WEEK, Views.AGENDA]}
-            view={currentView}
-            date={calendarDate}
-            onNavigate={handleNavigate}
-            onView={handleViewChange}
-            messages={messages}
-            selectable
-            onSelectSlot={(slot: SlotInfo) => openCreate(slot)}
-            onSelectEvent={(ev) => openEdit(ev as CalendarEvent)}
-            eventPropGetter={() => ({
-              className:
-                "!bg-primary/15 !text-foreground ring-1 ring-primary/25 rounded-md text-xs",
-            })}
-          />
-        </div>
+        <LaboresBigCalendar
+          events={events}
+          currentView={currentView}
+          calendarDate={calendarDate}
+          loading={loadingRange}
+          onNavigate={handleNavigate}
+          onViewChange={handleViewChange}
+          onSelectSlot={openCreate}
+          onSelectEvent={openEdit}
+          eventPropGetter={() => ({ className: tecnicoEventClassName() })}
+        />
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

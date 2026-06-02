@@ -1,9 +1,13 @@
+import { endOfMonth, format, startOfMonth } from "date-fns";
+
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { todayColombiaYmd } from "@/lib/date-colombia";
 import {
   getCatalogoLabores,
   getLaboresPendientesEjecucion,
+  getLaboresRango,
+  getLotesPorFinca,
 } from "@/app/actions/queries";
 import { LaboresOperarioClient } from "@/components/operario/labores-operario-client";
 
@@ -22,14 +26,29 @@ export default async function OperarioLaboresPage() {
   const fincas = await getFincas(fincaId);
   const supabase = await createClient();
   const hoy = todayColombiaYmd();
+  const monthStart = startOfMonth(new Date());
+  const monthEnd = endOfMonth(new Date());
+  const monthDesde = format(monthStart, "yyyy-MM-dd");
+  const monthHasta = format(monthEnd, "yyyy-MM-dd");
 
-  const catalogoRes = fincaId ? await getCatalogoLabores() : { success: true as const, data: [] };
-  const pendientesRes = fincaId
-    ? await getLaboresPendientesEjecucion(fincaId, hoy)
-    : { success: true as const, data: [] };
+  const [catalogoRes, pendientesRes, lotesRes, agendaRes] = fincaId
+    ? await Promise.all([
+        getCatalogoLabores(),
+        getLaboresPendientesEjecucion(fincaId, hoy),
+        getLotesPorFinca(fincaId),
+        getLaboresRango(fincaId, monthDesde, monthHasta),
+      ])
+    : [
+        { success: true as const, data: [] },
+        { success: true as const, data: [] },
+        { success: true as const, data: [] },
+        { success: true as const, data: [] },
+      ];
 
   const catalogoLabores = catalogoRes.success ? catalogoRes.data : [];
   const pendientes = pendientesRes.success ? pendientesRes.data : [];
+  const lotes = lotesRes.success ? lotesRes.data : [];
+  const initialAgendaLabores = agendaRes.success ? agendaRes.data : [];
 
   const { data: laboresRaw } = fincaId
     ? await supabase
@@ -93,6 +112,8 @@ export default async function OperarioLaboresPage() {
         defaultFincaId={fincaId}
         catalogoLabores={catalogoLabores}
         pendientes={pendientes}
+        lotes={lotes}
+        initialAgendaLabores={initialAgendaLabores}
       />
     </div>
   );

@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, RefreshCw } from "lucide-react";
+import { MapPin, Plus, RefreshCw, Search } from "lucide-react";
 import { registrarAplicacionFitosanitaria } from "@/app/actions/fitosanidad";
 import type { AplicacionFitosanitariaListRow } from "@/app/actions/fitosanidad";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { parseCantidadDosis, mensajeDesviacionDosis } from "@/lib/sanidad-dosis";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -50,7 +57,15 @@ async function captureGps(): Promise<{ lat: number; lng: number } | null> {
   }
 }
 
-function AplicacionForm({ ordenes, onSuccess }: { ordenes: OrdenPendienteRow[]; onSuccess: () => void }) {
+function AplicacionForm({
+  ordenes,
+  embedded = false,
+  onSuccess,
+}: {
+  ordenes: OrdenPendienteRow[];
+  embedded?: boolean;
+  onSuccess: () => void;
+}) {
   const [ordenId, setOrdenId] = useState(ordenes[0]?.id ?? "");
   const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [cantidad, setCantidad] = useState("");
@@ -70,6 +85,10 @@ function AplicacionForm({ ordenes, onSuccess }: { ordenes: OrdenPendienteRow[]; 
     selected && Number.isFinite(qtyPreview) && qtyPreview > 0
       ? mensajeDesviacionDosis(qtyPreview, selected.dosis_recomendada)
       : null;
+
+  const formClass = embedded
+    ? "flex max-w-none flex-col gap-5"
+    : "surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6";
 
   useEffect(() => {
     if (!ordenes.length) return;
@@ -152,26 +171,11 @@ function AplicacionForm({ ordenes, onSuccess }: { ordenes: OrdenPendienteRow[]; 
       setErr(res.error);
       return;
     }
-    setCantidad("");
-    setNotas("");
-    setEpp(false);
     onSuccess();
   }
 
-  if (ordenes.length === 0) {
-    return (
-      <p className="surface-panel rounded-2xl p-4 text-sm text-muted-foreground">
-        No hay órdenes de control autorizadas pendientes de aplicación. Cuando el técnico valide
-        el monitoreo y emita una orden, podrá registrarla aquí (RN66).
-      </p>
-    );
-  }
-
   return (
-    <form
-      onSubmit={onSubmit}
-      className="surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6"
-    >
+    <form onSubmit={onSubmit} className={formClass}>
       <div className="space-y-2">
         <Label htmlFor="orden">Orden de control</Label>
         <Select value={ordenId} onValueChange={setOrdenId}>
@@ -292,54 +296,119 @@ export function AplicacionesOperarioClient({ ordenes, initialHistorial }: Props)
   const router = useRouter();
   const { toast } = useToast();
   const [historial] = useServerPropsState(initialHistorial);
+  const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createKey, setCreateKey] = useState(0);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return historial;
+    return historial.filter((r) => {
+      const blob = `${r.fecha_aplicacion} ${r.lote_codigo} ${r.insumo_nombre} ${r.cantidad_aplicada} ${r.unidad_medida ?? ""}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [historial, search]);
 
   function afterSuccess() {
+    setCreateOpen(false);
     toast("Aplicación registrada. Orden cerrada.", "success");
     router.refresh();
   }
 
   return (
-    <div className="space-y-8">
-      <AplicacionForm ordenes={ordenes} onSuccess={afterSuccess} />
+    <div className="fade-up-enter space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative min-w-0 flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar por lote, producto, fecha…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="min-h-10 rounded-xl border-border/70 bg-background/80 pl-9 text-sm shadow-none"
+          />
+        </div>
+        <Button
+          type="button"
+          className="shrink-0 gap-1.5"
+          disabled={ordenes.length === 0}
+          onClick={() => {
+            setCreateKey((k) => k + 1);
+            setCreateOpen(true);
+          }}
+        >
+          <Plus className="size-4" />
+          Registrar aplicación
+        </Button>
+      </div>
 
-      {historial.length > 0 ? (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold tracking-tight">Aplicaciones recientes</h3>
-          <div className="surface-panel overflow-hidden rounded-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Lote</th>
-                    <th className="px-4 py-3">Producto</th>
-                    <th className="px-4 py-3">Cantidad</th>
-                    <th className="px-4 py-3">EPP</th>
+      {ordenes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No hay órdenes de control autorizadas pendientes de aplicación. Cuando el técnico valide
+          el monitoreo y emita una orden, podrá registrarla aquí (RN66).
+        </p>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <div className="surface-panel rounded-2xl py-14 text-center">
+          <p className="text-sm font-medium text-muted-foreground">
+            {search
+              ? "No hay resultados para esa búsqueda."
+              : "Sin aplicaciones registradas aún. Use «Registrar aplicación» para la primera."}
+          </p>
+        </div>
+      ) : (
+        <div className="surface-panel overflow-hidden rounded-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Lote</th>
+                  <th className="px-4 py-3">Producto</th>
+                  <th className="px-4 py-3">Cantidad</th>
+                  <th className="px-4 py-3">EPP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r, idx) => (
+                  <tr
+                    key={r.id}
+                    className={`border-b border-border/40 last:border-0 ${
+                      idx % 2 !== 0 ? "bg-muted/15" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">{r.fecha_aplicacion}</td>
+                    <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
+                    <td className="px-4 py-3">{r.insumo_nombre}</td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {r.cantidad_aplicada} {r.unidad_medida ?? ""}
+                    </td>
+                    <td className="px-4 py-3">{r.epp_confirmado ? "Sí" : "No"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {historial.map((r, idx) => (
-                    <tr
-                      key={r.id}
-                      className={`border-b border-border/40 last:border-0 ${
-                        idx % 2 !== 0 ? "bg-muted/15" : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap">{r.fecha_aplicacion}</td>
-                      <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
-                      <td className="px-4 py-3">{r.insumo_nombre}</td>
-                      <td className="px-4 py-3 tabular-nums">
-                        {r.cantidad_aplicada} {r.unidad_medida ?? ""}
-                      </td>
-                      <td className="px-4 py-3">{r.epp_confirmado ? "Sí" : "No"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      ) : null}
+      )}
+
+      <Dialog open={createOpen} onOpenChange={(v) => !v && setCreateOpen(false)}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Registrar aplicación fitosanitaria</DialogTitle>
+            <DialogDescription>
+              Cierre la orden de control con cantidad aplicada, EPP confirmado y ubicación GPS.
+            </DialogDescription>
+          </DialogHeader>
+          <AplicacionForm
+            key={createKey}
+            ordenes={ordenes}
+            embedded
+            onSuccess={afterSuccess}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

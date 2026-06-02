@@ -26,6 +26,8 @@ export type CosechaListRow = {
   madurez_frutos_caidos_min: number | null;
   madurez_frutos_caidos_max: number | null;
   observaciones_calidad: string | null;
+  latitud: number | null;
+  longitud: number | null;
   lote_codigo: string;
   area_ha: number;
   rendimiento_ton_ha: number;
@@ -273,6 +275,14 @@ export function CosechaOperarioClient({
                   {viewRow.observaciones_calidad ?? "—"}
                 </dd>
               </div>
+              {(viewRow.latitud != null || viewRow.longitud != null) && (
+                <div>
+                  <dt className="text-xs font-medium uppercase text-muted-foreground">GPS</dt>
+                  <dd className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+                    {viewRow.latitud?.toFixed(6) ?? "—"}, {viewRow.longitud?.toFixed(6) ?? "—"}
+                  </dd>
+                </div>
+              )}
             </dl>
           ) : null}
         </DialogContent>

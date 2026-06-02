@@ -30,7 +30,7 @@ type Props = {
   catalogo: CatalogoFitosanidadOption[];
   embedded?: boolean;
   onSuccess?: () => void;
-  /** HU25 plagas / HU26 enfermedades: catálogo obligatorio por tipo. */
+  /** Plagas / enfermedades: catálogo obligatorio por tipo. */
   variant?: "general" | "plaga" | "enfermedad";
 };
 
@@ -276,12 +276,12 @@ export function AlertaForm({
         </Select>
         {variant === "plaga" && catalogo.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No hay plagas activas en el catálogo. Solicite al administrador su carga (HU07).
+            No hay plagas activas en el catálogo. Solicite al administrador su carga.
           </p>
         ) : null}
         {variant === "enfermedad" && catalogo.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No hay enfermedades activas en el catálogo. Solicite al administrador su carga (HU07).
+            No hay enfermedades activas en el catálogo. Solicite al administrador su carga.
           </p>
         ) : null}
       </div>
