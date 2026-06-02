@@ -6,7 +6,8 @@ export type TimelineEventCategory =
   | "nutricion"
   | "sanidad"
   | "suelo"
-  | "cosecha";
+  | "cosecha"
+  | "logistica";
 
 export type TimelineEvent = {
   /** Identificador estable para keys de React (prefijo + id de fila). */

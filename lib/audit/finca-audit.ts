@@ -3,6 +3,8 @@ import type { Json } from "@/lib/database.types";
 export const FINCA_AUDIT_ACTION_KEYS = [
   "cosecha.registrar",
   "cosecha.anular",
+  /** HU29: remisión de despacho de fruta. */
+  "despacho.remision_crear",
   "plan_siembra.crear",
   "plan_siembra.actualizar",
   "plan_siembra.anular",
@@ -39,6 +41,16 @@ export const FINCA_AUDIT_ACTION_KEYS = [
   "inventario.herramienta_estado",
   /** HU17: consulta de trazabilidad técnica (solo lectura). */
   "trazabilidad.consulta",
+  /** HU08: consulta de reporte de productividad RFF. */
+  "reporte.productividad_consultar",
+  /** HU09: exportación expediente RSPO. */
+  "reporte.rspo_exportar",
+  /** HU08: exportación reporte productividad (PDF/CSV). */
+  "reporte.productividad_exportar",
+  /** HU05/06/07: cambios en catálogo maestro. */
+  "catalogo.crear",
+  "catalogo.actualizar",
+  "catalogo.inactivar",
 ] as const;
 
 export type FincaAuditActionKey = (typeof FINCA_AUDIT_ACTION_KEYS)[number];
