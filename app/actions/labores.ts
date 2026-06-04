@@ -18,6 +18,7 @@ import {
   validarCantidadLaborVsLote,
   type UnidadMedidaLabor,
 } from "@/lib/labor-ejecucion";
+import { assertOperarioAsignadoFinca } from "@/lib/operario-finca";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 
@@ -154,6 +155,13 @@ export async function registrarLabor(
     );
     if (!loteCheck.success) return loteCheck;
     loteCodigo = loteCheck.data.codigo;
+
+    const opV = await assertOperarioAsignadoFinca(
+      supabase,
+      input.finca_id,
+      input.assigned_to
+    );
+    if (!opV.success) return opV;
   } else {
     return actionError("No tiene permiso para programar labores.");
   }
@@ -166,6 +174,7 @@ export async function registrarLabor(
       tipo: tipoResolved,
       fecha_ejecucion: input.fecha_ejecucion,
       notas: input.notas ?? null,
+      assigned_to: input.assigned_to,
       created_by: user.id,
       source: input.source,
       catalogo_item_id: catalogoItemId,
@@ -188,6 +197,7 @@ export async function registrarLabor(
       fechaEjecucion: input.fecha_ejecucion,
       notas: input.notas ?? null,
       catalogoItemId,
+      assignedTo: input.assigned_to,
     },
   });
 
@@ -226,7 +236,7 @@ export async function registrarLaborEjecutada(
     const { data: programada, error: progErr } = await supabase
       .from("labores_agronomicas")
       .select(
-        "id, finca_id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada, is_voided"
+        "id, finca_id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada, is_voided, assigned_to"
       )
       .eq("id", input.labor_programada_id)
       .maybeSingle();
@@ -239,6 +249,12 @@ export async function registrarLaborEjecutada(
     }
     if (programada.finca_id !== input.finca_id) {
       return actionError("La labor programada no pertenece a su finca.");
+    }
+    if (
+      programada.assigned_to != null &&
+      programada.assigned_to !== user.id
+    ) {
+      return actionError("Esta labor está asignada a otro operario.");
     }
     if (programada.cantidad_ejecutada != null) {
       return actionError("Esta labor ya fue reportada como ejecutada.");
@@ -425,6 +441,13 @@ export async function actualizarLabor(
   );
   if (!loteCheck.success) return loteCheck;
 
+  const opV = await assertOperarioAsignadoFinca(
+    supabase,
+    fincaId,
+    input.assigned_to
+  );
+  if (!opV.success) return opV;
+
   const { data: updated, error: upErr } = await supabase
     .from("labores_agronomicas")
     .update({
@@ -433,6 +456,7 @@ export async function actualizarLabor(
       fecha_ejecucion: input.fecha_ejecucion,
       notas: input.notas ?? null,
       catalogo_item_id: input.catalogo_item_id,
+      assigned_to: input.assigned_to,
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)
@@ -463,6 +487,7 @@ export async function actualizarLabor(
         fechaEjecucion: input.fecha_ejecucion,
         notas: input.notas ?? null,
         catalogoItemId: input.catalogo_item_id,
+        assignedTo: input.assigned_to,
       },
     },
   });

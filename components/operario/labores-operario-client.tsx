@@ -47,6 +47,7 @@ type Props = {
   initialRows: LaborListRow[];
   fincas: Finca[];
   defaultFincaId: string | null;
+  operarioId: string | null;
   catalogoLabores: CatalogoRow[];
   pendientes: LaborPendienteRow[];
   lotes: LoteOption[];
@@ -67,6 +68,7 @@ export function LaboresOperarioClient({
   initialRows,
   fincas,
   defaultFincaId,
+  operarioId,
   catalogoLabores,
   pendientes,
   lotes,
@@ -198,6 +200,7 @@ export function LaboresOperarioClient({
       {pageView === "agenda" && defaultFincaId ? (
         <LaboresOperarioSchedule
           fincaId={defaultFincaId}
+          operarioId={operarioId}
           lotes={lotes}
           initialLabores={initialAgendaLabores}
           onOpenCreate={openCreate}
@@ -288,7 +291,7 @@ export function LaboresOperarioClient({
       <Dialog open={createOpen} onOpenChange={(v) => !v && setCreateOpen(false)}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nueva labor</DialogTitle>
+            <DialogTitle>Reportar ejecución de labor</DialogTitle>
             <DialogDescription>
               Registre la ejecución en campo. Puede cerrar sin guardar.
             </DialogDescription>

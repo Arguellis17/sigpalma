@@ -13,6 +13,8 @@ export const registrarLaborSchema = z.object({
   source: registroSourceSchema.optional().default("web"),
   /** Si viene informado (HU11), debe coincidir con un ítem labor activo para agrónomos. */
   catalogo_item_id: uuid.optional().nullable(),
+  /** HU11: operario de campo responsable de ejecutar la labor. */
+  assigned_to: uuid,
 });
 
 export const actualizarLaborSchema = z.object({
@@ -22,6 +24,7 @@ export const actualizarLaborSchema = z.object({
   fecha_ejecucion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notas: z.string().max(5000).optional().nullable(),
   catalogo_item_id: uuid.optional().nullable(),
+  assigned_to: uuid,
 });
 
 export const reportarCosechaSchema = z

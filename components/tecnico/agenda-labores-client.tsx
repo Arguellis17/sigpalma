@@ -10,6 +10,7 @@ import type {
   CatalogoLaborOption,
   LaborAgendaRow,
   LoteOption,
+  OperarioFincaOption,
 } from "@/app/actions/queries";
 import {
   LaboresBigCalendar,
@@ -43,16 +44,19 @@ type Props = {
   fincaId: string;
   catalogoLabores: CatalogoLaborOption[];
   lotes: LoteOption[];
+  operarios: OperarioFincaOption[];
   initialLabores: LaborAgendaRow[];
 };
 
 const IDLE_LOTE = "__lote_idle__";
 const IDLE_CAT = "__cat_idle__";
+const IDLE_OPERARIO = "__operario_idle__";
 
 export function AgendaLaboresClient({
   fincaId,
   catalogoLabores,
   lotes,
+  operarios,
   initialLabores,
 }: Props) {
   const { toast } = useToast();
@@ -67,6 +71,7 @@ export function AgendaLaboresClient({
   const [catalogoId, setCatalogoId] = useState("");
   const [fechaYmd, setFechaYmd] = useState(format(new Date(), "yyyy-MM-dd"));
   const [notas, setNotas] = useState("");
+  const [assignedTo, setAssignedTo] = useState(IDLE_OPERARIO);
   const [pending, setPending] = useState(false);
   const [layoutMode, setLayoutMode] = useState<"calendar" | "gantt">("calendar");
 
@@ -109,6 +114,7 @@ export function AgendaLaboresClient({
     setFechaYmd(format(d, "yyyy-MM-dd"));
     setLoteId(lotes[0]?.id ?? IDLE_LOTE);
     setCatalogoId(catalogoLabores[0]?.id ?? IDLE_CAT);
+    setAssignedTo(operarios[0]?.id ?? IDLE_OPERARIO);
     setNotas("");
     setDialogOpen(true);
   }
@@ -128,6 +134,7 @@ export function AgendaLaboresClient({
     setCatalogoId(matchId);
     setFechaYmd(r.fecha_ejecucion);
     setNotas(r.notas ?? "");
+    setAssignedTo(r.assigned_to ?? IDLE_OPERARIO);
     setDialogOpen(true);
   }
 
@@ -156,6 +163,11 @@ export function AgendaLaboresClient({
       toast("Catálogo inválido.", "error");
       return;
     }
+    if (!assignedTo || assignedTo === IDLE_OPERARIO) {
+      toast("Seleccione el operario asignado.", "error");
+      return;
+    }
+    const opRow = operarios.find((o) => o.id === assignedTo);
 
     setPending(true);
     if (editingId) {
@@ -166,6 +178,7 @@ export function AgendaLaboresClient({
         fecha_ejecucion: fechaYmd,
         notas: notas.trim() || null,
         catalogo_item_id: catalogoId,
+        assigned_to: assignedTo,
       });
       setPending(false);
       if (!result.success) {
@@ -182,13 +195,18 @@ export function AgendaLaboresClient({
         notas: notas.trim() || null,
         source: "web",
         catalogo_item_id: catalogoId,
+        assigned_to: assignedTo,
       });
       setPending(false);
       if (!result.success) {
         toast(result.error, "error");
         return;
       }
-      toast("Labor programada. Queda disponible para el operador de campo.");
+      toast(
+        opRow
+          ? `Labor programada para ${opRow.full_name || "operario"}.`
+          : "Labor programada."
+      );
     }
 
     setDialogOpen(false);
@@ -208,6 +226,15 @@ export function AgendaLaboresClient({
       <p className="surface-panel rounded-[1.5rem] p-4 text-sm leading-6 text-muted-foreground">
         El catálogo de tipos de labor está vacío o inactivo. Un administrador debe cargar ítems en
         Catálogos → Labores agronómicas.
+      </p>
+    );
+  }
+
+  if (operarios.length === 0) {
+    return (
+      <p className="surface-panel rounded-[1.5rem] p-4 text-sm leading-6 text-muted-foreground">
+        No hay operarios activos en esta finca. Cree usuarios operario asignados a la finca antes de
+        programar labores.
       </p>
     );
   }
@@ -296,6 +323,24 @@ export function AgendaLaboresClient({
               <div className="grid gap-2">
                 <Label>Fecha programada</Label>
                 <DatePickerField value={fechaYmd} onChange={setFechaYmd} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Operario asignado</Label>
+                <Select
+                  value={assignedTo || IDLE_OPERARIO}
+                  onValueChange={setAssignedTo}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione operario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {operarios.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.full_name || "Operario"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="notas-agenda">Notas (opcional)</Label>

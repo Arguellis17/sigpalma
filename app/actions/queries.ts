@@ -1,7 +1,9 @@
 "use server";
 
+import { addDays, format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
+import { todayColombiaYmd } from "@/lib/date-colombia";
 import {
   createSignedUrlsForStoragePaths,
   parseEvidenciaPaths,
@@ -137,13 +139,47 @@ export type LaborAgendaRow = {
   fecha_ejecucion: string;
   notas: string | null;
   catalogo_item_id: string | null;
+  assigned_to: string | null;
+  asignado_nombre: string | null;
   pendiente_ejecucion: boolean;
 };
+
+export type LaboresQueryOperarioOptions = {
+  /** Filtra labores asignadas al operario o sin asignar (legacy). */
+  operarioId?: string;
+};
+
+function applyLaboresOperarioFilter<
+  Q extends {
+    or: (filters: string) => Q;
+  },
+>(query: Q, operarioId?: string): Q {
+  if (!operarioId) return query;
+  return query.or(`assigned_to.is.null,assigned_to.eq.${operarioId}`);
+}
+
+async function mapAsignadoNombres(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  assignedIds: (string | null)[]
+): Promise<Map<string, string>> {
+  const ids = [
+    ...new Set(assignedIds.filter((x): x is string => Boolean(x))),
+  ];
+  if (!ids.length) return new Map();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", ids);
+  return new Map(
+    (data ?? []).map((p) => [p.id, p.full_name?.trim() || "Operario"])
+  );
+}
 
 export async function getLaboresRango(
   fincaId: string,
   desde: string,
-  hasta: string
+  hasta: string,
+  options?: LaboresQueryOperarioOptions
 ): Promise<ActionResult<LaborAgendaRow[]>> {
   const fid = fincaId.trim();
   if (!/^[0-9a-f-]{36}$/i.test(fid)) {
@@ -154,16 +190,17 @@ export async function getLaboresRango(
   }
 
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
+  let q = supabase
     .from("labores_agronomicas")
     .select(
-      "id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada"
+      "id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, cantidad_ejecutada, assigned_to"
     )
     .eq("finca_id", fid)
     .eq("is_voided", false)
     .gte("fecha_ejecucion", desde)
-    .lte("fecha_ejecucion", hasta)
-    .order("fecha_ejecucion");
+    .lte("fecha_ejecucion", hasta);
+  q = applyLaboresOperarioFilter(q, options?.operarioId);
+  const { data: rows, error } = await q.order("fecha_ejecucion");
 
   if (error) {
     return actionError(error.message);
@@ -171,9 +208,15 @@ export async function getLaboresRango(
 
   const lr = rows ?? [];
   const loteIds = [...new Set(lr.map((r) => r.lote_id))];
-  const { data: lotesRows } = loteIds.length
-    ? await supabase.from("lotes").select("id, codigo").in("id", loteIds)
-    : { data: [] as { id: string; codigo: string }[] };
+  const [{ data: lotesRows }, nombreMap] = await Promise.all([
+    loteIds.length
+      ? supabase.from("lotes").select("id, codigo").in("id", loteIds)
+      : Promise.resolve({ data: [] as { id: string; codigo: string }[] }),
+    mapAsignadoNombres(
+      supabase,
+      lr.map((r) => r.assigned_to)
+    ),
+  ]);
 
   const loteMap = new Map((lotesRows ?? []).map((l) => [l.id, l.codigo]));
 
@@ -186,6 +229,10 @@ export async function getLaboresRango(
       fecha_ejecucion: r.fecha_ejecucion,
       notas: r.notas,
       catalogo_item_id: r.catalogo_item_id,
+      assigned_to: r.assigned_to,
+      asignado_nombre: r.assigned_to
+        ? (nombreMap.get(r.assigned_to) ?? null)
+        : null,
       pendiente_ejecucion:
         r.cantidad_ejecutada == null && r.catalogo_item_id != null,
     }))
@@ -200,31 +247,44 @@ export type LaborPendienteRow = {
   fecha_ejecucion: string;
   notas: string | null;
   catalogo_item_id: string;
+  assigned_to: string | null;
+  asignado_nombre: string | null;
+};
+
+export type LaboresPendientesOptions = LaboresQueryOperarioOptions & {
+  /** Incluye labores programadas con fecha futura (selector operario). Default: hoy + 90 días. */
+  hastaFecha?: string;
 };
 
 /** HU21: labores programadas (HU11) pendientes de reporte de ejecución. */
 export async function getLaboresPendientesEjecucion(
   fincaId: string,
-  hastaFecha: string
+  options?: LaboresPendientesOptions
 ): Promise<ActionResult<LaborPendienteRow[]>> {
   const fid = fincaId.trim();
   if (!/^[0-9a-f-]{36}$/i.test(fid)) {
     return actionError("Finca no válida.");
   }
+  const hastaFecha =
+    options?.hastaFecha ??
+    format(addDays(new Date(todayColombiaYmd() + "T12:00:00"), 90), "yyyy-MM-dd");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(hastaFecha)) {
     return actionError("Fecha límite inválida.");
   }
 
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
+  let q = supabase
     .from("labores_agronomicas")
-    .select("id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id")
+    .select(
+      "id, lote_id, tipo, fecha_ejecucion, notas, catalogo_item_id, assigned_to"
+    )
     .eq("finca_id", fid)
     .eq("is_voided", false)
     .is("cantidad_ejecutada", null)
     .not("catalogo_item_id", "is", null)
-    .lte("fecha_ejecucion", hastaFecha)
-    .order("fecha_ejecucion");
+    .lte("fecha_ejecucion", hastaFecha);
+  q = applyLaboresOperarioFilter(q, options?.operarioId);
+  const { data: rows, error } = await q.order("fecha_ejecucion");
 
   if (error) {
     return actionError(error.message);
@@ -235,9 +295,15 @@ export async function getLaboresPendientesEjecucion(
       r.catalogo_item_id != null
   );
   const loteIds = [...new Set(lr.map((r) => r.lote_id))];
-  const { data: lotesRows } = loteIds.length
-    ? await supabase.from("lotes").select("id, codigo").in("id", loteIds)
-    : { data: [] as { id: string; codigo: string }[] };
+  const [{ data: lotesRows }, nombreMap] = await Promise.all([
+    loteIds.length
+      ? supabase.from("lotes").select("id, codigo").in("id", loteIds)
+      : Promise.resolve({ data: [] as { id: string; codigo: string }[] }),
+    mapAsignadoNombres(
+      supabase,
+      lr.map((r) => r.assigned_to)
+    ),
+  ]);
 
   const loteMap = new Map((lotesRows ?? []).map((l) => [l.id, l.codigo]));
 
@@ -250,6 +316,10 @@ export async function getLaboresPendientesEjecucion(
       fecha_ejecucion: r.fecha_ejecucion,
       notas: r.notas,
       catalogo_item_id: r.catalogo_item_id,
+      assigned_to: r.assigned_to,
+      asignado_nombre: r.assigned_to
+        ? (nombreMap.get(r.assigned_to) ?? null)
+        : null,
     }))
   );
 }

@@ -253,6 +253,12 @@ export async function cambiarEstadoInventarioHerramienta(
   }
   const { profile } = session;
 
+  if (profile.role !== "admin" && profile.role !== "superadmin") {
+    return actionError(
+      "Solo un administrador puede registrar daño o pérdida de herramientas."
+    );
+  }
+
   const supabase = await createClient();
   const rowResult = await fetchInventarioRow(supabase, input.id);
   if (!rowResult.success) return rowResult;

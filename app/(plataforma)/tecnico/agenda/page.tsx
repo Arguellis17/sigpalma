@@ -2,6 +2,7 @@ import {
   getCatalogoLabores,
   getLaboresRango,
   getLotesPorFinca,
+  getOperariosFinca,
 } from "@/app/actions/queries";
 import { AgendaLaboresClient } from "@/components/tecnico/agenda-labores-client";
 import { getSessionProfile } from "@/lib/auth/session-profile";
@@ -24,9 +25,10 @@ export default async function TecnicoAgendaPage() {
   const monthStart = startOfMonth(new Date());
   const monthEnd = endOfMonth(new Date());
 
-  const [cat, lotes, labores] = await Promise.all([
+  const [cat, lotes, operarios, labores] = await Promise.all([
     getCatalogoLabores(),
     getLotesPorFinca(fincaId, { soloActivos: true }),
+    getOperariosFinca(fincaId),
     getLaboresRango(
       fincaId,
       format(monthStart, "yyyy-MM-dd"),
@@ -48,6 +50,15 @@ export default async function TecnicoAgendaPage() {
       </div>
     );
   }
+  if (!operarios.success) {
+    return (
+      <div className="fade-up-enter space-y-6">
+        <p className="surface-panel rounded-[1.5rem] p-4 text-sm text-destructive">
+          {operarios.error}
+        </p>
+      </div>
+    );
+  }
   if (!labores.success) {
     return (
       <div className="fade-up-enter space-y-6">
@@ -63,14 +74,15 @@ export default async function TecnicoAgendaPage() {
           Agenda de labores
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Programe labores de mantenimiento por lote. Las fechas deben ser hoy o futuras; los tipos
-          provienen del catálogo técnico.
+          Programe labores de mantenimiento por lote y asigne un operario de campo. Las fechas deben
+          ser hoy o futuras; los tipos provienen del catálogo técnico.
         </p>
       </div>
       <AgendaLaboresClient
         fincaId={fincaId}
         catalogoLabores={cat.data}
         lotes={lotes.data}
+        operarios={operarios.data}
         initialLabores={labores.data}
       />
     </div>

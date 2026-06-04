@@ -10,6 +10,7 @@ import {
 import type { LaborPendienteRow } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
+import { todayColombiaYmd } from "@/lib/date-colombia";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -173,7 +174,7 @@ export function LaborForm({
     <form onSubmit={onSubmit} className={formClass}>
       {pendientes.length > 0 ? (
         <div className="space-y-2 rounded-2xl border border-primary/15 bg-primary/5 p-4">
-          <Label htmlFor="pendiente">Tarea programada (opcional)</Label>
+          <Label htmlFor="pendiente">Tarea programada asignada (opcional)</Label>
           <Select
             value={pendienteId}
             onValueChange={(v) => {
@@ -194,16 +195,21 @@ export function LaborForm({
               <SelectItem value={PENDIENTE_SELECT_IDLE}>
                 Registrar sin programación previa
               </SelectItem>
-              {pendientes.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.tipo} · {p.lote_codigo} · {p.fecha_ejecucion}
-                </SelectItem>
-              ))}
+              {pendientes.map((p) => {
+                const hoy = todayColombiaYmd();
+                const futura = p.fecha_ejecucion > hoy;
+                return (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.tipo} · {p.lote_codigo} · {p.fecha_ejecucion}
+                    {futura ? " (programada)" : ""}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Las tareas programadas por el técnico aparecen aquí hasta que reporte
-            la ejecución.
+            Las tareas que el técnico le asignó aparecen aquí (incluidas fechas futuras).
+            Al reportar la ejecución, el lote debe estar en producción.
           </p>
         </div>
       ) : null}

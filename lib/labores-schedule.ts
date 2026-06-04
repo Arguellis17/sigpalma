@@ -35,7 +35,9 @@ export function rowsToEvents(rows: LaborAgendaRow[]): CalendarEvent[] {
     const dayEnd = parseISO(`${row.fecha_ejecucion}T23:59:59`);
     return {
       id: row.id,
-      title: `${row.tipo} · ${row.lote_codigo}`,
+      title: row.asignado_nombre
+        ? `${row.tipo} · ${row.lote_codigo} · ${row.asignado_nombre}`
+        : `${row.tipo} · ${row.lote_codigo}`,
       start: dayStart,
       end: dayEnd,
       allDay: true,

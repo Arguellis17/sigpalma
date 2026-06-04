@@ -228,6 +228,9 @@ export const laboresAgronomicas = pgTable("labores_agronomicas", {
   unidadMedida: text("unidad_medida"),
   ejecutadaAt: timestamp("ejecutada_at", { withTimezone: true }),
   notas: text("notas"),
+  assignedTo: uuid("assigned_to").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),

@@ -876,6 +876,7 @@ export type Database = {
           unidad_medida: string | null;
           ejecutada_at: string | null;
           notas: string | null;
+          assigned_to: string | null;
           created_by: string;
           source: Database["public"]["Enums"]["registro_source"];
           is_voided: boolean;
@@ -893,6 +894,7 @@ export type Database = {
           unidad_medida?: string | null;
           ejecutada_at?: string | null;
           notas?: string | null;
+          assigned_to?: string | null;
           created_by: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
@@ -910,6 +912,7 @@ export type Database = {
           unidad_medida?: string | null;
           ejecutada_at?: string | null;
           notas?: string | null;
+          assigned_to?: string | null;
           created_by?: string;
           source?: Database["public"]["Enums"]["registro_source"];
           is_voided?: boolean;
@@ -917,6 +920,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "labores_agronomicas_assigned_to_fkey";
+            columns: ["assigned_to"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "labores_agronomicas_catalogo_item_id_fkey";
             columns: ["catalogo_item_id"];

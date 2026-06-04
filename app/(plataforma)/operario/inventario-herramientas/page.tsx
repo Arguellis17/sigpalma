@@ -30,8 +30,8 @@ export default async function OperarioInventarioHerramientasPage() {
           Inventario de herramientas
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Busque por código o nombre, tome herramientas disponibles y devuélvalas al terminar. Reporte
-          daños o pérdidas con una descripción clara.
+          Busque por código o nombre, tome herramientas disponibles y devuélvalas al terminar. Para
+          reportar daño o pérdida, contacte al administrador de la finca.
         </p>
       </div>
       {!listResult.success && (

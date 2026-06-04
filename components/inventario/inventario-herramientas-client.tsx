@@ -228,7 +228,8 @@ export function InventarioHerramientasClient({
                     (r.assigned_to === currentUserId || mode === "admin");
                   const puedeTomar = r.estado === "disponible";
                   const puedeReportar =
-                    r.estado === "disponible" || r.estado === "en_uso";
+                    mode === "admin" &&
+                    (r.estado === "disponible" || r.estado === "en_uso");
 
                   return (
                     <tr

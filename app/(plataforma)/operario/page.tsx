@@ -9,7 +9,9 @@ async function getOperarioStats(userId: string, fincaId: string | null) {
   const baseLabores = supabase
     .from("labores_agronomicas")
     .select("id", { count: "exact", head: true })
-    .eq("is_voided", false);
+    .eq("is_voided", false)
+    .is("cantidad_ejecutada", null)
+    .not("catalogo_item_id", "is", null);
 
   const baseCosechas = supabase
     .from("cosechas_rff")
@@ -23,8 +25,13 @@ async function getOperarioStats(userId: string, fincaId: string | null) {
     .eq("estado", "pendiente")
     .eq("is_voided", false);
 
+  let laboresQuery = fincaId ? baseLabores.eq("finca_id", fincaId) : baseLabores;
+  if (fincaId && userId) {
+    laboresQuery = laboresQuery.or(`assigned_to.is.null,assigned_to.eq.${userId}`);
+  }
+
   const [{ count: labores }, { count: cosechas }, { count: monitoreos }] = await Promise.all([
-    fincaId ? baseLabores.eq("finca_id", fincaId) : baseLabores,
+    laboresQuery,
     fincaId ? baseCosechas.eq("finca_id", fincaId) : baseCosechas,
     baseMonitoreos,
   ]);

@@ -35,6 +35,7 @@ const LaboresBigCalendar = dynamic(
 
 type Props = {
   fincaId: string;
+  operarioId: string | null;
   lotes: LoteOption[];
   initialLabores: LaborAgendaRow[];
   onOpenCreate: (opts: { fecha?: string; pendienteId?: string }) => void;
@@ -44,6 +45,7 @@ type Props = {
 
 export function LaboresOperarioSchedule({
   fincaId,
+  operarioId,
   lotes,
   initialLabores,
   onOpenCreate,
@@ -62,7 +64,12 @@ export function LaboresOperarioSchedule({
     async (view: View, date: Date) => {
       const { desde, hasta } = rangeForView(view, date);
       setLoadingRange(true);
-      const res = await getLaboresRango(fincaId, desde, hasta);
+      const res = await getLaboresRango(
+        fincaId,
+        desde,
+        hasta,
+        operarioId ? { operarioId } : undefined
+      );
       setLoadingRange(false);
       if (!res.success) {
         toast(`No se pudo cargar el calendario: ${res.error}`, "error");
@@ -70,7 +77,7 @@ export function LaboresOperarioSchedule({
       }
       setRows(res.data);
     },
-    [fincaId, setRows, toast]
+    [fincaId, operarioId, setRows, toast]
   );
 
   const handleNavigate = useCallback(
@@ -164,9 +171,9 @@ export function LaboresOperarioSchedule({
 
       <p className="text-xs text-muted-foreground">
         <span className="inline-block size-2 rounded-sm bg-amber-500/40 ring-1 ring-amber-500/30" />{" "}
-        Ámbar = pendiente de reportar ·{" "}
+        Ámbar = pendiente de reportar ejecución (clic para abrir formulario) ·{" "}
         <span className="inline-block size-2 rounded-sm bg-muted/60 ring-1 ring-border/60" /> Gris =
-        ya ejecutada
+        ya ejecutada (solo detalle)
       </p>
     </div>
   );

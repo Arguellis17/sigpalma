@@ -2,7 +2,6 @@ import { endOfMonth, format, startOfMonth } from "date-fns";
 
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import { todayColombiaYmd } from "@/lib/date-colombia";
 import {
   getCatalogoLabores,
   getLaboresPendientesEjecucion,
@@ -23,20 +22,22 @@ async function getFincas(fincaId: string | null) {
 export default async function OperarioLaboresPage() {
   const session = await getSessionProfile();
   const fincaId = session?.profile?.finca_id ?? null;
+  const operarioId = session?.user?.id ?? null;
   const fincas = await getFincas(fincaId);
   const supabase = await createClient();
-  const hoy = todayColombiaYmd();
   const monthStart = startOfMonth(new Date());
   const monthEnd = endOfMonth(new Date());
   const monthDesde = format(monthStart, "yyyy-MM-dd");
   const monthHasta = format(monthEnd, "yyyy-MM-dd");
 
+  const laboresOpts = operarioId ? { operarioId } : undefined;
+
   const [catalogoRes, pendientesRes, lotesRes, agendaRes] = fincaId
     ? await Promise.all([
         getCatalogoLabores(),
-        getLaboresPendientesEjecucion(fincaId, hoy),
+        getLaboresPendientesEjecucion(fincaId, laboresOpts),
         getLotesPorFinca(fincaId),
-        getLaboresRango(fincaId, monthDesde, monthHasta),
+        getLaboresRango(fincaId, monthDesde, monthHasta, laboresOpts),
       ])
     : [
         { success: true as const, data: [] },
@@ -50,8 +51,8 @@ export default async function OperarioLaboresPage() {
   const lotes = lotesRes.success ? lotesRes.data : [];
   const initialAgendaLabores = agendaRes.success ? agendaRes.data : [];
 
-  const { data: laboresRaw } = fincaId
-    ? await supabase
+  let ejecutadasQuery = fincaId
+    ? supabase
         .from("labores_agronomicas")
         .select(
           "id, lote_id, tipo, fecha_ejecucion, notas, created_at, cantidad_ejecutada, unidad_medida, ejecutada_at"
@@ -59,6 +60,14 @@ export default async function OperarioLaboresPage() {
         .eq("finca_id", fincaId)
         .eq("is_voided", false)
         .not("cantidad_ejecutada", "is", null)
+    : null;
+  if (ejecutadasQuery && operarioId) {
+    ejecutadasQuery = ejecutadasQuery.or(
+      `assigned_to.is.null,assigned_to.eq.${operarioId}`
+    );
+  }
+  const { data: laboresRaw } = ejecutadasQuery
+    ? await ejecutadasQuery
         .order("ejecutada_at", { ascending: false })
         .limit(200)
     : {
@@ -110,6 +119,7 @@ export default async function OperarioLaboresPage() {
         initialRows={initialRows}
         fincas={fincas}
         defaultFincaId={fincaId}
+        operarioId={operarioId}
         catalogoLabores={catalogoLabores}
         pendientes={pendientes}
         lotes={lotes}
