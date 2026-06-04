@@ -12,6 +12,7 @@ import {
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -274,12 +275,10 @@ export function DespachoOperarioClient({
           </div>
           <div className="space-y-2">
             <Label htmlFor="cap">Capacidad vehículo kg (opc.)</Label>
-            <Input
+            <NumericInput
               id="cap"
-              type="number"
-              min={0}
               value={capacidad}
-              onChange={(e) => setCapacidad(e.target.value)}
+              onValueChange={setCapacidad}
               className="min-h-11"
             />
           </div>

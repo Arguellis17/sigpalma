@@ -5,6 +5,7 @@ import { crearLote } from "@/app/actions/lotes";
 import { LoteEstadoFields } from "@/components/fincas/lote-estado-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
 import type { LoteEstadoCultivo } from "@/lib/lote-estado";
@@ -20,6 +21,9 @@ const SLOPE_THRESHOLD = 12;
 export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [areaHa, setAreaHa] = useState("");
+  const [anioSiembra, setAnioSiembra] = useState(String(new Date().getFullYear()));
+  const [densidad, setDensidad] = useState("");
   const [pendientePct, setPendientePct] = useState("");
   const [estadoCultivo, setEstadoCultivo] = useState<LoteEstadoCultivo>("disponible");
   const [activo, setActivo] = useState(true);
@@ -32,20 +36,16 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
     setError(null);
     const fd = new FormData(e.currentTarget);
     setPending(true);
-    const densRaw = fd.get("densidad_palmas_ha");
-    const pendRaw = fd.get("pendiente_pct");
     const result = await crearLote({
       finca_id: fincaId,
       codigo: String(fd.get("codigo") ?? ""),
-      area_ha: fd.get("area_ha"),
-      anio_siembra: fd.get("anio_siembra"),
+      area_ha: areaHa,
+      anio_siembra: anioSiembra,
       material_genetico: fd.get("material_genetico")
         ? String(fd.get("material_genetico"))
         : null,
-      densidad_palmas_ha:
-        densRaw === "" || densRaw === null ? null : densRaw,
-      pendiente_pct:
-        pendRaw === "" || pendRaw === null ? null : pendRaw,
+      densidad_palmas_ha: densidad.trim() === "" ? null : densidad,
+      pendiente_pct: pendientePct.trim() === "" ? null : pendientePct,
       estado_cultivo: estadoCultivo,
       activo,
     });
@@ -56,8 +56,6 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
     }
     onSuccess?.(result.data.id);
   }
-
-  const yearDefault = new Date().getFullYear();
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -74,27 +72,23 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="lc-area">Área (ha) <span className="text-destructive">*</span></Label>
-          <Input
+          <NumericInput
             id="lc-area"
-            name="area_ha"
-            type="number"
+            value={areaHa}
+            onValueChange={setAreaHa}
             required
-            min={0.0001}
-            step="0.0001"
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             placeholder="0.0"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lc-anio">Año de siembra <span className="text-destructive">*</span></Label>
-          <Input
+          <NumericInput
             id="lc-anio"
-            name="anio_siembra"
-            type="number"
+            integer
+            value={anioSiembra}
+            onValueChange={setAnioSiembra}
             required
-            min={1900}
-            max={yearDefault}
-            defaultValue={yearDefault}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           />
         </div>
@@ -110,15 +104,10 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
         <Label htmlFor="lc-pendiente">
           Pendiente del terreno (%)
         </Label>
-        <Input
+        <NumericInput
           id="lc-pendiente"
-          name="pendiente_pct"
-          type="number"
-          min={0}
-          max={100}
-          step="0.1"
           value={pendientePct}
-          onChange={(e) => setPendientePct(e.target.value)}
+          onValueChange={setPendientePct}
           className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           placeholder="0.0"
         />
@@ -143,12 +132,10 @@ export function LoteCreateForm({ fincaId, onSuccess, onCancel }: Props) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="lc-densidad">Palmas / ha</Label>
-          <Input
+          <NumericInput
             id="lc-densidad"
-            name="densidad_palmas_ha"
-            type="number"
-            min={1}
-            step="0.01"
+            value={densidad}
+            onValueChange={setDensidad}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             placeholder="143"
           />

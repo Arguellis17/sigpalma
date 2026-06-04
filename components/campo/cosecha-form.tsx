@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -344,14 +345,10 @@ export function CosechaForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="peso">Peso total (kg)</Label>
-          <Input
+          <NumericInput
             id="peso"
-            type="number"
-            inputMode="decimal"
-            min={0.001}
-            step="0.001"
             value={pesoKg}
-            onChange={(e) => setPesoKg(e.target.value)}
+            onValueChange={setPesoKg}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             required
           />
@@ -363,14 +360,11 @@ export function CosechaForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="racimos">Conteo de racimos</Label>
-          <Input
+          <NumericInput
             id="racimos"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
+            integer
             value={conteo}
-            onChange={(e) => setConteo(e.target.value)}
+            onValueChange={setConteo}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             required
           />
@@ -378,25 +372,21 @@ export function CosechaForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="minf">Frutos caídos min (opc.)</Label>
-            <Input
+            <NumericInput
               id="minf"
-              type="number"
-              min={0}
-              max={20}
+              integer
               value={minFrutos}
-              onChange={(e) => setMinFrutos(e.target.value)}
+              onValueChange={setMinFrutos}
               className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="maxf">Frutos caídos max (opc.)</Label>
-            <Input
+            <NumericInput
               id="maxf"
-              type="number"
-              min={0}
-              max={20}
+              integer
               value={maxFrutos}
-              onChange={(e) => setMaxFrutos(e.target.value)}
+              onValueChange={setMaxFrutos}
               className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             />
           </div>

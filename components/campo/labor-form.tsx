@@ -11,7 +11,7 @@ import type { LaborPendienteRow } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { todayColombiaYmd } from "@/lib/date-colombia";
-import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -321,14 +321,10 @@ export function LaborForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="cantidad">Cantidad ejecutada</Label>
-          <Input
+          <NumericInput
             id="cantidad"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
             value={cantidad}
-            onChange={(e) => setCantidad(e.target.value)}
+            onValueChange={setCantidad}
             placeholder={unidad === "ha" ? "Ej. 2.5" : "Ej. 120"}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
             required

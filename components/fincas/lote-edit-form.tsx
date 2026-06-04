@@ -5,6 +5,7 @@ import { actualizarLote } from "@/app/actions/lotes";
 import { LoteEstadoFields } from "@/components/fincas/lote-estado-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
 import type { LoteEstadoCultivo } from "@/lib/lote-estado";
@@ -27,7 +28,6 @@ type Props = {
 };
 
 const SLOPE_THRESHOLD = 12;
-const yearMax = new Date().getFullYear();
 
 export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: Props) {
   const [codigo, setCodigo] = useState(initial.codigo);
@@ -88,27 +88,22 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="le-area">Área (ha) <span className="text-destructive">*</span></Label>
-          <Input
+          <NumericInput
             id="le-area"
-            type="number"
             required
-            min={0.0001}
-            step="0.0001"
             value={areaHa}
-            onChange={(e) => setAreaHa(e.target.value)}
+            onValueChange={setAreaHa}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="le-anio">Año de siembra <span className="text-destructive">*</span></Label>
-          <Input
+          <NumericInput
             id="le-anio"
-            type="number"
+            integer
             required
-            min={1900}
-            max={yearMax}
             value={anio}
-            onChange={(e) => setAnio(e.target.value)}
+            onValueChange={setAnio}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           />
         </div>
@@ -122,14 +117,10 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
       />
       <div className="space-y-1.5">
         <Label htmlFor="le-pendiente">Pendiente del terreno (%)</Label>
-        <Input
+        <NumericInput
           id="le-pendiente"
-          type="number"
-          min={0}
-          max={100}
-          step="0.1"
           value={pendientePct}
-          onChange={(e) => setPendientePct(e.target.value)}
+          onValueChange={setPendientePct}
           className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           placeholder="0.0"
         />
@@ -154,13 +145,10 @@ export function LoteEditForm({ fincaId, loteId, initial, onSuccess, onCancel }: 
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="le-densidad">Palmas / ha</Label>
-          <Input
+          <NumericInput
             id="le-densidad"
-            type="number"
-            min={1}
-            step="0.01"
             value={densidad}
-            onChange={(e) => setDensidad(e.target.value)}
+            onValueChange={setDensidad}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           />
         </div>

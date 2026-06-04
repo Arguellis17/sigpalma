@@ -13,6 +13,7 @@ import type {
 } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -208,34 +209,31 @@ export function TecnicoEvaluacionViveroClient({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ti">Total inicial (unidades)</Label>
-                <Input
+                <NumericInput
                   id="ti"
-                  type="number"
-                  min={1}
+                  integer
                   value={totalInicial}
-                  onChange={(e) => setTotalInicial(e.target.value)}
+                  onValueChange={setTotalInicial}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ug">Unidades germinadas</Label>
-                <Input
+                <NumericInput
                   id="ug"
-                  type="number"
-                  min={0}
+                  integer
                   value={unidadesGerminadas}
-                  onChange={(e) => setUnidadesGerminadas(e.target.value)}
+                  onValueChange={setUnidadesGerminadas}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ud">Unidades descartadas</Label>
-                <Input
+                <NumericInput
                   id="ud"
-                  type="number"
-                  min={0}
+                  integer
                   value={unidadesDescartadas}
-                  onChange={(e) => setUnidadesDescartadas(e.target.value)}
+                  onValueChange={setUnidadesDescartadas}
                   required
                 />
               </div>

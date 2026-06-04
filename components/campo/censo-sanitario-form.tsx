@@ -16,6 +16,7 @@ import {
 import { labelCategoriaFitosanitaria } from "@/lib/validations/catalogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -230,28 +231,22 @@ export function CensoSanitarioForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="c-inspeccionadas">Palmas inspeccionadas</Label>
-          <Input
+          <NumericInput
             id="c-inspeccionadas"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
+            integer
             value={inspeccionadas}
-            onChange={(e) => setInspeccionadas(e.target.value)}
+            onValueChange={setInspeccionadas}
             className="min-h-12 rounded-2xl text-lg tabular-nums"
             required
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="c-afectadas">Palmas afectadas</Label>
-          <Input
+          <NumericInput
             id="c-afectadas"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
+            integer
             value={afectadas}
-            onChange={(e) => setAfectadas(e.target.value)}
+            onValueChange={setAfectadas}
             className="min-h-12 rounded-2xl text-lg tabular-nums"
             required
           />

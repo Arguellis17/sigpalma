@@ -4,6 +4,7 @@ import { useState } from "react";
 import { actualizarFinca } from "@/app/actions/fincas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -71,14 +72,11 @@ export function FincaEditForm({ fincaId, initial, onSuccess, onCancel }: Props) 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="fe-area">Área total (ha) <span className="text-destructive">*</span></Label>
-          <Input
+          <NumericInput
             id="fe-area"
-            type="number"
             required
-            min={0.0001}
-            step="0.0001"
             value={areaHa}
-            onChange={(e) => setAreaHa(e.target.value)}
+            onValueChange={setAreaHa}
             className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none"
           />
         </div>

@@ -10,8 +10,9 @@ import {
   pendienteRequiereValidacionTecnico,
 } from "@/lib/preparacion-terreno";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
+import { parseDecimalInput } from "@/lib/numeric-input";
 import {
   Select,
   SelectContent,
@@ -46,9 +47,9 @@ export function PreparacionTerrenoForm({
   const [err, setErr] = useState<string | null>(null);
 
   const selected = pendientes.find((p) => p.lote_id === loteKey);
-  const pendienteNum = Number(pendiente.replace(",", "."));
+  const pendienteNum = parseDecimalInput(pendiente);
   const pendienteAlerta =
-    Number.isFinite(pendienteNum) && pendienteRequiereValidacionTecnico(pendienteNum)
+    pendienteNum != null && pendienteRequiereValidacionTecnico(pendienteNum)
       ? mensajePendienteCritica(pendienteNum)
       : null;
 
@@ -65,10 +66,12 @@ export function PreparacionTerrenoForm({
 
   useEffect(() => {
     if (!selected) return;
-    if (pendiente === "" && selected.pendiente_lote_pct != null) {
-      setPendiente(String(selected.pendiente_lote_pct));
-    }
-  }, [selected, pendiente]);
+    setPendiente(
+      selected.pendiente_lote_pct != null
+        ? String(selected.pendiente_lote_pct)
+        : ""
+    );
+  }, [selected?.lote_id]);
 
   function toggleActividad(id: string) {
     setActividades((prev) =>
@@ -81,7 +84,7 @@ export function PreparacionTerrenoForm({
     if (actividades.length === 0) {
       return "Seleccione al menos una actividad realizada (RN54).";
     }
-    if (!Number.isFinite(pendienteNum) || pendienteNum < 0) {
+    if (pendienteNum == null || pendienteNum < 0) {
       return "Indique la pendiente final del terreno.";
     }
     return null;
@@ -154,15 +157,10 @@ export function PreparacionTerrenoForm({
 
       <div className="space-y-2">
         <Label htmlFor="pendiente">Pendiente final del terreno (%)</Label>
-        <Input
+        <NumericInput
           id="pendiente"
-          type="number"
-          inputMode="decimal"
-          min="0"
-          max="100"
-          step="0.01"
           value={pendiente}
-          onChange={(e) => setPendiente(e.target.value)}
+          onValueChange={setPendiente}
           className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base"
           required
         />

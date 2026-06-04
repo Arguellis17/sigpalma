@@ -8,6 +8,7 @@ import type {
 } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -137,26 +138,20 @@ export function GerminacionForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="temp">Temperatura máx. (°C)</Label>
-          <Input
+          <NumericInput
             id="temp"
-            type="number"
-            step="0.1"
-            min={0}
-            max={100}
             value={temperaturaMax}
-            onChange={(e) => setTemperaturaMax(e.target.value)}
+            onValueChange={setTemperaturaMax}
             required
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="dias">Días tratamiento</Label>
-          <Input
+          <NumericInput
             id="dias"
-            type="number"
-            min={1}
-            max={365}
+            integer
             value={diasTratamiento}
-            onChange={(e) => setDiasTratamiento(e.target.value)}
+            onValueChange={setDiasTratamiento}
             required
           />
         </div>

@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
+import { NumericInputUncontrolled } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -212,13 +213,9 @@ export function AnalisisSueloForm({
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="ph">pH del suelo</Label>
-          <Input
+          <NumericInputUncontrolled
             id="ph"
             name="ph"
-            type="number"
-            step="0.01"
-            min={0}
-            max={14}
             placeholder="Ej. 5.5"
             className="rounded-xl"
             defaultValue={record?.ph != null ? String(record.ph) : undefined}
@@ -227,13 +224,9 @@ export function AnalisisSueloForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="humedad_pct">Humedad (%)</Label>
-          <Input
+          <NumericInputUncontrolled
             id="humedad_pct"
             name="humedad_pct"
-            type="number"
-            step="0.1"
-            min={0}
-            max={100}
             placeholder="Ej. 45"
             className="rounded-xl"
             defaultValue={record?.humedad_pct != null ? String(record.humedad_pct) : undefined}
@@ -242,12 +235,9 @@ export function AnalisisSueloForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="compactacion">Compactación (MPa)</Label>
-          <Input
+          <NumericInputUncontrolled
             id="compactacion"
             name="compactacion"
-            type="number"
-            step="0.01"
-            min={0}
             placeholder="Ej. 2.5"
             className="rounded-xl"
             defaultValue={record?.compactacion != null ? String(record.compactacion) : undefined}
@@ -296,12 +286,9 @@ export function AnalisisSueloForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="aluminio">Aluminio</Label>
-          <Input
+          <NumericInputUncontrolled
             id="aluminio"
             name="aluminio"
-            type="number"
-            step="0.001"
-            min={0}
             placeholder="Valor según informe"
             className="rounded-xl"
             defaultValue={record?.aluminio != null ? String(record.aluminio) : undefined}
@@ -310,12 +297,9 @@ export function AnalisisSueloForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="cic">CIC</Label>
-          <Input
+          <NumericInputUncontrolled
             id="cic"
             name="cic"
-            type="number"
-            step="0.01"
-            min={0}
             placeholder="Capacidad de intercambio catiónico"
             className="rounded-xl"
             defaultValue={record?.cic != null ? String(record.cic) : undefined}
@@ -324,13 +308,9 @@ export function AnalisisSueloForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="materia_organica_pct">Materia orgánica (%)</Label>
-          <Input
+          <NumericInputUncontrolled
             id="materia_organica_pct"
             name="materia_organica_pct"
-            type="number"
-            step="0.01"
-            min={0}
-            max={100}
             placeholder="Ej. 3.2"
             className="rounded-xl"
             defaultValue={

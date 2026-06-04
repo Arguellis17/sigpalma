@@ -25,6 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInputUncontrolled } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -322,7 +323,7 @@ export function CatalogoClient({
           <Label htmlFor="ci-anio">
             {materialGeneticoForm ? "Año adquisición / certificación" : "Año adquisición"}
           </Label>
-          <Input id="ci-anio" name="anio_adquisicion" type="number" min={2000} max={new Date().getFullYear() + 1} defaultValue={item?.anio_adquisicion ?? ""} className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" />
+          <NumericInputUncontrolled id="ci-anio" name="anio_adquisicion" integer defaultValue={item?.anio_adquisicion != null ? String(item.anio_adquisicion) : undefined} className="min-h-12 rounded-2xl border-border/70 bg-background/80 px-4 text-base shadow-none" />
         </div>
       </div>
       <div className="space-y-1.5">

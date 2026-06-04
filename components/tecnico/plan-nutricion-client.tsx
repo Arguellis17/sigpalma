@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/dialog";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { parseDecimalInput } from "@/lib/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -564,13 +566,10 @@ export function PlanNutricionClient({
                       </div>
                       <div className="space-y-2">
                         <Label>Dosis (cantidad)</Label>
-                        <Input
-                          type="number"
-                          step="0.0001"
-                          min="0"
-                          value={it.dosis_cantidad}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
+                        <NumericInput
+                          value={String(it.dosis_cantidad)}
+                          onValueChange={(raw) => {
+                            const v = raw === "" ? 0 : (parseDecimalInput(raw) ?? 0);
                             setItems((prev) =>
                               prev.map((row, i) =>
                                 i === idx ? { ...row, dosis_cantidad: v } : row
@@ -717,18 +716,21 @@ export function PlanNutricionClient({
                       </div>
                       <div className="space-y-2">
                         <Label>Intervalo (días, opcional)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={r.intervalo_dias ?? ""}
-                          onChange={(e) => {
-                            const raw = e.target.value;
+                        <NumericInput
+                          integer
+                          value={
+                            r.intervalo_dias != null ? String(r.intervalo_dias) : ""
+                          }
+                          onValueChange={(raw) => {
                             setRiego((prev) =>
                               prev.map((row, i) =>
                                 i === idx
                                   ? {
                                       ...row,
-                                      intervalo_dias: raw === "" ? null : Number(raw),
+                                      intervalo_dias:
+                                        raw === ""
+                                          ? null
+                                          : (parseDecimalInput(raw) ?? null),
                                     }
                                   : row
                               )
