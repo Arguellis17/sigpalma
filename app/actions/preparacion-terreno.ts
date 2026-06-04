@@ -15,6 +15,32 @@ import {
 } from "@/lib/validations/preparacion-terreno";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/database.types";
+
+/** Tras prep. aprobada, el trigger BD debe dejar el lote en listo_para_siembra. */
+async function assertLoteListoParaSiembraTrasPrep(
+  supabase: SupabaseClient<Database>,
+  loteId: string
+): Promise<ActionResult<null>> {
+  const { data: loteAfter, error } = await supabase
+    .from("lotes")
+    .select("estado_cultivo")
+    .eq("id", loteId)
+    .maybeSingle();
+
+  if (error) {
+    return actionError(
+      "Registro guardado pero no se pudo verificar el estado del lote. Contacte al administrador."
+    );
+  }
+  if (loteAfter?.estado_cultivo !== "listo_para_siembra") {
+    return actionError(
+      "Registro guardado pero el lote no quedó «Listo para siembra». Solicite al técnico agrónomo que valide la preparación o contacte al administrador."
+    );
+  }
+  return actionOk(null);
+}
 
 export async function registrarPreparacionTerreno(
   raw: unknown
@@ -116,21 +142,11 @@ export async function registrarPreparacionTerreno(
   }
 
   if (!requiereValidacion) {
-    const { error: loteUpErr } = await supabase
-      .from("lotes")
-      .update({
-        estado_cultivo: "listo_para_siembra",
-        pendiente_pct: input.pendiente_final_pct,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", input.lote_id)
-      .eq("estado_cultivo", "planificado_siembra");
-
-    if (loteUpErr) {
-      return actionError(
-        "Registro guardado pero no se pudo actualizar el estado del lote. Contacte al administrador."
-      );
-    }
+    const loteSync = await assertLoteListoParaSiembraTrasPrep(
+      supabase,
+      input.lote_id
+    );
+    if (!loteSync.success) return loteSync;
   }
 
   await registrarEventoFinca({
@@ -225,21 +241,11 @@ export async function validarPreparacionTerreno(
     .eq("id", updated.lote_id)
     .maybeSingle();
 
-  const { error: loteUpErr } = await supabase
-    .from("lotes")
-    .update({
-      estado_cultivo: "listo_para_siembra",
-      pendiente_pct: prep.pendiente_final_pct,
-      updated_at: nowIso,
-    })
-    .eq("id", updated.lote_id)
-    .eq("estado_cultivo", "planificado_siembra");
-
-  if (loteUpErr) {
-    return actionError(
-      "Validación registrada pero no se pudo actualizar el estado del lote."
-    );
-  }
+  const loteSync = await assertLoteListoParaSiembraTrasPrep(
+    supabase,
+    updated.lote_id
+  );
+  if (!loteSync.success) return loteSync;
 
   await registrarEventoFinca({
     fincaId: prep.finca_id,
