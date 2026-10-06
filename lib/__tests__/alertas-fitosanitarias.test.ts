@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   RUTA_VALIDACION,
   construirNotificacion,
-  debeNotificar,
   type AlertaInsertada,
 } from "@/lib/notificaciones/alerta-fitosanitaria";
 import {
@@ -14,7 +13,6 @@ import {
 const FINCA = "d4e96ae4-05af-40da-8868-2fb8509dc4ae";
 const LOTE = "5de0fe48-860d-486d-9faa-c209adafb80a";
 const OPERARIO = "f6701d42-446f-48af-9b5a-8b4dff53bb2f";
-const TECNICO = "c9466f2a-3f9d-469b-a193-37383606f3df";
 const PLAGA = "11111111-2222-4333-8444-555555555555";
 
 const alerta = (over: Partial<AlertaInsertada> = {}): AlertaInsertada => ({
@@ -26,21 +24,6 @@ const alerta = (over: Partial<AlertaInsertada> = {}): AlertaInsertada => ({
   created_by: OPERARIO,
   is_voided: false,
   ...over,
-});
-
-describe("debeNotificar", () => {
-  it("notifica al técnico cuando un operario de su finca reporta", () => {
-    expect(debeNotificar(alerta(), TECNICO, FINCA)).toBe(true);
-  });
-
-  it("no notifica las alertas que crea el propio técnico", () => {
-    expect(debeNotificar(alerta({ created_by: TECNICO }), TECNICO, FINCA)).toBe(false);
-  });
-
-  it("no notifica alertas anuladas ni de otra finca", () => {
-    expect(debeNotificar(alerta({ is_voided: true }), TECNICO, FINCA)).toBe(false);
-    expect(debeNotificar(alerta({ finca_id: "00000000-0000-4000-8000-000000000000" }), TECNICO, FINCA)).toBe(false);
-  });
 });
 
 describe("construirNotificacion", () => {

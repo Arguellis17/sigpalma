@@ -1,8 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  EVENTO_MONITOREO_ASIGNADO,
   RUTA_MONITOREOS_OPERARIO,
-  canalMonitoreosOperario,
   construirAvisoMonitoreo,
   debeNotificarAsignacion,
 } from "@/lib/notificaciones/monitoreo-asignado";
@@ -23,13 +21,6 @@ const evento = {
   notas: "Revisar flechas nuevas en el sector norte",
   reasignado: false,
 };
-
-describe("canal y evento", () => {
-  it("cada operario tiene su canal privado (coincide con la política RLS de realtime.messages)", () => {
-    expect(canalMonitoreosOperario(RONALD)).toBe(`monitoreos:${RONALD}`);
-    expect(EVENTO_MONITOREO_ASIGNADO).toBe("monitoreo_asignado");
-  });
-});
 
 describe("debeNotificarAsignacion", () => {
   it("al crear (sin operario anterior) siempre avisa", () => {
@@ -65,45 +56,8 @@ describe("construirAvisoMonitoreo", () => {
     expect(cuerpo.endsWith("…")).toBe(true);
     expect(cuerpo.length).toBeLessThan(170);
   });
-});
 
-// ── Emisión del evento (Broadcast privado + Web Push) con fetch y web-push simulados ─────────
-vi.mock("web-push", () => ({ default: { sendNotification: vi.fn(), setVapidDetails: vi.fn() } }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
-
-describe("notificarMonitoreoAsignado", () => {
-  beforeEach(() => {
-    vi.resetModules();
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://proyecto.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
-    delete process.env.VAPID_PRIVATE_KEY; // sin VAPID: solo se prueba el broadcast
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  it("emite el evento en el canal privado del operario vía REST con service role", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202, text: async () => "" });
-    vi.stubGlobal("fetch", fetchMock);
-    const { notificarMonitoreoAsignado } = await import("@/lib/push/enviar");
-    const r = await notificarMonitoreoAsignado(RONALD, evento);
-    expect(r.broadcast).toBe(true);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://proyecto.supabase.co/realtime/v1/api/broadcast");
-    expect(init.headers).toMatchObject({ apikey: "service-role", Authorization: "Bearer service-role" });
-    expect(JSON.parse(init.body)).toEqual({
-      messages: [{ topic: `monitoreos:${RONALD}`, event: "monitoreo_asignado", payload: evento, private: true }],
-    });
-    vi.unstubAllGlobals();
-  });
-
-  it("si Realtime falla no lanza (la asignación ya quedó guardada)", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("sin red")));
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const { notificarMonitoreoAsignado } = await import("@/lib/push/enviar");
-    await expect(notificarMonitoreoAsignado(RONALD, evento)).resolves.toMatchObject({ broadcast: false });
-    vi.unstubAllGlobals();
-  });
-
-  it("el push enlaza a los monitoreos del operario", () => {
+  it("enlaza a los monitoreos del operario", () => {
     expect(RUTA_MONITOREOS_OPERARIO).toBe("/operario/sanidad/monitoreos-pendientes");
   });
 });

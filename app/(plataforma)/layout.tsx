@@ -41,6 +41,7 @@ export default async function PlataformaLayout({
     <ToastProvider>
       <AppShell
         session={{
+          userId: session.user.id,
           email: session.user.email ?? null,
           fullName: session.profile?.full_name ?? null,
           role: session.profile?.role ?? null,

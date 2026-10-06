@@ -1,14 +1,8 @@
 /** Lógica pura de la notificación "te asignaron un monitoreo" (sin React ni Supabase). */
 
-export const EVENTO_MONITOREO_ASIGNADO = "monitoreo_asignado";
 export const RUTA_MONITOREOS_OPERARIO = "/operario/sanidad/monitoreos-pendientes";
 
-/** Canal privado Broadcast de cada operario (autorizado por RLS en realtime.messages). */
-export function canalMonitoreosOperario(operarioId: string): string {
-  return `monitoreos:${operarioId}`;
-}
-
-/** Payload del evento Broadcast y base del Web Push. */
+/** Datos del evento "monitoreo asignado" (notificación guardada + Web Push). */
 export type MonitoreoAsignadoPayload = {
   monitoreoId: string;
   loteCodigo: string;
