@@ -5,6 +5,29 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
+// Web Push: llega aunque no haya ninguna pestaña de SIG-Palma abierta.
+// Payload (lib/push/enviar.ts): { title, body, url, tag, requireInteraction }.
+self.addEventListener("push", (event) => {
+  let datos = {};
+  try {
+    datos = event.data ? event.data.json() : {};
+  } catch {
+    datos = { body: event.data ? event.data.text() : "" };
+  }
+  const titulo = datos.title || "SIG-Palma";
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: datos.body || "",
+      tag: datos.tag || undefined,
+      renotify: Boolean(datos.tag),
+      requireInteraction: Boolean(datos.requireInteraction),
+      icon: "/logo.png",
+      badge: "/logo.png",
+      data: { url: datos.url || "/" },
+    })
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/tecnico/sanidad/validacion", self.location.origin).href;

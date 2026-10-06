@@ -783,3 +783,19 @@ export const censosSanitarios = pgTable("censos_sanitarios", {
     .notNull()
     .defaultNow(),
 });
+
+/** Web Push: suscripción del navegador por usuario/dispositivo (`user_id` → auth.users). */
+export const pushSuscripciones = pgTable("push_suscripciones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

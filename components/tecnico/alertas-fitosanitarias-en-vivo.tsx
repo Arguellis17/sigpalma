@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BellRing, ShieldAlert, X } from "lucide-react";
+import { BellRing, ShieldAlert, X } from "lucide-react";
+import {
+  InvitacionNotificaciones,
+  leerPermisoNotificaciones,
+} from "@/components/notificaciones/invitacion-notificaciones";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -18,39 +22,12 @@ import {
 
 type Props = { usuarioId: string; fincaId: string };
 
-type Permiso = NotificationPermission | "no-soportado";
-
-const CLAVE_INVITACION = "sigpalma:notificaciones-invitacion-descartada";
 const MAX_AVISOS = 4;
 
-// ── Permiso de notificaciones del navegador como store externo (SSR-safe) ─────────────────────
-const oyentesPermiso = new Set<() => void>();
-function suscribirPermiso(cb: () => void) {
-  oyentesPermiso.add(cb);
-  let estado: PermissionStatus | null = null;
-  navigator.permissions
-    ?.query({ name: "notifications" as PermissionName })
-    .then((s) => {
-      estado = s;
-      s.onchange = () => oyentesPermiso.forEach((f) => f());
-    })
-    .catch(() => {});
-  return () => {
-    oyentesPermiso.delete(cb);
-    if (estado) estado.onchange = null;
-  };
-}
-const leerPermiso = (): Permiso => ("Notification" in window ? Notification.permission : "no-soportado");
-const avisarPermiso = () => oyentesPermiso.forEach((f) => f());
-
-function leerInvitacionDescartada(): boolean {
-  try {
-    return localStorage.getItem(CLAVE_INVITACION) === "1";
-  } catch {
-    return false;
-  }
-}
-
+/**
+ * Respaldo si este navegador aún no tiene Web Push: notificación local mientras la pestaña está
+ * abierta. Usa la misma etiqueta que el push, así que nunca se duplica.
+ */
 async function mostrarEnSistema(n: NotificacionAlerta, alHacerClic: () => void) {
   const opciones: NotificationOptions = {
     body: n.cuerpo,
@@ -90,18 +67,11 @@ const ESTILO_SEVERIDAD: Record<NotificacionAlerta["severidad"], string> = {
 
 /**
  * Alertas fitosanitarias en tiempo real para el técnico: Supabase Realtime (Postgres Changes,
- * filtrado por finca y protegido por RLS) + aviso en pantalla + notificación del navegador.
+ * filtrado por finca y protegido por RLS) + aviso en pantalla. Con la app cerrada llega por Web Push.
  */
 export function AlertasFitosanitariasEnVivo({ usuarioId, fincaId }: Props) {
   const router = useRouter();
   const [avisos, setAvisos] = useState<NotificacionAlerta[]>([]);
-  const [invitacionDescartada, setInvitacionDescartada] = useState(false);
-  const permiso = useSyncExternalStore<Permiso>(suscribirPermiso, leerPermiso, () => "no-soportado");
-  const descartadaGuardada = useSyncExternalStore(
-    () => () => {},
-    leerInvitacionDescartada,
-    () => true
-  );
   const routerRef = useRef(router);
   useEffect(() => {
     routerRef.current = router;
@@ -126,7 +96,7 @@ export function AlertasFitosanitariasEnVivo({ usuarioId, fincaId }: Props) {
       });
       setAvisos((prev) => [aviso, ...prev.filter((a) => a.id !== aviso.id)].slice(0, MAX_AVISOS));
       routerRef.current.refresh(); // listas de validación/alertas renderizadas en servidor
-      if (leerPermiso() === "granted" && !document.hasFocus()) {
+      if (leerPermisoNotificaciones() === "granted" && !document.hasFocus()) {
         void mostrarEnSistema(aviso, () => routerRef.current.push(RUTA_VALIDACION));
       }
     }
@@ -154,59 +124,11 @@ export function AlertasFitosanitariasEnVivo({ usuarioId, fincaId }: Props) {
     };
   }, [usuarioId, fincaId]);
 
-  // Con permiso ya concedido, registra el service worker (necesario en Android).
-  useEffect(() => {
-    if (permiso === "granted" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
-  }, [permiso]);
-
-  async function activarNotificaciones() {
-    if (!("Notification" in window)) return;
-    const resultado = await Notification.requestPermission();
-    avisarPermiso();
-    if (resultado === "granted" && "serviceWorker" in navigator) {
-      await navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
-  }
-
-  function descartarInvitacion() {
-    try {
-      localStorage.setItem(CLAVE_INVITACION, "1");
-    } catch {
-      /* sin almacenamiento: solo se oculta en esta sesión */
-    }
-    setInvitacionDescartada(true);
-  }
-
   const cerrar = (id: string) => setAvisos((prev) => prev.filter((a) => a.id !== id));
-  const mostrarInvitacion = permiso === "default" && !invitacionDescartada && !descartadaGuardada;
-
-  if (avisos.length === 0 && !mostrarInvitacion) return null;
 
   return (
     <div className="pointer-events-none fixed inset-x-4 top-20 z-[90] flex flex-col gap-3 sm:left-auto sm:right-6 sm:w-96">
-      {mostrarInvitacion ? (
-        <div className="pointer-events-auto rounded-2xl border border-border bg-background/95 p-4 shadow-lg backdrop-blur">
-          <div className="flex items-start gap-3">
-            <Bell className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-            <div className="min-w-0 flex-1 space-y-3">
-              <p className="text-sm leading-5">
-                Active las notificaciones para enterarse de los reportes fitosanitarios aunque esté en otra
-                pestaña o aplicación.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" className="min-h-10 rounded-xl" onClick={activarNotificaciones}>
-                  Activar notificaciones
-                </Button>
-                <Button type="button" size="sm" variant="ghost" className="min-h-10 rounded-xl" onClick={descartarInvitacion}>
-                  Ahora no
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <InvitacionNotificaciones texto="Active las notificaciones para enterarse de los reportes fitosanitarios aunque tenga la aplicación cerrada." />
 
       {avisos.map((a) => (
         <div
