@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ExpedienteRspoPdfData } from "@/lib/pdf/expediente-rspo-types";
+import { CATEGORIA_EXPEDIENTE_LABEL } from "@/lib/trazabilidad/expediente-rspo";
 
 const styles = StyleSheet.create({
   page: { padding: 36, fontSize: 9, fontFamily: "Helvetica" },
@@ -14,16 +15,7 @@ const styles = StyleSheet.create({
   footer: { marginTop: 16, fontSize: 7, color: "#666" },
 });
 
-const CAT_LABEL: Record<string, string> = {
-  material_plan: "Genética/plan",
-  vivero: "Vivero",
-  labor: "Labores",
-  nutricion: "Nutrición",
-  sanidad: "Sanidad",
-  suelo: "Suelo",
-  cosecha: "Cosecha",
-  logistica: "Despacho",
-};
+const CAT_LABEL: Record<string, string> = CATEGORIA_EXPEDIENTE_LABEL;
 
 export function ExpedienteRspoDocument({ data }: { data: ExpedienteRspoPdfData }) {
   const { trazabilidad: tr } = data;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileDown, FileSpreadsheet } from "lucide-react";
 import { consultarReporteProductividad } from "@/app/actions/reportes-productividad";
 import type { ReporteProductividadPayload } from "@/app/actions/reportes-productividad";
 import { getLotesPorFinca } from "@/app/actions/queries";
@@ -136,7 +137,7 @@ export function ReporteProductividadClient({
     URL.revokeObjectURL(url);
   }
 
-  function descargarPdf() {
+  function exportar(formato: "pdf" | "xlsx") {
     if (!reporte) return;
     const params = new URLSearchParams({
       finca_id: reporte.finca_id,
@@ -146,7 +147,7 @@ export function ReporteProductividadClient({
     if (loteFilter !== "__all__") {
       params.set("lote_ids", loteFilter);
     }
-    window.open(`/api/v1/reportes/productividad/pdf?${params.toString()}`, "_blank", "noopener,noreferrer");
+    window.open(`/api/v1/reportes/productividad/${formato}?${params.toString()}`, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -258,19 +259,28 @@ export function ReporteProductividadClient({
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
-              variant="outline"
-              className="min-h-11 rounded-xl"
-              onClick={descargarCsv}
+              className="min-h-11 gap-2 rounded-xl"
+              onClick={() => exportar("xlsx")}
             >
-              Descargar CSV
+              <FileSpreadsheet className="size-4" />
+              Descargar Excel (con gráficos)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 gap-2 rounded-xl"
+              onClick={() => exportar("pdf")}
+            >
+              <FileDown className="size-4" />
+              Descargar PDF
             </Button>
             <Button
               type="button"
               variant="outline"
               className="min-h-11 rounded-xl"
-              onClick={descargarPdf}
+              onClick={descargarCsv}
             >
-              Descargar PDF
+              Descargar CSV
             </Button>
           </div>
 

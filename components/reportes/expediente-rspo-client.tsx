@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileDown, ShieldCheck } from "lucide-react";
+import { FileDown, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { consultarExpedienteRspo } from "@/app/actions/reportes-rspo";
 import type { ExpedienteRspoPayload } from "@/app/actions/reportes-rspo";
 import { getLotesPorFinca } from "@/app/actions/queries";
@@ -128,12 +128,20 @@ export function ExpedienteRspoClient({
             {pending ? "Generando vista…" : "Generar vista previa"}
           </Button>
           {expediente ? (
-            <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
-              <a href={expediente.pdf_download_url} target="_blank" rel="noreferrer">
-                <FileDown className="size-4" />
-                Descargar PDF
-              </a>
-            </Button>
+            <>
+              <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
+                <a href={expediente.xlsx_download_url} download>
+                  <FileSpreadsheet className="size-4" />
+                  Descargar Excel
+                </a>
+              </Button>
+              <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
+                <a href={expediente.pdf_download_url} target="_blank" rel="noreferrer">
+                  <FileDown className="size-4" />
+                  Descargar PDF
+                </a>
+              </Button>
+            </>
           ) : null}
         </div>
       </div>
@@ -188,7 +196,7 @@ export function ExpedienteRspoClient({
             </ul>
             {expediente.trazabilidad.eventos.length > 25 ? (
               <p className="mt-2 text-xs text-muted-foreground">
-                El PDF incluye hasta 80 eventos ordenados cronológicamente.
+                El PDF incluye hasta 80 eventos; el Excel incluye la línea de vida completa.
               </p>
             ) : null}
           </div>

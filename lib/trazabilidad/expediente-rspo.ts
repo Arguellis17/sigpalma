@@ -1,4 +1,19 @@
-import type { TrazabilidadTecnicaLotePayload } from "@/lib/trazabilidad/types";
+import type {
+  TimelineEventCategory,
+  TrazabilidadTecnicaLotePayload,
+} from "@/lib/trazabilidad/types";
+
+/** Etiquetas de categoría usadas en los exportables RSPO (PDF y Excel). */
+export const CATEGORIA_EXPEDIENTE_LABEL: Record<TimelineEventCategory, string> = {
+  material_plan: "Genética/plan",
+  vivero: "Vivero",
+  labor: "Labores",
+  nutricion: "Nutrición",
+  sanidad: "Sanidad",
+  suelo: "Suelo",
+  cosecha: "Cosecha",
+  logistica: "Despacho",
+};
 
 export type ExpedienteCompletitudFlag =
   | "sin_plan_siembra"

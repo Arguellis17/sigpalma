@@ -72,6 +72,46 @@ export function agregarCosechasPorLote(
   return rows.sort((a, b) => a.lote_codigo.localeCompare(b.lote_codigo));
 }
 
+export type MesProductividadRow = {
+  /** yyyy-MM */
+  mes: string;
+  total_ton: number;
+  total_racimos: number;
+  registros: number;
+  /** ton del mes / área analizada del periodo: los meses suman el t/ha ponderado. */
+  ton_ha: number;
+};
+
+/** Serie mensual de los lotes incluidos en `filas` (mismos lotes y área que el resumen). */
+export function agregarCosechasPorMes(
+  registros: (CosechaRegistroMin & { fecha: string })[],
+  filas: CosechaAgregadaRow[]
+): MesProductividadRow[] {
+  const lotesIncluidos = new Set(filas.map((f) => f.lote_id));
+  const areaHa = filas.reduce((s, f) => s + f.area_ha, 0);
+  const acc = new Map<string, { kg: number; racimos: number; count: number }>();
+
+  for (const r of registros) {
+    if (!lotesIncluidos.has(r.lote_id)) continue;
+    const mes = r.fecha.slice(0, 7);
+    const cur = acc.get(mes) ?? { kg: 0, racimos: 0, count: 0 };
+    cur.kg += r.peso_kg;
+    cur.racimos += r.conteo_racimos;
+    cur.count += 1;
+    acc.set(mes, cur);
+  }
+
+  return [...acc]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([mes, t]) => ({
+      mes,
+      total_ton: Math.round((t.kg / 1000) * 1000) / 1000,
+      total_racimos: t.racimos,
+      registros: t.count,
+      ton_ha: rendimientoTonHa(t.kg, areaHa),
+    }));
+}
+
 export type ResumenFincaProductividad = {
   total_ton: number;
   total_racimos: number;

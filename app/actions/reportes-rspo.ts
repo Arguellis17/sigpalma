@@ -21,6 +21,7 @@ export type ExpedienteRspoPayload = {
   trazabilidad: TrazabilidadTecnicaLotePayload;
   advertencias: ExpedienteRspoAdvertencia[];
   pdf_download_url: string;
+  xlsx_download_url: string;
 };
 
 async function assertAdminPuedeLote(loteId: string): Promise<
@@ -110,12 +111,13 @@ export async function consultarExpedienteRspo(
     trazabilidad: tr.data,
     advertencias,
     pdf_download_url: `/api/v1/reportes/rspo/${lote_id}/pdf`,
+    xlsx_download_url: `/api/v1/reportes/rspo/${lote_id}/xlsx`,
   });
 }
 
 export async function buildExpedienteRspoPdfData(
   loteId: string,
-  options?: { recordAudit?: boolean }
+  options?: { recordAudit?: boolean; formato?: "pdf" | "xlsx" }
 ): Promise<ActionResult<ExpedienteRspoPdfData>> {
   const gate = await assertAdminPuedeLote(loteId);
   if (!gate.success) return gate;
@@ -129,11 +131,15 @@ export async function buildExpedienteRspoPdfData(
     await registrarEventoFinca({
       fincaId: gate.data.finca_id,
       actionKey: "reporte.rspo_exportar",
-      titulo: "Descarga expediente RSPO (PDF)",
+      titulo:
+        options?.formato === "xlsx"
+          ? "Descarga expediente RSPO (Excel)"
+          : "Descarga expediente RSPO (PDF)",
       detalle: {
         loteId,
         loteCodigo: gate.data.lote_codigo,
         advertencias: advertencias.map((a) => a.codigo),
+        formato: options?.formato ?? "pdf",
       },
     });
   }

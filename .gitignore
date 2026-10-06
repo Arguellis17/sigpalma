@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # Drizzle Kit salida si generáis migraciones desde el ORM (el esquema fuente está en db/)
 /drizzle/
@@ -49,3 +50,8 @@ next-env.d.ts
 .codecortex
 docs/15-04-2026/documentacion/primer-corte/plantuml
 docs/15-04-2026/documentacion/primer-corte/bpmn
+.claude
+.cursor
+docs
+.serena
+CLAUDE.md

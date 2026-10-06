@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, hasRole } from "@/lib/auth/session-profile";
 import {
   agregarCosechasPorLote,
+  agregarCosechasPorMes,
   agregarResumenFinca,
   type CosechaAgregadaRow,
+  type MesProductividadRow,
   type ResumenFincaProductividad,
 } from "@/lib/productividad";
 import {
@@ -23,11 +25,22 @@ export type ReporteProductividadPayload = {
   fecha_hasta: string;
   filas: CosechaAgregadaRow[];
   resumen: ResumenFincaProductividad;
+  mensual: MesProductividadRow[];
+  /** Cosechas individuales de los lotes incluidos, orden cronológico (detalle exportable). */
+  registros: CosechaDetalleRow[];
+};
+
+export type CosechaDetalleRow = {
+  fecha: string;
+  lote_codigo: string;
+  peso_kg: number;
+  conteo_racimos: number;
 };
 
 type BuildOpts = {
   auditAction?: FincaAuditActionKey;
   auditTitulo?: string;
+  formato?: "pdf" | "xlsx";
 };
 
 export async function buildReporteProductividadPayload(
@@ -70,7 +83,7 @@ export async function buildReporteProductividadPayload(
 
   let cosechasQuery = supabase
     .from("cosechas_rff")
-    .select("lote_id, peso_kg, conteo_racimos")
+    .select("lote_id, fecha, peso_kg, conteo_racimos")
     .eq("finca_id", input.finca_id)
     .eq("is_voided", false)
     .gte("fecha", input.fecha_desde)
@@ -87,6 +100,7 @@ export async function buildReporteProductividadPayload(
 
   const registros = (cosechas ?? []).map((c) => ({
     lote_id: c.lote_id,
+    fecha: String(c.fecha),
     peso_kg: Number(c.peso_kg),
     conteo_racimos: c.conteo_racimos,
   }));
@@ -111,6 +125,17 @@ export async function buildReporteProductividadPayload(
 
   const filas = agregarCosechasPorLote(registros, lotes);
   const resumen = agregarResumenFinca(filas);
+  const mensual = agregarCosechasPorMes(registros, filas);
+  const codigoPorLote = new Map(filas.map((f) => [f.lote_id, f.lote_codigo]));
+  const detalle: CosechaDetalleRow[] = registros
+    .filter((r) => codigoPorLote.has(r.lote_id))
+    .map((r) => ({
+      fecha: r.fecha,
+      lote_codigo: codigoPorLote.get(r.lote_id)!,
+      peso_kg: r.peso_kg,
+      conteo_racimos: r.conteo_racimos,
+    }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.lote_codigo.localeCompare(b.lote_codigo));
 
   const auditAction = opts?.auditAction ?? "reporte.productividad_consultar";
   const auditTitulo =
@@ -129,7 +154,8 @@ export async function buildReporteProductividadPayload(
       loteIds: input.lote_ids ?? null,
       totalRegistros: resumen.total_registros,
       tonHaPonderado: resumen.ton_ha_ponderado,
-      formato: auditAction === "reporte.productividad_exportar" ? "pdf" : "pantalla",
+      formato:
+        auditAction === "reporte.productividad_exportar" ? (opts?.formato ?? "pdf") : "pantalla",
     },
   });
 
@@ -140,6 +166,8 @@ export async function buildReporteProductividadPayload(
     fecha_hasta: input.fecha_hasta,
     filas,
     resumen,
+    mensual,
+    registros: detalle,
   });
 }
 
