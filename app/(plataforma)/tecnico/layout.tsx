@@ -1,3 +1,4 @@
+import { AlertasFitosanitariasEnVivo } from "@/components/tecnico/alertas-fitosanitarias-en-vivo";
 import { requireRole } from "@/lib/auth/session-profile";
 
 export default async function TecnicoLayout({
@@ -5,6 +6,12 @@ export default async function TecnicoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["agronomo"]);
-  return <>{children}</>;
+  const session = await requireRole(["agronomo"]);
+  const fincaId = session.profile?.finca_id;
+  return (
+    <>
+      {children}
+      {fincaId ? <AlertasFitosanitariasEnVivo usuarioId={session.user.id} fincaId={fincaId} /> : null}
+    </>
+  );
 }
