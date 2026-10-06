@@ -5,6 +5,7 @@ import type { VariantProps } from "class-variance-authority";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { desuscribirEsteNavegador } from "@/lib/notificaciones/push-cliente";
 import { LogoutTransitionOverlay } from "@/components/auth/logout-transition-overlay";
 import { Button, buttonVariants } from "@/components/ui/button";
 
@@ -30,6 +31,8 @@ export function SignOutButton({
     if (loggingOut) return;
     setLoggingOut(true);
     try {
+      // Antes de cerrar sesión: este dispositivo deja de recibir notificaciones de la cuenta.
+      await desuscribirEsteNavegador();
       const supabase = createClient();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;

@@ -1,3 +1,4 @@
+import { MonitoreosAsignadosEnVivo } from "@/components/operario/monitoreos-asignados-en-vivo";
 import { requireRole } from "@/lib/auth/session-profile";
 
 export default async function OperarioLayout({
@@ -5,6 +6,11 @@ export default async function OperarioLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["operario"]);
-  return <>{children}</>;
+  const session = await requireRole(["operario"]);
+  return (
+    <>
+      {children}
+      <MonitoreosAsignadosEnVivo operarioId={session.user.id} />
+    </>
+  );
 }

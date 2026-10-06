@@ -19,6 +19,9 @@ import {
   type CrearMonitoreoProgramadoInput,
 } from "@/lib/validations/monitoreo-programado";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notificarMonitoreoAsignado } from "@/lib/push/enviar";
+import { debeNotificarAsignacion } from "@/lib/notificaciones/monitoreo-asignado";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 
@@ -152,6 +155,16 @@ export async function crearMonitoreoProgramado(
     },
   });
 
+  // Evento al operario asignado (tiempo real + Web Push), sin retrasar la respuesta al técnico.
+  const evento = {
+    monitoreoId: inserted.id,
+    loteCodigo: loteV.data.codigo,
+    fechaInspeccion: input.fecha_inspeccion,
+    notas: input.notas?.trim() || null,
+    reasignado: false,
+  };
+  after(() => notificarMonitoreoAsignado(input.assigned_to, evento).catch((e) => console.error("[monitoreo] aviso:", e)));
+
   return actionOk({ id: inserted.id });
 }
 
@@ -181,7 +194,7 @@ export async function actualizarMonitoreoProgramado(
 
   const { data: prev, error: pe } = await supabase
     .from("monitoreos_fitosanitarios_programados")
-    .select("id, finca_id, lote_id, estado, is_voided")
+    .select("id, finca_id, lote_id, estado, is_voided, assigned_to")
     .eq("id", input.id)
     .maybeSingle();
 
@@ -239,6 +252,18 @@ export async function actualizarMonitoreoProgramado(
       assignedTo: input.assigned_to,
     },
   });
+
+  // Solo una reasignación a otro operario es una nueva asignación (no cambios de fecha/notas).
+  if (debeNotificarAsignacion(prev.assigned_to, input.assigned_to)) {
+    const evento = {
+      monitoreoId: updated.id,
+      loteCodigo: loteV.data.codigo,
+      fechaInspeccion: input.fecha_inspeccion,
+      notas: input.notas?.trim() || null,
+      reasignado: true,
+    };
+    after(() => notificarMonitoreoAsignado(input.assigned_to, evento).catch((e) => console.error("[monitoreo] aviso:", e)));
+  }
 
   return actionOk({ id: updated.id });
 }
