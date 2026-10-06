@@ -5,6 +5,13 @@ import {
   construirNotificacion,
   type AlertaInsertada,
 } from "@/lib/notificaciones/alerta-fitosanitaria";
+import {
+  EVENTO_MONITOREO_ASIGNADO,
+  RUTA_MONITOREOS_OPERARIO,
+  canalMonitoreosOperario,
+  construirAvisoMonitoreo,
+  type MonitoreoAsignadoPayload,
+} from "@/lib/notificaciones/monitoreo-asignado";
 
 /**
  * Web Push (solo servidor): llega aunque el navegador esté cerrado (Android / escritorio).
@@ -111,4 +118,40 @@ export async function notificarAlertaFitosanitariaPush(alertaId: string) {
     (tecnicos ?? []).map((t) => t.id),
     { title: n.titulo, body: n.cuerpo, url: RUTA_VALIDACION, tag: n.id, requireInteraction: n.urgente }
   );
+}
+
+/**
+ * Evento al asignar un monitoreo: Broadcast en el canal privado del operario (tiempo real con la
+ * app abierta) + Web Push (con la app cerrada). Nunca lanza; devuelve qué canales funcionaron.
+ */
+export async function notificarMonitoreoAsignado(operarioId: string, payload: MonitoreoAsignadoPayload) {
+  let broadcast = false;
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (url && clave) {
+      const res = await fetch(`${url}/realtime/v1/api/broadcast`, {
+        method: "POST",
+        headers: { apikey: clave, Authorization: `Bearer ${clave}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { topic: canalMonitoreosOperario(operarioId), event: EVENTO_MONITOREO_ASIGNADO, payload, private: true },
+          ],
+        }),
+      });
+      broadcast = res.ok;
+      if (!res.ok) console.error("[realtime] broadcast monitoreo:", res.status, await res.text());
+    }
+  } catch (e) {
+    console.error("[realtime] broadcast monitoreo:", (e as Error).message);
+  }
+
+  const { titulo, cuerpo } = construirAvisoMonitoreo(payload);
+  const push = await enviarPushAUsuarios([operarioId], {
+    title: titulo,
+    body: cuerpo,
+    url: RUTA_MONITOREOS_OPERARIO,
+    tag: `monitoreo:${payload.monitoreoId}`,
+  });
+  return { broadcast, ...push };
 }
