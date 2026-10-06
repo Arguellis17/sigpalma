@@ -11,7 +11,7 @@ import {
   type ReporteEnfermedadInput,
 } from "@/lib/validations/operativo";
 import { EVIDENCIA_TECNICA_BUCKET } from "@/lib/storage-evidencia-tecnica";
-import { notificarAlertaFitosanitariaPush } from "@/lib/push/enviar";
+import { notificarAlertaFitosanitaria } from "@/lib/push/enviar";
 import { after } from "next/server";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
@@ -198,7 +198,7 @@ async function crearAlertaFitosanitariaInternal(
 
   // Web Push a los técnicos de la finca, sin retrasar la respuesta al operario.
   const alertaId = data.id;
-  after(() => notificarAlertaFitosanitariaPush(alertaId).catch((e) => console.error("[push] alerta:", e)));
+  after(() => notificarAlertaFitosanitaria(alertaId).catch((e) => console.error("[push] alerta:", e)));
 
   return actionOk({
     id: data.id,
@@ -267,7 +267,7 @@ export async function crearAlertaDesdeCensoUmbral(
   }
 
   const alertaCensoId = data.id;
-  after(() => notificarAlertaFitosanitariaPush(alertaCensoId).catch((e) => console.error("[push] censo:", e)));
+  after(() => notificarAlertaFitosanitaria(alertaCensoId).catch((e) => console.error("[push] censo:", e)));
 
   await registrarEventoFinca({
     fincaId: input.fincaId,

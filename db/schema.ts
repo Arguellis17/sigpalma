@@ -799,3 +799,19 @@ export const pushSuscripciones = pgTable("push_suscripciones", {
     .notNull()
     .defaultNow(),
 });
+
+/** Centro de notificaciones: bandeja por usuario; solo el servidor inserta (service role). */
+export const notificaciones = pgTable("notificaciones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  tipo: text("tipo").notNull(),
+  titulo: text("titulo").notNull(),
+  cuerpo: text("cuerpo").notNull().default(""),
+  url: text("url").notNull(),
+  referenciaId: uuid("referencia_id"),
+  severidad: nivelSeveridadEnum("severidad"),
+  leidaAt: timestamp("leida_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

@@ -1413,6 +1413,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      notificaciones: {
+        Row: {
+          id: string;
+          user_id: string;
+          tipo: "alerta_fitosanitaria" | "monitoreo_asignado";
+          titulo: string;
+          cuerpo: string;
+          url: string;
+          referencia_id: string | null;
+          severidad: Database["public"]["Enums"]["nivel_severidad"] | null;
+          leida_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          tipo: "alerta_fitosanitaria" | "monitoreo_asignado";
+          titulo: string;
+          cuerpo?: string;
+          url: string;
+          referencia_id?: string | null;
+          severidad?: Database["public"]["Enums"]["nivel_severidad"] | null;
+          leida_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          leida_at?: string | null;
+        };
+        Relationships: [];
+      };
       push_suscripciones: {
         Row: {
           id: string;

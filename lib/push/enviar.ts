@@ -1,14 +1,13 @@
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/database.types";
 import {
   RUTA_VALIDACION,
   construirNotificacion,
   type AlertaInsertada,
 } from "@/lib/notificaciones/alerta-fitosanitaria";
 import {
-  EVENTO_MONITOREO_ASIGNADO,
   RUTA_MONITOREOS_OPERARIO,
-  canalMonitoreosOperario,
   construirAvisoMonitoreo,
   type MonitoreoAsignadoPayload,
 } from "@/lib/notificaciones/monitoreo-asignado";
@@ -87,16 +86,31 @@ export async function enviarPushAUsuarios(
   return { enviados, eliminados: caducadas.length };
 }
 
-/** Push de una alerta fitosanitaria a los técnicos activos de la finca (excepto quien la creó). */
-export async function notificarAlertaFitosanitariaPush(alertaId: string) {
-  if (!configurarVapid()) return { enviados: 0, eliminados: 0 };
+type NuevaNotificacion = Database["public"]["Tables"]["notificaciones"]["Insert"];
+
+/** Guarda notificaciones en la bandeja de cada usuario; Realtime las entrega a las pestañas abiertas. */
+export async function registrarNotificaciones(filas: NuevaNotificacion[]): Promise<number> {
+  if (filas.length === 0) return 0;
+  const { error } = await createAdminClient().from("notificaciones").insert(filas);
+  if (error) {
+    console.error("[notificaciones] registrar:", error.message);
+    return 0;
+  }
+  return filas.length;
+}
+
+/**
+ * Nueva alerta fitosanitaria: notificación en la bandeja de los técnicos activos de la finca
+ * (excepto quien la creó) + Web Push. Nunca lanza.
+ */
+export async function notificarAlertaFitosanitaria(alertaId: string) {
   const admin = createAdminClient();
   const { data: alerta } = await admin
     .from("alertas_fitosanitarias")
     .select("id, finca_id, lote_id, severidad, descripcion, created_by, is_voided, lotes ( codigo ), catalogo_items ( nombre )")
     .eq("id", alertaId)
     .maybeSingle();
-  if (!alerta || alerta.is_voided) return { enviados: 0, eliminados: 0 };
+  if (!alerta || alerta.is_voided) return { registradas: 0, enviados: 0, eliminados: 0 };
 
   const { data: tecnicos } = await admin
     .from("profiles")
@@ -105,6 +119,7 @@ export async function notificarAlertaFitosanitariaPush(alertaId: string) {
     .eq("role", "agronomo")
     .eq("is_active", true)
     .neq("id", alerta.created_by);
+  const destinatarios = (tecnicos ?? []).map((t) => t.id);
 
   const fila = alerta as unknown as AlertaInsertada & {
     lotes?: { codigo?: string } | null;
@@ -114,44 +129,46 @@ export async function notificarAlertaFitosanitariaPush(alertaId: string) {
     loteCodigo: fila.lotes?.codigo ?? null,
     plaga: fila.catalogo_items?.nombre ?? null,
   });
-  return enviarPushAUsuarios(
-    (tecnicos ?? []).map((t) => t.id),
-    { title: n.titulo, body: n.cuerpo, url: RUTA_VALIDACION, tag: n.id, requireInteraction: n.urgente }
+
+  const registradas = await registrarNotificaciones(
+    destinatarios.map((userId) => ({
+      user_id: userId,
+      tipo: "alerta_fitosanitaria" as const,
+      titulo: n.titulo,
+      cuerpo: n.cuerpo,
+      url: RUTA_VALIDACION,
+      referencia_id: alerta.id,
+      severidad: n.severidad,
+    }))
   );
+  const push = await enviarPushAUsuarios(destinatarios, {
+    title: n.titulo,
+    body: n.cuerpo,
+    url: RUTA_VALIDACION,
+    tag: n.id,
+    requireInteraction: n.urgente,
+  });
+  return { registradas, ...push };
 }
 
-/**
- * Evento al asignar un monitoreo: Broadcast en el canal privado del operario (tiempo real con la
- * app abierta) + Web Push (con la app cerrada). Nunca lanza; devuelve qué canales funcionaron.
- */
+/** Monitoreo asignado (o reasignado): notificación en la bandeja del operario + Web Push. Nunca lanza. */
 export async function notificarMonitoreoAsignado(operarioId: string, payload: MonitoreoAsignadoPayload) {
-  let broadcast = false;
-  try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const clave = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (url && clave) {
-      const res = await fetch(`${url}/realtime/v1/api/broadcast`, {
-        method: "POST",
-        headers: { apikey: clave, Authorization: `Bearer ${clave}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            { topic: canalMonitoreosOperario(operarioId), event: EVENTO_MONITOREO_ASIGNADO, payload, private: true },
-          ],
-        }),
-      });
-      broadcast = res.ok;
-      if (!res.ok) console.error("[realtime] broadcast monitoreo:", res.status, await res.text());
-    }
-  } catch (e) {
-    console.error("[realtime] broadcast monitoreo:", (e as Error).message);
-  }
-
   const { titulo, cuerpo } = construirAvisoMonitoreo(payload);
+  const registradas = await registrarNotificaciones([
+    {
+      user_id: operarioId,
+      tipo: "monitoreo_asignado",
+      titulo,
+      cuerpo,
+      url: RUTA_MONITOREOS_OPERARIO,
+      referencia_id: payload.monitoreoId,
+    },
+  ]);
   const push = await enviarPushAUsuarios([operarioId], {
     title: titulo,
     body: cuerpo,
     url: RUTA_MONITOREOS_OPERARIO,
     tag: `monitoreo:${payload.monitoreoId}`,
   });
-  return { broadcast, ...push };
+  return { registradas, ...push };
 }

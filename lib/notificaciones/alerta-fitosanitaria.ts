@@ -36,11 +36,6 @@ const SEVERIDAD_LABEL: Record<Severidad, string> = {
   critica: "Crítica",
 };
 
-/** No notifica alertas anuladas, de otra finca ni las que creó el propio técnico. */
-export function debeNotificar(alerta: AlertaInsertada, usuarioId: string, fincaId: string): boolean {
-  return !alerta.is_voided && alerta.finca_id === fincaId && alerta.created_by !== usuarioId;
-}
-
 function recortar(texto: string, max: number): string {
   const t = texto.replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;

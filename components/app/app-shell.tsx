@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CentroNotificaciones } from "@/components/notificaciones/centro-notificaciones";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,7 @@ type UserRole = "superadmin" | "admin" | "agronomo" | "operario";
 type AppShellProps = {
   children: React.ReactNode;
   session: {
+    userId: string;
     email: string | null;
     fullName: string | null;
     role: UserRole | null;
@@ -351,6 +353,9 @@ const breadcrumbLabels: Record<string, string> = {
   nuevo_usuario: "Nuevo usuario",
 };
 
+/** Segmentos intermedios sin página propia en ningún rol (p. ej. /operario/sanidad). */
+const SEGMENTOS_SIN_PAGINA = new Set(["catalogos", "reportes", "sanidad", "vivero", "cuenta"]);
+
 // UUID pattern
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -388,7 +393,8 @@ function buildBreadcrumbs(pathname: string): BreadcrumbEntry[] {
     const isLast = index === segments.length - 2;
     const prevSegment = segments[index]; // segments[index] is one before current in slice(1)
     const label = humanizeSegment(segment, prevSegment);
-    crumbs.push(isLast ? { label } : { href, label });
+    // Carpetas que solo agrupan rutas (sin page.tsx): texto, no enlace (evita 404 y su prefetch).
+    crumbs.push(isLast || SEGMENTOS_SIN_PAGINA.has(segment) ? { label } : { href, label });
   });
 
   return crumbs;
@@ -812,6 +818,8 @@ export function AppShell({ children, session }: AppShellProps) {
                           <BreadcrumbItem>
                             {isLast ? (
                               <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                            ) : !crumb.href ? (
+                              <span className="text-muted-foreground">{crumb.label}</span>
                             ) : (
                               <BreadcrumbLink asChild>
                                 <Link href={crumb.href ?? "/"}>{crumb.label}</Link>
@@ -837,6 +845,16 @@ export function AppShell({ children, session }: AppShellProps) {
                 </p>
               </div>
 
+              {session.isActive && (session.role === "agronomo" || session.role === "operario") ? (
+                <CentroNotificaciones
+                  usuarioId={session.userId}
+                  textoInvitacion={
+                    session.role === "agronomo"
+                      ? "Active las notificaciones para enterarse de los reportes fitosanitarios aunque tenga la aplicación cerrada."
+                      : "Active las notificaciones para enterarse cuando le asignen un monitoreo, aunque tenga la aplicación cerrada."
+                  }
+                />
+              ) : null}
               <ThemeToggle className="shrink-0" />
             </div>
           </header>
