@@ -12,6 +12,7 @@ import type {
   RegistroGerminacionListRow,
 } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
+import { comprimirImagen, formatearBytes } from "@/lib/imagenes/comprimir-imagen";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
@@ -96,11 +97,16 @@ export function TecnicoEvaluacionViveroClient({
     setUploadMsg(null);
     if (!files?.length) return;
     const next: string[] = [...evidenciaPaths];
+    let bytesOriginal = 0;
+    let bytesFinal = 0;
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+      setUploadMsg(`Optimizando foto ${i + 1} de ${files.length}…`);
+      const compresion = await comprimirImagen(files[i]);
+      bytesOriginal += compresion.bytesOriginal;
+      bytesFinal += compresion.bytesFinal;
       const fd = new FormData();
       fd.set("finca_id", fincaId);
-      fd.set("archivo", file);
+      fd.set("archivo", compresion.archivo);
       const up = await subirEvidenciaEvaluacionVivero(fd);
       if (!up.success) {
         setUploadMsg(up.error);
@@ -113,7 +119,11 @@ export function TecnicoEvaluacionViveroClient({
       next.push(up.data.path);
     }
     setEvidenciaPaths(next);
-    setUploadMsg(`${next.length} archivo(s) listos (bucket evidencia-tecnica).`);
+    const ahorro =
+      bytesOriginal > bytesFinal
+        ? ` · ${formatearBytes(bytesOriginal)} → ${formatearBytes(bytesFinal)} (−${Math.round((1 - bytesFinal / bytesOriginal) * 100)} %)`
+        : "";
+    setUploadMsg(`${next.length} foto(s) lista(s)${ahorro}.`);
   }
 
   async function onSubmit(e: React.FormEvent) {
