@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, ImageIcon, X } from "lucide-react";
+import { Camera, ImageIcon, Loader2, X } from "lucide-react";
+import { comprimirImagen, formatearBytes, resumenCompresion } from "@/lib/imagenes/comprimir-imagen";
 
 type FincaRow = { id: string; nombre: string };
 
@@ -68,6 +69,8 @@ export function AlertaForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState<string | null>(null);
+  const [resumenFotos, setResumenFotos] = useState<Record<string, string>>({});
 
   const inputCameraRef = useRef<HTMLInputElement>(null);
   const inputGalleryRef = useRef<HTMLInputElement>(null);
@@ -86,11 +89,15 @@ export function AlertaForm({
         setError("Máximo 8 fotos por alerta.");
         break;
       }
+      setSubiendo(`Optimizando foto (${file.name})…`);
+      const compresion = await comprimirImagen(file);
+      setSubiendo(`Subiendo foto (${formatearBytes(compresion.bytesFinal)})…`);
       const fd = new FormData();
       fd.set("finca_id", fincaId);
-      fd.set("archivo", file);
+      fd.set("archivo", compresion.archivo);
       const up = await subirEvidenciaAlertaFitosanitaria(fd);
       if (!up.success) {
+        setSubiendo(null);
         setError(up.error);
         return;
       }
@@ -99,7 +106,9 @@ export function AlertaForm({
         evidenciaPathsRef.current = next;
         return next;
       });
+      setResumenFotos((prev) => ({ ...prev, [up.data.path]: resumenCompresion(compresion) }));
     }
+    setSubiendo(null);
     if (inputCameraRef.current) inputCameraRef.current.value = "";
     if (inputGalleryRef.current) inputGalleryRef.current.value = "";
   }
@@ -343,7 +352,7 @@ export function AlertaForm({
             variant="outline"
             size="sm"
             className="gap-1.5 rounded-xl"
-            disabled={!fincaId || evidenciaPaths.length >= 8 || pending}
+            disabled={!fincaId || evidenciaPaths.length >= 8 || pending || subiendo !== null}
             onClick={() => inputCameraRef.current?.click()}
           >
             <Camera className="size-4" />
@@ -354,7 +363,7 @@ export function AlertaForm({
             variant="outline"
             size="sm"
             className="gap-1.5 rounded-xl"
-            disabled={!fincaId || evidenciaPaths.length >= 8 || pending}
+            disabled={!fincaId || evidenciaPaths.length >= 8 || pending || subiendo !== null}
             onClick={() => inputGalleryRef.current?.click()}
           >
             <ImageIcon className="size-4" />
@@ -381,6 +390,12 @@ export function AlertaForm({
           tabIndex={-1}
           onChange={(e) => void uploadFiles(e.target.files)}
         />
+        {subiendo ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+            <Loader2 className="size-4 animate-spin" />
+            {subiendo}
+          </p>
+        ) : null}
         {evidenciaPaths.length > 0 ? (
           <ul className="flex flex-col gap-2 text-sm">
             {evidenciaPaths.map((path, idx) => (
@@ -388,8 +403,9 @@ export function AlertaForm({
                 key={`${path}-${idx}`}
                 className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/60 px-3 py-2"
               >
-                <span className="truncate font-mono text-xs text-muted-foreground" title={path}>
-                  {path.split("/").pop()}
+                <span className="min-w-0 truncate text-xs text-muted-foreground" title={path}>
+                  Foto {idx + 1}
+                  {resumenFotos[path] ? ` · ${resumenFotos[path]}` : ""}
                 </span>
                 <Button
                   type="button"
@@ -417,7 +433,7 @@ export function AlertaForm({
           {message}
         </p>
       ) : null}
-      <Button type="submit" size="lg" className="min-h-12 w-full rounded-2xl shadow-lg shadow-primary/15 sm:w-auto" disabled={pending}>
+      <Button type="submit" size="lg" className="min-h-12 w-full rounded-2xl shadow-lg shadow-primary/15 sm:w-auto" disabled={pending || subiendo !== null}>
         {pending ? "Enviando…" : variant === "plaga"
           ? "Enviar reporte de plaga"
           : variant === "enfermedad"
