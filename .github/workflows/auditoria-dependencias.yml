@@ -1,0 +1,52 @@
+name: Auditoría de dependencias
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Lunes 12:00 UTC: aparecen vulnerabilidades nuevas aunque el código no cambie.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Producción (falla con severidad alta o crítica)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Todas las dependencias (informativo)
+        run: npm audit || true
+
+  pip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Buscar dependencias de Python
+        id: python
+        run: |
+          archivos=$(git ls-files '*requirements*.txt' '*pyproject.toml' '*Pipfile.lock')
+          if [ -z "$archivos" ]; then
+            echo "Este repositorio no tiene dependencias de Python: pip-audit no aplica."
+          fi
+          {
+            echo 'archivos<<EOF'
+            echo "$archivos"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: pip-audit
+        if: steps.python.outputs.archivos != ''
+        env:
+          ARCHIVOS: ${{ steps.python.outputs.archivos }}
+        run: |
+          pipx install pip-audit
+          echo "$ARCHIVOS" | { grep requirements || true; } | while read -r f; do pip-audit -r "$f"; done
+          echo "$ARCHIVOS" | { grep -E 'pyproject|Pipfile' || true; } | while read -r f; do pip-audit "$(dirname "$f")"; done
