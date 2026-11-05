@@ -19,7 +19,9 @@ const ETIQUETA_SYNC = "sigpalma-sincronizar";
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  skipWaiting: true,
+  // Una versión nueva queda en espera hasta que el usuario toca «Actualizar» (components/app/aviso-pwa.tsx):
+  // no cambia la app a mitad de un formulario. La primera instalación sí toma control de inmediato.
+  skipWaiting: false,
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [

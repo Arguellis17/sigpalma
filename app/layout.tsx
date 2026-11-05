@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { IBM_Plex_Mono, Lora, Plus_Jakarta_Sans } from "next/font/google";
+import { AvisoPwa } from "@/components/app/aviso-pwa";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -55,6 +56,7 @@ export default function RootLayout({
         <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false} cacheOnNavigation>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <TooltipProvider>{children}</TooltipProvider>
+            <AvisoPwa />
           </ThemeProvider>
         </SerwistProvider>
       </body>
