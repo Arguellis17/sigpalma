@@ -894,6 +894,66 @@ export type Database = {
           },
         ];
       };
+      cronogramas_labores: {
+        Row: {
+          id: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          assigned_to: string;
+          frecuencia: Database["public"]["Enums"]["cronograma_frecuencia"];
+          intervalo: number;
+          dias_semana: number[];
+          fecha_inicio: string;
+          fecha_fin: string | null;
+          notas: string | null;
+          activo: boolean;
+          generado_hasta: string | null;
+          is_voided: boolean;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          lote_id: string;
+          catalogo_item_id: string;
+          assigned_to: string;
+          frecuencia: Database["public"]["Enums"]["cronograma_frecuencia"];
+          intervalo?: number;
+          dias_semana?: number[];
+          fecha_inicio: string;
+          fecha_fin?: string | null;
+          notas?: string | null;
+          activo?: boolean;
+          generado_hasta?: string | null;
+          is_voided?: boolean;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          lote_id?: string;
+          catalogo_item_id?: string;
+          assigned_to?: string;
+          frecuencia?: Database["public"]["Enums"]["cronograma_frecuencia"];
+          intervalo?: number;
+          dias_semana?: number[];
+          fecha_inicio?: string;
+          fecha_fin?: string | null;
+          notas?: string | null;
+          activo?: boolean;
+          generado_hasta?: string | null;
+          is_voided?: boolean;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       labores_agronomicas: {
         Row: {
           id: string;
@@ -914,6 +974,7 @@ export type Database = {
           updated_at: string;
           client_op_id: string | null;
           capturado_en: string | null;
+          cronograma_id: string | null;
         };
         Insert: {
           id?: string;
@@ -934,6 +995,7 @@ export type Database = {
           updated_at?: string;
           client_op_id?: string | null;
           capturado_en?: string | null;
+          cronograma_id?: string | null;
         };
         Update: {
           id?: string;
@@ -954,6 +1016,7 @@ export type Database = {
           updated_at?: string;
           client_op_id?: string | null;
           capturado_en?: string | null;
+          cronograma_id?: string | null;
         };
         Relationships: [
           {
@@ -1560,6 +1623,10 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_superadmin: { Args: Record<string, never>; Returns: boolean };
       current_user_finca_id: { Args: Record<string, never>; Returns: string | null };
+      generar_labores_cronogramas: {
+        Args: { p_cronograma_id?: string | null };
+        Returns: number;
+      };
       crear_remision_despacho: {
         Args: {
           p_finca_id: string;
@@ -1587,6 +1654,7 @@ export type Database = {
     Enums: {
       user_role: "superadmin" | "admin" | "agronomo" | "operario";
       registro_source: "web" | "mobile" | "api";
+      cronograma_frecuencia: "diaria" | "semanal" | "mensual";
       catalogo_categoria:
         | "plaga"
         | "enfermedad"

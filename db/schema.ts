@@ -211,7 +211,44 @@ export const catalogoItems = pgTable(
   ]
 );
 
+export const cronogramaFrecuenciaEnum = pgEnum("cronograma_frecuencia", [
+  "diaria",
+  "semanal",
+  "mensual",
+]);
+
+export const cronogramasLabores = pgTable("cronogramas_labores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  loteId: uuid("lote_id")
+    .notNull()
+    .references(() => lotes.id, { onDelete: "restrict" }),
+  catalogoItemId: uuid("catalogo_item_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  assignedTo: uuid("assigned_to").notNull(),
+  frecuencia: cronogramaFrecuenciaEnum("frecuencia").notNull(),
+  intervalo: integer("intervalo").notNull().default(1),
+  diasSemana: integer("dias_semana").array().notNull().default(sql`'{}'`),
+  fechaInicio: date("fecha_inicio").notNull(),
+  fechaFin: date("fecha_fin"),
+  notas: text("notas"),
+  activo: boolean("activo").notNull().default(true),
+  generadoHasta: date("generado_hasta"),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const laboresAgronomicas = pgTable("labores_agronomicas", {
+  cronogramaId: uuid("cronograma_id").references(() => cronogramasLabores.id, { onDelete: "set null" }),
   id: uuid("id").primaryKey().defaultRandom(),
   fincaId: uuid("finca_id")
     .notNull()

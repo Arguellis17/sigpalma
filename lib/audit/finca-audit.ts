@@ -27,6 +27,10 @@ export const FINCA_AUDIT_ACTION_KEYS = [
   "labor.actualizar",
   "labor.anular",
   "labor.ejecutar",
+  /** CR-05: cronogramas de labores recurrentes. */
+  "cronograma.crear",
+  "cronograma.actualizar",
+  "cronograma.anular",
   "alerta.crear",
   "sanidad.validar_alerta",
   "sanidad.cancelar_orden",

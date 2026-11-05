@@ -8,6 +8,7 @@ import {
   Bug,
   Calendar,
   CalendarClock,
+  Repeat,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -182,6 +183,7 @@ function buildNavGroups(role: UserRole | null, monitoreosPendientesCount = 0): N
           items: [
             { href: "/tecnico", label: "Dashboard", icon: LayoutDashboard },
             { href: "/tecnico/agenda", label: "Agenda de labores", icon: Calendar },
+            { href: "/tecnico/cronogramas", label: "Cronogramas de labores", icon: Repeat },
             {
               href: "/tecnico/trazabilidad",
               label: "Trazabilidad por lote",
@@ -329,6 +331,7 @@ const breadcrumbLabels: Record<string, string> = {
   "material-genetico": "Material genético",
   fitosanitario: "Fitosanitario",
   agenda: "Agenda",
+  cronogramas: "Cronogramas de labores",
   trazabilidad: "Trazabilidad",
   "planificacion-siembra": "Planificación de siembra",
   suelo: "Análisis de suelo",
@@ -498,6 +501,12 @@ function getPageMeta(pathname: string): PageMeta {
       title: "Despacho y remisiones",
       description:
         "Consolide cosechas en acopio, registre transporte y genere remisión PDF.",
+    };
+  }
+  if (pathname === "/tecnico/cronogramas") {
+    return {
+      title: "Cronogramas de labores",
+      description: "Labores repetitivas por lote que se programan solas en la agenda.",
     };
   }
   if (pathname === "/tecnico/agenda") {
