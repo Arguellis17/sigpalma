@@ -5,6 +5,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   date,
   integer,
@@ -211,6 +212,64 @@ export const catalogoItems = pgTable(
   ]
 );
 
+export const tarifasLabor = pgTable("tarifas_labor", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  catalogoItemId: uuid("catalogo_item_id")
+    .notNull()
+    .references(() => catalogoItems.id, { onDelete: "restrict" }),
+  unidadMedida: text("unidad_medida").notNull(),
+  valorUnitario: numeric("valor_unitario", { precision: 14, scale: 2 }).notNull(),
+  vigenteDesde: date("vigente_desde").notNull(),
+  isVoided: boolean("is_voided").notNull().default(false),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const liquidacionesJornales = pgTable("liquidaciones_jornales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  consecutivo: bigint("consecutivo", { mode: "number" }).generatedAlwaysAsIdentity(),
+  fincaId: uuid("finca_id")
+    .notNull()
+    .references(() => fincas.id, { onDelete: "restrict" }),
+  periodoDesde: date("periodo_desde").notNull(),
+  periodoHasta: date("periodo_hasta").notNull(),
+  total: numeric("total", { precision: 16, scale: 2 }).notNull(),
+  trabajadores: integer("trabajadores").notNull(),
+  labores: integer("labores").notNull(),
+  isVoided: boolean("is_voided").notNull().default(false),
+  motivoAnulacion: text("motivo_anulacion"),
+  anuladaPor: uuid("anulada_por"),
+  anuladaEn: timestamp("anulada_en", { withTimezone: true }),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const liquidacionesJornalesDetalle = pgTable("liquidaciones_jornales_detalle", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  liquidacionId: uuid("liquidacion_id")
+    .notNull()
+    .references(() => liquidacionesJornales.id, { onDelete: "restrict" }),
+  laborId: uuid("labor_id").notNull(),
+  trabajadorId: uuid("trabajador_id").notNull(),
+  trabajadorNombre: text("trabajador_nombre").notNull(),
+  trabajadorDocumento: text("trabajador_documento"),
+  laborNombre: text("labor_nombre").notNull(),
+  loteCodigo: text("lote_codigo").notNull(),
+  fecha: date("fecha").notNull(),
+  cantidad: numeric("cantidad").notNull(),
+  unidadMedida: text("unidad_medida").notNull(),
+  valorUnitario: numeric("valor_unitario", { precision: 14, scale: 2 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 16, scale: 2 }).notNull(),
+  vigente: boolean("vigente").notNull().default(true),
+});
+
 export const cronogramaFrecuenciaEnum = pgEnum("cronograma_frecuencia", [
   "diaria",
   "semanal",
@@ -248,6 +307,7 @@ export const cronogramasLabores = pgTable("cronogramas_labores", {
 });
 
 export const laboresAgronomicas = pgTable("labores_agronomicas", {
+  ejecutadaPor: uuid("ejecutada_por"),
   cronogramaId: uuid("cronograma_id").references(() => cronogramasLabores.id, { onDelete: "set null" }),
   id: uuid("id").primaryKey().defaultRandom(),
   fincaId: uuid("finca_id")

@@ -9,6 +9,7 @@ import {
   Calendar,
   CalendarClock,
   Repeat,
+  Wallet,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -148,6 +149,7 @@ function buildNavGroups(role: UserRole | null, monitoreosPendientesCount = 0): N
             { href: "/admin/usuarios", label: "Usuarios", icon: Users },
             { href: "/admin/fincas", label: "Fincas", icon: MapPinned },
             { href: "/admin/auditoria", label: "Actividad de campo", icon: ScrollText },
+            { href: "/admin/jornales", label: "Liquidación de jornales", icon: Wallet },
             {
               href: "/admin/reportes/productividad",
               label: "Productividad RFF",
@@ -332,6 +334,7 @@ const breadcrumbLabels: Record<string, string> = {
   fitosanitario: "Fitosanitario",
   agenda: "Agenda",
   cronogramas: "Cronogramas de labores",
+  jornales: "Liquidación de jornales",
   trazabilidad: "Trazabilidad",
   "planificacion-siembra": "Planificación de siembra",
   suelo: "Análisis de suelo",
@@ -501,6 +504,12 @@ function getPageMeta(pathname: string): PageMeta {
       title: "Despacho y remisiones",
       description:
         "Consolide cosechas en acopio, registre transporte y genere remisión PDF.",
+    };
+  }
+  if (pathname === "/admin/jornales") {
+    return {
+      title: "Liquidación de jornales",
+      description: "Pagos por trabajador según las labores ejecutadas y las tarifas vigentes.",
     };
   }
   if (pathname === "/tecnico/cronogramas") {

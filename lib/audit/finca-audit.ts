@@ -31,6 +31,12 @@ export const FINCA_AUDIT_ACTION_KEYS = [
   "cronograma.crear",
   "cronograma.actualizar",
   "cronograma.anular",
+  /** CR-06: liquidación de jornales. */
+  "jornales.tarifa_guardar",
+  "jornales.tarifa_anular",
+  "jornales.liquidacion_cerrar",
+  "jornales.liquidacion_anular",
+  "jornales.liquidacion_exportar",
   "alerta.crear",
   "sanidad.validar_alerta",
   "sanidad.cancelar_orden",

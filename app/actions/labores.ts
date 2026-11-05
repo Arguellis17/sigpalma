@@ -294,6 +294,7 @@ export async function registrarLaborEjecutada(
         fecha_ejecucion: input.fecha_ejecucion,
         notas: notasMerged,
         updated_at: new Date().toISOString(),
+        ejecutada_por: user.id,
         ...meta,
       })
       .eq("id", input.labor_programada_id)
@@ -359,6 +360,7 @@ export async function registrarLaborEjecutada(
       cantidad_ejecutada: input.cantidad_ejecutada,
       unidad_medida: input.unidad_medida,
       ejecutada_at: ejecutadaAt,
+      ejecutada_por: user.id,
       ...meta,
     })
     .select("id")

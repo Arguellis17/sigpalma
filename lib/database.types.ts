@@ -894,6 +894,144 @@ export type Database = {
           },
         ];
       };
+      tarifas_labor: {
+        Row: {
+          id: string;
+          finca_id: string;
+          catalogo_item_id: string;
+          unidad_medida: string;
+          valor_unitario: number;
+          vigente_desde: string;
+          is_voided: boolean;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          finca_id: string;
+          catalogo_item_id: string;
+          unidad_medida: string;
+          valor_unitario: number;
+          vigente_desde: string;
+          is_voided?: boolean;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          finca_id?: string;
+          catalogo_item_id?: string;
+          unidad_medida?: string;
+          valor_unitario?: number;
+          vigente_desde?: string;
+          is_voided?: boolean;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      liquidaciones_jornales: {
+        Row: {
+          id: string;
+          consecutivo: number;
+          finca_id: string;
+          periodo_desde: string;
+          periodo_hasta: string;
+          total: number;
+          trabajadores: number;
+          labores: number;
+          is_voided: boolean;
+          motivo_anulacion: string | null;
+          anulada_por: string | null;
+          anulada_en: string | null;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          consecutivo?: number;
+          finca_id: string;
+          periodo_desde: string;
+          periodo_hasta: string;
+          total: number;
+          trabajadores: number;
+          labores: number;
+          is_voided?: boolean;
+          motivo_anulacion?: string | null;
+          anulada_por?: string | null;
+          anulada_en?: string | null;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          consecutivo?: number;
+          finca_id?: string;
+          periodo_desde?: string;
+          periodo_hasta?: string;
+          total?: number;
+          trabajadores?: number;
+          labores?: number;
+          is_voided?: boolean;
+          motivo_anulacion?: string | null;
+          anulada_por?: string | null;
+          anulada_en?: string | null;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      liquidaciones_jornales_detalle: {
+        Row: {
+          id: string;
+          liquidacion_id: string;
+          labor_id: string;
+          trabajador_id: string;
+          trabajador_nombre: string;
+          trabajador_documento: string | null;
+          labor_nombre: string;
+          lote_codigo: string;
+          fecha: string;
+          cantidad: number;
+          unidad_medida: string;
+          valor_unitario: number;
+          subtotal: number;
+          vigente: boolean;
+        };
+        Insert: {
+          id?: string;
+          liquidacion_id: string;
+          labor_id: string;
+          trabajador_id: string;
+          trabajador_nombre: string;
+          trabajador_documento?: string | null;
+          labor_nombre: string;
+          lote_codigo: string;
+          fecha: string;
+          cantidad: number;
+          unidad_medida: string;
+          valor_unitario: number;
+          subtotal: number;
+          vigente?: boolean;
+        };
+        Update: {
+          id?: string;
+          liquidacion_id?: string;
+          labor_id?: string;
+          trabajador_id?: string;
+          trabajador_nombre?: string;
+          trabajador_documento?: string | null;
+          labor_nombre?: string;
+          lote_codigo?: string;
+          fecha?: string;
+          cantidad?: number;
+          unidad_medida?: string;
+          valor_unitario?: number;
+          subtotal?: number;
+          vigente?: boolean;
+        };
+        Relationships: [];
+      };
       cronogramas_labores: {
         Row: {
           id: string;
@@ -975,6 +1113,7 @@ export type Database = {
           client_op_id: string | null;
           capturado_en: string | null;
           cronograma_id: string | null;
+          ejecutada_por: string | null;
         };
         Insert: {
           id?: string;
@@ -996,6 +1135,7 @@ export type Database = {
           client_op_id?: string | null;
           capturado_en?: string | null;
           cronograma_id?: string | null;
+          ejecutada_por?: string | null;
         };
         Update: {
           id?: string;
@@ -1017,6 +1157,7 @@ export type Database = {
           client_op_id?: string | null;
           capturado_en?: string | null;
           cronograma_id?: string | null;
+          ejecutada_por?: string | null;
         };
         Relationships: [
           {
@@ -1623,6 +1764,31 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_superadmin: { Args: Record<string, never>; Returns: boolean };
       current_user_finca_id: { Args: Record<string, never>; Returns: string | null };
+      calcular_liquidacion_jornales: {
+        Args: { p_finca: string; p_desde: string; p_hasta: string };
+        Returns: {
+          labor_id: string;
+          trabajador_id: string;
+          trabajador_nombre: string;
+          trabajador_documento: string | null;
+          catalogo_item_id: string | null;
+          labor_nombre: string;
+          lote_codigo: string;
+          fecha: string;
+          cantidad: number;
+          unidad_medida: string;
+          valor_unitario: number | null;
+          subtotal: number | null;
+        }[];
+      };
+      cerrar_liquidacion_jornales: {
+        Args: { p_finca: string; p_desde: string; p_hasta: string };
+        Returns: string;
+      };
+      anular_liquidacion_jornales: {
+        Args: { p_id: string; p_motivo: string };
+        Returns: undefined;
+      };
       generar_labores_cronogramas: {
         Args: { p_cronograma_id?: string | null };
         Returns: number;
