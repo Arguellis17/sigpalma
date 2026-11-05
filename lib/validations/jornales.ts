@@ -1,18 +1,24 @@
 import { z } from "zod";
-import { UNIDADES_MEDIDA_LABOR } from "@/lib/labor-ejecucion";
+import { UNIDADES_PAGO, UNIDADES_PAGO_COSECHA } from "@/lib/jornales";
 
 const uuid = z.string().uuid();
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida (use AAAA-MM-DD).");
 
-export const guardarTarifaSchema = z.object({
-  catalogo_item_id: uuid,
-  unidad_medida: z.enum(UNIDADES_MEDIDA_LABOR),
-  valor_unitario: z.coerce
-    .number()
-    .positive("El valor debe ser mayor que cero.")
-    .max(999_999_999, "Valor fuera de rango."),
-  vigente_desde: ymd,
-});
+/** Tarifa por labor (palma, hectárea o jornal), o de cosecha sin labor (kilo o racimo). */
+export const guardarTarifaSchema = z
+  .object({
+    catalogo_item_id: uuid.nullable().optional(),
+    unidad_medida: z.enum(UNIDADES_PAGO),
+    valor_unitario: z.coerce
+      .number()
+      .positive("El valor debe ser mayor que cero.")
+      .max(999_999_999, "Valor fuera de rango."),
+    vigente_desde: ymd,
+  })
+  .refine(
+    (d) => (UNIDADES_PAGO_COSECHA as readonly string[]).includes(d.unidad_medida) === !d.catalogo_item_id,
+    { message: "Kilo y racimo son para la cosecha; palma, hectárea y jornal requieren una labor.", path: ["unidad_medida"] }
+  );
 
 export const anularTarifaSchema = z.object({ id: uuid });
 

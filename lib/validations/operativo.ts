@@ -52,6 +52,8 @@ export const reportarCosechaSchema = z
     latitud: z.coerce.number().min(-90).max(90).optional().nullable(),
     longitud: z.coerce.number().min(-180).max(180).optional().nullable(),
     confirmar_peso_inusual: z.boolean().optional().default(false),
+    /** Operario que cosechó; se le paga la cosecha. Vacío = quien registra. */
+    cosechado_por: uuid.optional().nullable(),
     source: registroSourceSchema.optional().default("web"),
   })
   .superRefine((data, ctx) => {

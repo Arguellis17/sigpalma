@@ -1,12 +1,18 @@
 "use client";
 
-import { useGuardarOffline, type DatosDe } from "@/components/offline/estado-offline";
+import { useGuardarOffline, useOffline, type DatosDe } from "@/components/offline/estado-offline";
 import { conCache } from "@/lib/offline/referencia";
 
 import { useEffect, useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
 import type { reportarCosecha } from "@/app/actions/cosecha";
-import { getLotesConCosechaProgramada, getLotesCosechables, getMaxPesoCosechaLote } from "@/app/actions/queries";
+import {
+  getLotesConCosechaProgramada,
+  getLotesCosechables,
+  getMaxPesoCosechaLote,
+  getOperariosCosecha,
+  type OperarioFincaOption,
+} from "@/app/actions/queries";
 import {
   mensajePesoInusual,
   pesoEsInusual,
@@ -74,6 +80,22 @@ export function CosechaForm({
   const [loadingLotes, setLoadingLotes] = useState(false);
   const [lotesProgramados, setLotesProgramados] = useState<string[] | null>(null);
   const guardar = useGuardarOffline();
+  const { userId } = useOffline();
+  // Quién cosechó: por defecto quien registra; un jefe de cuadrilla elige al cortero (se le paga la cosecha).
+  const [operarios, setOperarios] = useState<OperarioFincaOption[]>([]);
+  const [cosechadoPor, setCosechadoPor] = useState("");
+  useEffect(() => {
+    if (!fincaId) return;
+    let cancelled = false;
+    void conCache(`operarios:${fincaId}`, () => getOperariosCosecha()).then((res) => {
+      if (cancelled || !res.success) return;
+      setOperarios(res.data);
+      setCosechadoPor((prev) => prev || (res.data.some((o) => o.id === userId) ? userId : ""));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fincaId, userId]);
 
   const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [pesoKg, setPesoKg] = useState("");
@@ -196,8 +218,13 @@ export function CosechaForm({
       setError(gpsError ?? "Active la ubicación GPS antes de registrar.");
       return;
     }
+    if (operarios.length > 0 && !cosechadoPor) {
+      setError("Seleccione quién cosechó.");
+      return;
+    }
     setPending(true);
     const res = await guardar<DatosDe<typeof reportarCosecha>>("cosecha", {
+      cosechado_por: cosechadoPor || null,
       finca_id: fincaId,
       lote_id: loteId,
       fecha,
@@ -323,6 +350,25 @@ export function CosechaForm({
             </p>
           ) : null}
         </div>
+        {operarios.length > 0 ? (
+          <div className="space-y-2">
+            <Label htmlFor="c-cosechado-por">Cosechado por</Label>
+            <Select value={cosechadoPor} onValueChange={setCosechadoPor}>
+              <SelectTrigger id="c-cosechado-por" className="min-h-12 rounded-2xl border-border/70 bg-background/80 text-base shadow-none">
+                <SelectValue placeholder="¿Quién cosechó?" />
+              </SelectTrigger>
+              <SelectContent>
+                {operarios.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.full_name}
+                    {o.id === userId ? " (yo)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">A esta persona se le paga la cosecha en la liquidación de jornales.</p>
+          </div>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="c-fecha">Fecha de cosecha</Label>
           <DatePickerField

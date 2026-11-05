@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
-import type { FilaLiquidacion } from "@/lib/jornales";
+import { NOMBRE_TARIFA_COSECHA, type FilaLiquidacion } from "@/lib/jornales";
 import { isUniqueViolation } from "@/lib/postgres-errors";
 import {
   anularLiquidacionSchema,
@@ -18,7 +18,8 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 export type TarifaRow = {
   id: string;
-  catalogo_item_id: string;
+  /** null = tarifa de cosecha (por kilo o racimo). */
+  catalogo_item_id: string | null;
   labor_nombre: string;
   unidad_medida: string;
   valor_unitario: number;
@@ -72,7 +73,7 @@ export async function listarTarifas(): Promise<ActionResult<TarifaRow[]>> {
   const filas = (data ?? []) as unknown as (Omit<TarifaRow, "labor_nombre"> & { catalogo_items: { nombre: string } | null })[];
   return actionOk(
     filas
-      .map(({ catalogo_items, ...f }) => ({ ...f, valor_unitario: Number(f.valor_unitario), labor_nombre: catalogo_items?.nombre ?? "—" }))
+      .map(({ catalogo_items, ...f }) => ({ ...f, valor_unitario: Number(f.valor_unitario), labor_nombre: f.catalogo_item_id ? (catalogo_items?.nombre ?? "—") : NOMBRE_TARIFA_COSECHA }))
       .sort((a, b) => a.labor_nombre.localeCompare(b.labor_nombre, "es"))
   );
 }
@@ -86,16 +87,20 @@ export async function guardarTarifa(raw: unknown): Promise<ActionResult<{ id: st
   if (!sesion.success) return sesion;
   const { supabase, fincaId, userId } = sesion.data;
 
-  const { data: labor } = await supabase
-    .from("catalogo_items")
-    .select("nombre, categoria")
-    .eq("id", input.catalogo_item_id)
-    .maybeSingle();
-  if (!labor || labor.categoria !== "labor") return actionError("Seleccione una labor del catálogo.");
+  let laborNombre = NOMBRE_TARIFA_COSECHA;
+  if (input.catalogo_item_id) {
+    const { data: labor } = await supabase
+      .from("catalogo_items")
+      .select("nombre, categoria")
+      .eq("id", input.catalogo_item_id)
+      .maybeSingle();
+    if (!labor || labor.categoria !== "labor") return actionError("Seleccione una labor del catálogo.");
+    laborNombre = labor.nombre;
+  }
 
   const { data, error } = await supabase
     .from("tarifas_labor")
-    .insert({ ...input, finca_id: fincaId, created_by: userId })
+    .insert({ ...input, catalogo_item_id: input.catalogo_item_id ?? null, finca_id: fincaId, created_by: userId })
     .select("id")
     .single();
   if (error) {
@@ -108,7 +113,7 @@ export async function guardarTarifa(raw: unknown): Promise<ActionResult<{ id: st
     fincaId,
     actionKey: "jornales.tarifa_guardar",
     titulo: "Tarifa de labor registrada",
-    detalle: { tarifaId: data.id, tipoLabor: labor.nombre, unidadMedida: input.unidad_medida, valorUnitario: input.valor_unitario, vigenteDesde: input.vigente_desde },
+    detalle: { tarifaId: data.id, tipoLabor: laborNombre, unidadMedida: input.unidad_medida, valorUnitario: input.valor_unitario, vigenteDesde: input.vigente_desde },
   });
   revalidatePath(RUTA);
   return actionOk({ id: data.id });
@@ -247,7 +252,7 @@ export async function obtenerLiquidacion(id: string): Promise<ActionResult<Liqui
 
   const { data: detalle, error: de } = await supabase
     .from("liquidaciones_jornales_detalle")
-    .select("labor_id, trabajador_id, trabajador_nombre, trabajador_documento, labor_nombre, lote_codigo, fecha, cantidad, unidad_medida, valor_unitario, subtotal")
+    .select("labor_id, cosecha_id, trabajador_id, trabajador_nombre, trabajador_documento, labor_nombre, lote_codigo, fecha, cantidad, unidad_medida, valor_unitario, subtotal")
     .eq("liquidacion_id", id)
     .order("trabajador_nombre")
     .order("fecha");

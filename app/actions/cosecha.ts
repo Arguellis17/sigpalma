@@ -115,6 +115,16 @@ export async function reportarCosecha(
     return actionError("El área del lote no es válida para calcular rendimiento.");
   }
 
+  // Quién cosechó: operario activo de la finca del usuario. Se consulta con operarios_finca() porque el
+  // RLS de profiles no deja que un operario vea a sus compañeros.
+  if (input.cosechado_por) {
+    const { data: operarios, error: opErr } = await supabase.rpc("operarios_finca");
+    if (opErr) return actionError(opErr.message);
+    if (!(operarios ?? []).some((o) => o.id === input.cosechado_por)) {
+      return actionError("Quién cosechó debe ser un operario activo de su finca.");
+    }
+  }
+
   // Offline-first: el mismo pesaje registrado dos veces (dos personas o dos dispositivos sin conexión)
   // se conserva y queda enlazado al primero para que el agrónomo lo revise o lo anule.
   const { data: gemela } = await supabase
@@ -135,6 +145,7 @@ export async function reportarCosecha(
     .insert({
       ...metaOffline(raw),
       posible_duplicado_de,
+      cosechado_por: input.cosechado_por ?? null,
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha: input.fecha,

@@ -898,7 +898,7 @@ export type Database = {
         Row: {
           id: string;
           finca_id: string;
-          catalogo_item_id: string;
+          catalogo_item_id: string | null;
           unidad_medida: string;
           valor_unitario: number;
           vigente_desde: string;
@@ -909,7 +909,7 @@ export type Database = {
         Insert: {
           id?: string;
           finca_id: string;
-          catalogo_item_id: string;
+          catalogo_item_id?: string | null;
           unidad_medida: string;
           valor_unitario: number;
           vigente_desde: string;
@@ -920,7 +920,7 @@ export type Database = {
         Update: {
           id?: string;
           finca_id?: string;
-          catalogo_item_id?: string;
+          catalogo_item_id?: string | null;
           unidad_medida?: string;
           valor_unitario?: number;
           vigente_desde?: string;
@@ -985,7 +985,7 @@ export type Database = {
         Row: {
           id: string;
           liquidacion_id: string;
-          labor_id: string;
+          labor_id: string | null;
           trabajador_id: string;
           trabajador_nombre: string;
           trabajador_documento: string | null;
@@ -997,11 +997,12 @@ export type Database = {
           valor_unitario: number;
           subtotal: number;
           vigente: boolean;
+          cosecha_id: string | null;
         };
         Insert: {
           id?: string;
           liquidacion_id: string;
-          labor_id: string;
+          labor_id?: string | null;
           trabajador_id: string;
           trabajador_nombre: string;
           trabajador_documento?: string | null;
@@ -1013,11 +1014,12 @@ export type Database = {
           valor_unitario: number;
           subtotal: number;
           vigente?: boolean;
+          cosecha_id?: string | null;
         };
         Update: {
           id?: string;
           liquidacion_id?: string;
-          labor_id?: string;
+          labor_id?: string | null;
           trabajador_id?: string;
           trabajador_nombre?: string;
           trabajador_documento?: string | null;
@@ -1029,6 +1031,7 @@ export type Database = {
           valor_unitario?: number;
           subtotal?: number;
           vigente?: boolean;
+          cosecha_id?: string | null;
         };
         Relationships: [];
       };
@@ -1279,6 +1282,7 @@ export type Database = {
           client_op_id: string | null;
           capturado_en: string | null;
           posible_duplicado_de: string | null;
+          cosechado_por: string | null;
         };
         Insert: {
           id?: string;
@@ -1302,6 +1306,7 @@ export type Database = {
           client_op_id?: string | null;
           capturado_en?: string | null;
           posible_duplicado_de?: string | null;
+          cosechado_por?: string | null;
         };
         Update: {
           id?: string;
@@ -1325,6 +1330,7 @@ export type Database = {
           client_op_id?: string | null;
           capturado_en?: string | null;
           posible_duplicado_de?: string | null;
+          cosechado_por?: string | null;
         };
         Relationships: [
           {
@@ -1764,10 +1770,15 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_superadmin: { Args: Record<string, never>; Returns: boolean };
       current_user_finca_id: { Args: Record<string, never>; Returns: string | null };
+      operarios_finca: {
+        Args: Record<string, never>;
+        Returns: { id: string; full_name: string }[];
+      };
       calcular_liquidacion_jornales: {
         Args: { p_finca: string; p_desde: string; p_hasta: string };
         Returns: {
-          labor_id: string;
+          labor_id: string | null;
+          cosecha_id: string | null;
           trabajador_id: string;
           trabajador_nombre: string;
           trabajador_documento: string | null;

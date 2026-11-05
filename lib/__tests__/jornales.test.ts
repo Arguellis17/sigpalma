@@ -7,6 +7,8 @@ import {
 } from "@/lib/excel/liquidacion-jornales-workbook";
 import {
   consolidarPorTrabajador,
+  formatCantidadPago,
+  idFila,
   tarifasFaltantes,
   totalLiquidacion,
   type FilaLiquidacion,
@@ -83,12 +85,47 @@ describe("tarifasFaltantes", () => {
   });
 });
 
+describe("formas de pago", () => {
+  it("texto de cantidades", () => {
+    expect(formatCantidadPago(10, "palmas")).toBe("10 palmas");
+    expect(formatCantidadPago(1, "jornal")).toBe("1 jornal");
+    expect(formatCantidadPago(0, "jornal")).toBe("Incluida en el jornal del día");
+    expect(formatCantidadPago(1, "ha")).toBe("1 hectárea");
+    expect(formatCantidadPago(500, "kg")).toBe("500 kg");
+    expect(formatCantidadPago(20, "racimo")).toBe("20 racimos");
+  });
+
+  it("una labor del mismo día ya pagado por jornal no suma", () => {
+    const [t] = consolidarPorTrabajador([
+      fila({ unidad_medida: "jornal", cantidad: 1, valor_unitario: 60000, subtotal: 60000 }),
+      fila({ unidad_medida: "jornal", cantidad: 0, valor_unitario: 60000, subtotal: 0 }),
+    ]);
+    expect(t.total).toBe(60000);
+    expect(t.labores).toBe(2);
+    expect(t.sin_tarifa).toBe(0);
+  });
+
+  it("filas de cosecha se identifican por la cosecha", () => {
+    expect(idFila({ labor_id: null, cosecha_id: "c1" })).toBe("c1");
+    expect(idFila({ labor_id: "l1", cosecha_id: null })).toBe("l1");
+  });
+});
+
 describe("validaciones de jornales", () => {
   it("la tarifa debe ser positiva y de unidad conocida", () => {
     const t = { catalogo_item_id: U, unidad_medida: "palmas", valor_unitario: 500, vigente_desde: "2026-11-01" };
     expect(guardarTarifaSchema.safeParse(t).success).toBe(true);
     expect(guardarTarifaSchema.safeParse({ ...t, valor_unitario: 0 }).success).toBe(false);
-    expect(guardarTarifaSchema.safeParse({ ...t, unidad_medida: "kg" }).success).toBe(false);
+    expect(guardarTarifaSchema.safeParse({ ...t, unidad_medida: "litros" }).success).toBe(false);
+  });
+
+  it("jornal va con labor; kilo y racimo solo para la cosecha, sin labor", () => {
+    const t = { valor_unitario: 500, vigente_desde: "2026-11-01" };
+    expect(guardarTarifaSchema.safeParse({ ...t, catalogo_item_id: U, unidad_medida: "jornal" }).success).toBe(true);
+    expect(guardarTarifaSchema.safeParse({ ...t, catalogo_item_id: null, unidad_medida: "kg" }).success).toBe(true);
+    expect(guardarTarifaSchema.safeParse({ ...t, catalogo_item_id: null, unidad_medida: "racimo" }).success).toBe(true);
+    expect(guardarTarifaSchema.safeParse({ ...t, catalogo_item_id: U, unidad_medida: "kg" }).success).toBe(false);
+    expect(guardarTarifaSchema.safeParse({ ...t, catalogo_item_id: null, unidad_medida: "jornal" }).success).toBe(false);
   });
 
   it("el periodo no puede invertirse; un solo día es válido", () => {

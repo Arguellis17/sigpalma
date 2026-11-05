@@ -1356,6 +1356,14 @@ export async function getPlanNutricionDetalle(
 
 export type OperarioFincaOption = { id: string; full_name: string };
 
+/** Operarios activos de la propia finca para elegir quién cosechó (operario, agrónomo o admin). */
+export async function getOperariosCosecha(): Promise<ActionResult<OperarioFincaOption[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("operarios_finca");
+  if (error) return actionError(error.message);
+  return actionOk((data ?? []) as OperarioFincaOption[]);
+}
+
 /** Operarios activos de la finca (HU13 asignación). Requiere sesión agrónomo + RLS. */
 export async function getOperariosFinca(
   fincaId: string

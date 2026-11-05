@@ -39,15 +39,22 @@ import { useToast } from "@/components/ui/toast";
 import { todayColombiaYmd } from "@/lib/date-colombia";
 import {
   consolidarPorTrabajador,
+  formatCantidadPago,
   formatoCop,
+  idFila,
+  labelTarifa,
+  NOMBRE_TARIFA_COSECHA,
+  UNIDADES_PAGO_COSECHA,
+  UNIDADES_PAGO_LABOR,
   tarifasFaltantes,
   totalLiquidacion,
   type FilaLiquidacion,
 } from "@/lib/jornales";
-import { formatCantidadLabor, labelUnidadMedidaLabor, UNIDADES_MEDIDA_LABOR } from "@/lib/labor-ejecucion";
 import { cn } from "@/lib/utils";
 
 type Pestana = "liquidar" | "tarifas" | "historial";
+
+const COSECHA = "__cosecha__";
 
 type Props = {
   tarifas: TarifaRow[];
@@ -88,11 +95,11 @@ function DetallePorTrabajador({ filas }: { filas: FilaLiquidacion[] }) {
                 </thead>
                 <tbody>
                   {t.filas.map((f) => (
-                    <tr key={f.labor_id} className="border-t border-border/50">
+                    <tr key={idFila(f)} className="border-t border-border/50">
                       <td className="py-1.5 pr-3 whitespace-nowrap">{f.fecha}</td>
                       <td className="py-1.5 pr-3">{f.labor_nombre}</td>
                       <td className="py-1.5 pr-3">{f.lote_codigo}</td>
-                      <td className="py-1.5 pr-3 text-right tabular-nums">{formatCantidadLabor(f.cantidad, f.unidad_medida)}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{formatCantidadPago(f.cantidad, f.unidad_medida)}</td>
                       <td className="py-1.5 pr-3 text-right tabular-nums">
                         {f.valor_unitario == null ? <span className="text-amber-700 dark:text-amber-300">Sin tarifa</span> : formatoCop(f.valor_unitario)}
                       </td>
@@ -127,7 +134,15 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
 
   // Tarifas
   const [laborTarifa, setLaborTarifa] = useState(labores[0]?.id ?? "");
-  const [unidadTarifa, setUnidadTarifa] = useState<string>(UNIDADES_MEDIDA_LABOR[0]);
+  const [unidadTarifa, setUnidadTarifa] = useState<string>(UNIDADES_PAGO_LABOR[0]);
+  // La cosecha se paga por lo cosechado (kilo o racimo) y no depende de una labor del catálogo.
+  const esCosecha = laborTarifa === COSECHA;
+  const unidadesTarifa: readonly string[] = esCosecha ? UNIDADES_PAGO_COSECHA : UNIDADES_PAGO_LABOR;
+  function elegirLaborTarifa(v: string) {
+    setLaborTarifa(v);
+    const unidades: readonly string[] = v === COSECHA ? UNIDADES_PAGO_COSECHA : UNIDADES_PAGO_LABOR;
+    if (!unidades.includes(unidadTarifa)) setUnidadTarifa(unidades[0]);
+  }
   const [valorTarifa, setValorTarifa] = useState("");
   const [vigenciaTarifa, setVigenciaTarifa] = useState(hoy);
   const [errorTarifa, setErrorTarifa] = useState<string | null>(null);
@@ -177,7 +192,7 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
     setErrorTarifa(null);
     setPendiente(true);
     const res = await guardarTarifa({
-      catalogo_item_id: laborTarifa,
+      catalogo_item_id: esCosecha ? null : laborTarifa,
       unidad_medida: unidadTarifa,
       valor_unitario: Number(valorTarifa),
       vigente_desde: vigenciaTarifa,
@@ -301,7 +316,7 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
                   <ul className="mt-2 list-disc space-y-1 pl-5">
                     {faltantes.map((f) => (
                       <li key={`${f.labor_nombre}-${f.unidad_medida}`}>
-                        {f.labor_nombre} por {labelUnidadMedidaLabor(f.unidad_medida).toLowerCase()} ({f.labores}{" "}
+                        {f.labor_nombre}: {labelTarifa(f.unidad_medida).toLowerCase()} ({f.labores}{" "}
                         {f.labores === 1 ? "labor" : "labores"}), vigente desde {f.desde} o antes
                       </li>
                     ))}
@@ -336,11 +351,12 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
           <form onSubmit={agregarTarifa} className="surface-panel grid gap-3 rounded-2xl p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end">
             <div className="space-y-2">
               <Label htmlFor="tar-labor">Labor</Label>
-              <Select value={laborTarifa} onValueChange={setLaborTarifa}>
+              <Select value={laborTarifa} onValueChange={elegirLaborTarifa}>
                 <SelectTrigger id="tar-labor" className="min-h-12 w-full">
                   <SelectValue placeholder="Labor" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={COSECHA}>{NOMBRE_TARIFA_COSECHA}</SelectItem>
                   {labores.map((l) => (
                     <SelectItem key={l.id} value={l.id}>
                       {l.nombre}
@@ -350,15 +366,15 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tar-unidad">Por unidad de</Label>
+              <Label htmlFor="tar-unidad">Cómo se paga</Label>
               <Select value={unidadTarifa} onValueChange={setUnidadTarifa}>
                 <SelectTrigger id="tar-unidad" className="min-h-12 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNIDADES_MEDIDA_LABOR.map((u) => (
+                  {unidadesTarifa.map((u) => (
                     <SelectItem key={u} value={u}>
-                      {labelUnidadMedidaLabor(u)}
+                      {labelTarifa(u)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -384,7 +400,9 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
           </form>
 
           <p className="text-sm text-muted-foreground">
-            Para cambiar un precio, agregue otra tarifa con la nueva fecha: las labores anteriores conservan su valor.
+            Para cambiar un precio, agregue otra tarifa con la nueva fecha: las labores anteriores conservan su valor. Por jornal se
+            paga un día por trabajador aunque haga varias labores. Si hay tarifa de cosecha, la labor «Cosecha RFF» de ese día no se
+            paga aparte.
           </p>
 
           {tarifas.length === 0 ? (
@@ -405,7 +423,7 @@ export function JornalesClient({ tarifas, liquidaciones, labores }: Props) {
                   {tarifas.map((t) => (
                     <tr key={t.id} className="border-b border-border/50 last:border-0">
                       <td className="p-3 font-medium">{t.labor_nombre}</td>
-                      <td className="p-3">{labelUnidadMedidaLabor(t.unidad_medida)}</td>
+                      <td className="p-3">{labelTarifa(t.unidad_medida)}</td>
                       <td className="p-3 text-right tabular-nums">{formatoCop(t.valor_unitario)}</td>
                       <td className="p-3 whitespace-nowrap">{t.vigente_desde}</td>
                       <td className="p-3 text-right">

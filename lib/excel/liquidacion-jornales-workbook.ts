@@ -1,6 +1,5 @@
 import ExcelJS from "exceljs";
-import { consolidarPorTrabajador, type FilaLiquidacion } from "@/lib/jornales";
-import { labelUnidadMedidaLabor } from "@/lib/labor-ejecucion";
+import { consolidarPorTrabajador, labelUnidadPago, type FilaLiquidacion } from "@/lib/jornales";
 import {
   addAviso,
   addTitulo,
@@ -59,7 +58,7 @@ export async function buildLiquidacionJornalesWorkbook(data: DatosLiquidacionExc
       f.labor_nombre,
       f.lote_codigo,
       f.cantidad,
-      labelUnidadMedidaLabor(f.unidad_medida),
+      labelUnidadPago(f.unidad_medida).replace(/^./, (c) => c.toUpperCase()),
       f.valor_unitario,
       { formula: `ROUND(F${r}*H${r},2)`, result: f.subtotal ?? 0 },
     ];

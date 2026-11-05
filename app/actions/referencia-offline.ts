@@ -2,6 +2,7 @@
 
 import { getCapacidadPalmasLote } from "./censo-sanitario";
 import {
+  getOperariosCosecha,
   getLotesConCosechaProgramada,
   getLotesCosechables,
   getLotesPorFinca,
@@ -18,10 +19,11 @@ export async function getReferenciaOffline(
   fincaId: string,
   hoy: string
 ): Promise<ActionResult<Record<string, { success: boolean }>>> {
-  const [lotes, cosechables, programada] = await Promise.all([
+  const [lotes, cosechables, programada, operarios] = await Promise.all([
     getLotesPorFinca(fincaId),
     getLotesCosechables(fincaId, hoy),
     getLotesConCosechaProgramada(fincaId, hoy),
+    getOperariosCosecha(),
   ]);
   const porLote = lotes.success
     ? await Promise.all(
@@ -38,6 +40,7 @@ export async function getReferenciaOffline(
     [`lotes:${fincaId}`]: lotes,
     [`cosechables:${fincaId}`]: cosechables,
     [`cosecha-programada:${fincaId}`]: programada,
+    [`operarios:${fincaId}`]: operarios,
     ...Object.fromEntries(porLote.flat()),
   });
 }

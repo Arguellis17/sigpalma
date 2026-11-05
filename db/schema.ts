@@ -218,7 +218,6 @@ export const tarifasLabor = pgTable("tarifas_labor", {
     .notNull()
     .references(() => fincas.id, { onDelete: "restrict" }),
   catalogoItemId: uuid("catalogo_item_id")
-    .notNull()
     .references(() => catalogoItems.id, { onDelete: "restrict" }),
   unidadMedida: text("unidad_medida").notNull(),
   valorUnitario: numeric("valor_unitario", { precision: 14, scale: 2 }).notNull(),
@@ -256,7 +255,8 @@ export const liquidacionesJornalesDetalle = pgTable("liquidaciones_jornales_deta
   liquidacionId: uuid("liquidacion_id")
     .notNull()
     .references(() => liquidacionesJornales.id, { onDelete: "restrict" }),
-  laborId: uuid("labor_id").notNull(),
+  laborId: uuid("labor_id"),
+  cosechaId: uuid("cosecha_id"),
   trabajadorId: uuid("trabajador_id").notNull(),
   trabajadorNombre: text("trabajador_nombre").notNull(),
   trabajadorDocumento: text("trabajador_documento"),
@@ -624,6 +624,7 @@ export const remisionesDespacho = pgTable(
 );
 
 export const cosechasRff = pgTable("cosechas_rff", {
+  cosechadoPor: uuid("cosechado_por"),
   id: uuid("id").primaryKey().defaultRandom(),
   fincaId: uuid("finca_id")
     .notNull()
