@@ -7,9 +7,9 @@ import {
   cambiarEstadoInventarioHerramienta,
   crearInventarioHerramienta,
   devolverHerramienta,
-  tomarHerramienta,
   type InventarioHerramientaListRow,
 } from "@/app/actions/herramientas";
+import { useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import {
   ESTADO_HERRAMIENTA_LABELS,
@@ -72,6 +72,8 @@ export function InventarioHerramientasClient({
   const router = useRouter();
   const { toast } = useToast();
   const [rows] = useServerPropsState(initialRows);
+  const guardar = useGuardarOffline();
+  const tomadasEnCola = useEnCola("tomar_herramienta", "id");
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export function InventarioHerramientasClient({
 
   async function runAction(
     id: string,
-    fn: () => Promise<{ success: boolean; error?: string }>,
+    fn: () => Promise<{ success: boolean; error?: string; offline?: boolean }>,
     okMessage: string
   ) {
     setPendingId(id);
@@ -108,6 +110,7 @@ export function InventarioHerramientasClient({
       toast(result.error ?? "Error.", "error");
       return;
     }
+    if (result.offline) return;
     toast(okMessage, "success");
     router.refresh();
   }
@@ -226,7 +229,7 @@ export function InventarioHerramientasClient({
                   const puedeDevolver =
                     r.estado === "en_uso" &&
                     (r.assigned_to === currentUserId || mode === "admin");
-                  const puedeTomar = r.estado === "disponible";
+                  const puedeTomar = r.estado === "disponible" && !tomadasEnCola.has(r.id);
                   const puedeReportar =
                     mode === "admin" &&
                     (r.estado === "disponible" || r.estado === "en_uso");
@@ -257,6 +260,9 @@ export function InventarioHerramientasClient({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap justify-end gap-1.5">
+                          {r.estado === "disponible" && tomadasEnCola.has(r.id) ? (
+                            <span className="self-center text-xs text-muted-foreground">Tomada · por sincronizar</span>
+                          ) : null}
                           {puedeTomar && (
                             <Button
                               type="button"
@@ -265,7 +271,7 @@ export function InventarioHerramientasClient({
                               className="min-h-9 gap-1"
                               disabled={busy}
                               onClick={() =>
-                                runAction(r.id, () => tomarHerramienta({ id: r.id }), "Herramienta tomada.")
+                                runAction(r.id, () => guardar("tomar_herramienta", { id: r.id }, { resumen: `Herramienta ${r.codigo}` }), "Herramienta tomada.")
                               }
                             >
                               <Hand className="size-3.5" />
@@ -279,6 +285,7 @@ export function InventarioHerramientasClient({
                               variant="outline"
                               className="min-h-9 gap-1"
                               disabled={busy}
+                              data-requiere-conexion
                               onClick={() =>
                                 runAction(
                                   r.id,
@@ -415,7 +422,7 @@ export function InventarioHerramientasClient({
               type="button"
               variant="destructive"
               disabled={pendingReport || reportNotas.trim().length < 10}
-              onClick={handleReport}
+              data-requiere-conexion onClick={handleReport}
             >
               {pendingReport ? "Guardando…" : "Confirmar"}
             </Button>

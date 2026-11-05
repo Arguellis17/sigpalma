@@ -15,11 +15,13 @@ import {
   type ReportarCosechaInput,
 } from "@/lib/validations/operativo";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 export type ReportarCosechaResult = {
   id: string;
   rendimiento_ton_ha: number;
+  posible_duplicado_de: string | null;
 };
 
 export async function reportarCosecha(
@@ -113,9 +115,26 @@ export async function reportarCosecha(
     return actionError("El área del lote no es válida para calcular rendimiento.");
   }
 
+  // Offline-first: el mismo pesaje registrado dos veces (dos personas o dos dispositivos sin conexión)
+  // se conserva y queda enlazado al primero para que el agrónomo lo revise o lo anule.
+  const { data: gemela } = await supabase
+    .from("cosechas_rff")
+    .select("id")
+    .eq("lote_id", input.lote_id)
+    .eq("fecha", input.fecha)
+    .eq("peso_kg", String(input.peso_kg))
+    .eq("conteo_racimos", input.conteo_racimos)
+    .eq("is_voided", false)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const posible_duplicado_de = gemela?.id ?? null;
+
   const { data, error } = await supabase
     .from("cosechas_rff")
     .insert({
+      ...metaOffline(raw),
+      posible_duplicado_de,
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       fecha: input.fecha,
@@ -154,12 +173,14 @@ export async function reportarCosecha(
       longitud: input.longitud,
       pesoInusualConfirmado: input.confirmar_peso_inusual,
       observacionesCalidad: input.observaciones_calidad ?? null,
+      posibleDuplicadoDe: posible_duplicado_de,
     },
   });
 
   return actionOk({
     id: data.id,
     rendimiento_ton_ha,
+    posible_duplicado_de,
   });
 }
 

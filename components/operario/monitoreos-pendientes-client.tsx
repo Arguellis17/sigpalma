@@ -1,8 +1,9 @@
 "use client";
 
+import { useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { marcarMonitoreoCompletado } from "@/app/actions/monitoreo-programado";
 import type { MonitoreoPendienteOperarioRow } from "@/app/actions/queries";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -15,15 +16,20 @@ export function MonitoreosPendientesOperarioClient({ rowsIniciales }: Props) {
   const { toast } = useToast();
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const guardar = useGuardarOffline();
+  // Inspecciones ya marcadas en este dispositivo (aún sin sincronizar) desaparecen de la lista.
+  const enCola = useEnCola("monitoreo_completado", "id");
+  const rows = rowsIniciales.filter((r) => !enCola.has(r.id));
 
   async function completar(row: MonitoreoPendienteOperarioRow) {
     setPendingId(row.id);
     try {
-      const res = await marcarMonitoreoCompletado({ id: row.id });
+      const res = await guardar("monitoreo_completado", { id: row.id }, { resumen: `Lote ${row.lote_codigo} · ${row.fecha_inspeccion}` });
       if (!res.success) {
         toast(res.error, "error");
         return;
       }
+      if (res.offline) return;
       toast("Inspección marcada como realizada.", "success");
       router.refresh();
     } finally {
@@ -43,14 +49,14 @@ export function MonitoreosPendientesOperarioClient({ rowsIniciales }: Props) {
           </tr>
         </thead>
         <tbody>
-          {rowsIniciales.length === 0 ? (
+          {rows.length === 0 ? (
             <tr>
               <td colSpan={4} className="p-6 text-center text-muted-foreground">
                 No tiene inspecciones pendientes asignadas.
               </td>
             </tr>
           ) : (
-            rowsIniciales.map((r) => (
+            rows.map((r) => (
               <tr key={r.id} className="border-b border-border/60 last:border-0">
                 <td className="p-3 whitespace-nowrap">{r.fecha_inspeccion}</td>
                 <td className="p-3 font-medium">{r.lote_codigo}</td>

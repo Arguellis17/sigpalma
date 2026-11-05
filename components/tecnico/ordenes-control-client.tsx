@@ -88,7 +88,7 @@ export function OrdenesControlClient({ ordenes }: Props) {
                       variant="ghost"
                       className="text-destructive hover:text-destructive"
                       disabled={busyId === o.id}
-                      onClick={() => cancelar(o.id)}
+                      data-requiere-conexion onClick={() => cancelar(o.id)}
                     >
                       {busyId === o.id ? "…" : "Cancelar"}
                     </Button>

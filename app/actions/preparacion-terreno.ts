@@ -14,6 +14,7 @@ import {
   type ValidarPreparacionTerrenoInput,
 } from "@/lib/validations/preparacion-terreno";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
@@ -111,7 +112,7 @@ export async function registrarPreparacionTerreno(
     .maybeSingle();
 
   if (existente) {
-    return actionError("Este lote ya tiene un registro de preparación de terreno.");
+    return actionError(`${PREFIJO_CONFLICTO}Este lote ya tiene un registro de preparación de terreno.`);
   }
 
   const requiereValidacion = pendienteRequiereValidacionTecnico(
@@ -124,6 +125,7 @@ export async function registrarPreparacionTerreno(
   const { data: row, error: insertErr } = await supabase
     .from("preparaciones_terreno")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       plan_siembra_id: input.plan_siembra_id,

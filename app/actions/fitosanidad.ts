@@ -12,6 +12,7 @@ import {
   type ValidarAlertaFitosanitariaInput,
 } from "@/lib/validations/sanidad";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 function canEmitirOrdenes(profile: {
@@ -289,7 +290,7 @@ export async function registrarAplicacionFitosanitaria(
   if (orden.estado !== "autorizada") {
     return actionError(
       orden.estado === "cerrada"
-        ? "Esta orden ya fue cerrada con una aplicación."
+        ? `${PREFIJO_CONFLICTO}Esta orden ya fue cerrada con una aplicación.`
         : "La orden no está disponible para aplicación."
     );
   }
@@ -324,7 +325,7 @@ export async function registrarAplicacionFitosanitaria(
     .eq("orden_id", orden.id)
     .maybeSingle();
   if (existApp) {
-    return actionError("Ya existe un registro de aplicación para esta orden.");
+    return actionError(`${PREFIJO_CONFLICTO}Ya existe un registro de aplicación para esta orden.`);
   }
 
   const { data: insumo, error: ierr } = await supabase
@@ -349,6 +350,7 @@ export async function registrarAplicacionFitosanitaria(
   const { data: row, error: insertErr } = await supabase
     .from("aplicaciones_fitosanitarias")
     .insert({
+      ...metaOffline(raw),
       orden_id: orden.id,
       finca_id: orden.finca_id,
       lote_id: orden.lote_id,

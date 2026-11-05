@@ -169,7 +169,8 @@ export async function updateSession(request: NextRequest) {
     );
   }
 
-  if (!effectiveUser && !isPublicAuthPath(pathname)) {
+  // La cola offline necesita un 401 en JSON: un redirect al login se vería como falla de red.
+  if (!effectiveUser && !isPublicAuthPath(pathname) && pathname !== "/api/v1/sync") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

@@ -55,7 +55,7 @@ export function AnalisisPdfViewerButton({
           size="sm"
           className={cn("gap-1.5 rounded-xl", className)}
           disabled={loading}
-          onClick={handleOpen}
+          data-requiere-conexion onClick={handleOpen}
         >
           <FileText className="size-3.5 text-red-600 dark:text-red-400" />
           {loading ? "Abriendo…" : "Ver PDF"}
@@ -76,7 +76,7 @@ export function AnalisisPdfViewerButton({
         variant="link"
         className={cn("h-auto p-0 text-xs", className)}
         disabled={loading}
-        onClick={handleOpen}
+        data-requiere-conexion onClick={handleOpen}
       >
         {loading ? "Abriendo…" : "Ver PDF"}
       </Button>

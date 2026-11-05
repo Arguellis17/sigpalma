@@ -13,7 +13,7 @@ import {
   isInsumoNutricion,
 } from "@/lib/catalogo-insumo-fitosanitario";
 import { estimarTotalPalmasLote } from "@/lib/censo-sanitario";
-import { loteAptoParaCosecha } from "@/lib/cosecha-validacion";
+import { filasIncluyenLaborCosechaPendiente, loteAptoParaCosecha } from "@/lib/cosecha-validacion";
 import { actionError, actionOk, type ActionResult } from "./types";
 
 export type LoteOption = { id: string; codigo: string };
@@ -80,6 +80,25 @@ export async function getLotesCosechables(
   );
 
   return actionOk(aptos.map((l) => ({ id: l.id, codigo: l.codigo })));
+}
+
+/** HU27: lotes con labor «Cosecha RFF» programada y pendiente hasta la fecha indicada. */
+export async function getLotesConCosechaProgramada(
+  fincaId: string,
+  hasta: string
+): Promise<ActionResult<string[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("labores_agronomicas")
+    .select("lote_id, catalogo_items ( nombre )")
+    .eq("finca_id", fincaId)
+    .eq("is_voided", false)
+    .is("cantidad_ejecutada", null)
+    .not("catalogo_item_id", "is", null)
+    .lte("fecha_ejecucion", hasta);
+  if (error) return actionError(error.message);
+  const filas = (data ?? []) as unknown as { lote_id: string; catalogo_items: { nombre: string } | null }[];
+  return actionOk([...new Set(filas.filter((f) => filasIncluyenLaborCosechaPendiente([f])).map((f) => f.lote_id))]);
 }
 
 /** HU27: máximo peso histórico no anulado del lote (alerta de peso inusual). */

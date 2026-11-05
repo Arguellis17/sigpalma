@@ -1,12 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import {
-  anularEvaluacionVivero,
-  crearEvaluacionVivero,
-  subirEvidenciaEvaluacionVivero,
-} from "@/app/actions/evaluacion-vivero";
+import { useEffect, useMemo, useState } from "react";
+import { anularEvaluacionVivero } from "@/app/actions/evaluacion-vivero";
+import { useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
 import type {
   EvaluacionViveroListRow,
   RegistroGerminacionListRow,
@@ -41,10 +38,17 @@ type Props = {
 
 export function TecnicoEvaluacionViveroClient({
   fincaId,
-  germinacionesDisponibles,
+  germinacionesDisponibles: germinacionesServidor,
   historial,
 }: Props) {
   const router = useRouter();
+  const guardar = useGuardarOffline();
+  // Germinaciones ya evaluadas en este dispositivo (aún sin sincronizar) no se ofrecen de nuevo.
+  const enCola = useEnCola("evaluacion_vivero", "germinacion_id");
+  const germinacionesDisponibles = useMemo(
+    () => germinacionesServidor.filter((g) => !enCola.has(g.id)),
+    [germinacionesServidor, enCola]
+  );
   const [germinacionId, setGerminacionId] = useState(
     germinacionesDisponibles[0]?.id ?? ""
   );
@@ -56,7 +60,7 @@ export function TecnicoEvaluacionViveroClient({
   const [concepto, setConcepto] = useState<"apto_trasplante" | "no_apto">(
     "apto_trasplante"
   );
-  const [evidenciaPaths, setEvidenciaPaths] = useState<string[]>([]);
+  const [evidenciaPaths, setEvidenciaPaths] = useState<File[]>([]);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [pendingVoid, setPendingVoid] = useState<string | null>(null);
@@ -96,7 +100,7 @@ export function TecnicoEvaluacionViveroClient({
   async function onFilesChange(files: FileList | null) {
     setUploadMsg(null);
     if (!files?.length) return;
-    const next: string[] = [...evidenciaPaths];
+    const next: File[] = [...evidenciaPaths];
     let bytesOriginal = 0;
     let bytesFinal = 0;
     for (let i = 0; i < files.length; i++) {
@@ -104,19 +108,15 @@ export function TecnicoEvaluacionViveroClient({
       const compresion = await comprimirImagen(files[i]);
       bytesOriginal += compresion.bytesOriginal;
       bytesFinal += compresion.bytesFinal;
-      const fd = new FormData();
-      fd.set("finca_id", fincaId);
-      fd.set("archivo", compresion.archivo);
-      const up = await subirEvidenciaEvaluacionVivero(fd);
-      if (!up.success) {
-        setUploadMsg(up.error);
+      if (compresion.archivo.size > 4 * 1024 * 1024) {
+        setUploadMsg(`La foto pesa ${formatearBytes(compresion.archivo.size)}; el máximo es 4 MB.`);
         return;
       }
       if (next.length >= 8) {
         setUploadMsg("Máximo 8 evidencias por evaluación.");
         break;
       }
-      next.push(up.data.path);
+      next.push(compresion.archivo);
     }
     setEvidenciaPaths(next);
     const ahorro =
@@ -137,7 +137,7 @@ export function TecnicoEvaluacionViveroClient({
       return;
     }
     setPending(true);
-    const res = await crearEvaluacionVivero({
+    const res = await guardar("evaluacion_vivero", {
       finca_id: fincaId,
       germinacion_id: germinacionId,
       total_inicial: Number(totalInicial),
@@ -146,8 +146,8 @@ export function TecnicoEvaluacionViveroClient({
       motivo_descarte: motivoDescarte.trim() || null,
       observaciones_fitosanitarias: obsFitosanitarias.trim() || null,
       concepto,
-      evidencia_urls: evidenciaPaths,
-    });
+      evidencia_urls: [] as string[],
+    }, { archivos: evidenciaPaths });
     setPending(false);
     if (!res.success) {
       setErr(res.error);
@@ -155,7 +155,7 @@ export function TecnicoEvaluacionViveroClient({
     }
     setDialogOpen(false);
     resetForm();
-    router.refresh();
+    if (!res.offline) router.refresh();
   }
 
   async function onAnular(id: string) {
@@ -192,7 +192,7 @@ export function TecnicoEvaluacionViveroClient({
               el bucket evidencia-tecnica.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-4" data-offline-ok>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label>Germinación</Label>
@@ -383,7 +383,7 @@ export function TecnicoEvaluacionViveroClient({
                           variant="outline"
                           size="sm"
                           disabled={pendingVoid === r.id}
-                          onClick={() => onAnular(r.id)}
+                          data-requiere-conexion onClick={() => onAnular(r.id)}
                         >
                           {pendingVoid === r.id ? "…" : "Anular"}
                         </Button>

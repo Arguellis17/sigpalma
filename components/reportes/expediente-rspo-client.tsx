@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileDown, FileSpreadsheet, ShieldCheck } from "lucide-react";
@@ -44,7 +45,7 @@ export function ExpedienteRspoClient({
   useEffect(() => {
     if (!fincaId) return;
     let cancelled = false;
-    void getLotesPorFinca(fincaId).then((res) => {
+    void conCache(`lotes:${fincaId}`, () => getLotesPorFinca(fincaId)).then((res) => {
       if (cancelled) return;
       if (res.success) {
         setLotes(res.data);

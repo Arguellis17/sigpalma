@@ -157,8 +157,9 @@ export function TecnicoSueloClient({
     setSheet(null);
   }
 
-  function afterSave() {
+  function afterSave(info?: { offline: boolean }) {
     closeSheet();
+    if (info?.offline) return;
     toast("Análisis guardado.", "success");
     router.refresh();
   }
@@ -436,7 +437,7 @@ export function TecnicoSueloClient({
             <Button variant="ghost" onClick={() => setConfirmAnular(null)} disabled={pendingAnular}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleAnular} disabled={pendingAnular}>
+            <Button variant="destructive" data-requiere-conexion onClick={handleAnular} disabled={pendingAnular}>
               {pendingAnular ? "Anulando…" : "Anular"}
             </Button>
           </DialogFooter>

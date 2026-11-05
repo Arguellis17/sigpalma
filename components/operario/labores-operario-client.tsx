@@ -105,8 +105,9 @@ export function LaboresOperarioClient({
     setCreateOpen(true);
   }
 
-  function afterCreate() {
+  function afterCreate(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Labor registrada.", "success");
     router.refresh();
   }
@@ -408,7 +409,7 @@ export function LaboresOperarioClient({
             <Button variant="ghost" onClick={() => setConfirmAnular(null)} disabled={pendingAnular}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleAnular} disabled={pendingAnular}>
+            <Button variant="destructive" data-requiere-conexion onClick={handleAnular} disabled={pendingAnular}>
               {pendingAnular ? "Anulando…" : "Anular"}
             </Button>
           </DialogFooter>

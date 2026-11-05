@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -162,7 +163,7 @@ export function TrazabilidadLoteClient({
     if (!id) return;
     startTransition(async () => {
       setError(null);
-      const res = await getTrazabilidadTecnicaLote(id);
+      const res = await conCache(`trazabilidad:${id}`, () => getTrazabilidadTecnicaLote(id));
       if (!res.success) {
         setData(null);
         setError(res.error);
@@ -381,7 +382,7 @@ function SueloEventDetail({ event }: { event: TimelineEvent }) {
             variant="outline"
             className="w-full rounded-xl"
             disabled={pdfPending}
-            onClick={() => void openPdf()}
+            data-requiere-conexion onClick={() => void openPdf()}
           >
             <FileDown className="mr-2 size-4" />
             {pdfPending ? "Generando enlace…" : "Ver informe PDF"}

@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   actualizarMonitoreoProgramado,
@@ -86,7 +87,7 @@ export function MonitoreosProgramadosClient({
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const r = await getMonitoreosFitosanitariosRango(fincaId, desde, hasta);
+    const r = await conCache(`monitoreos:${fincaId}:${desde}:${hasta}`, () => getMonitoreosFitosanitariosRango(fincaId, desde, hasta));
     setLoading(false);
     if (!r.success) {
       toast(r.error, "error");
@@ -318,7 +319,7 @@ export function MonitoreosProgramadosClient({
             <Button type="button" variant="outline" onClick={() => setAnularId(null)}>
               Cancelar
             </Button>
-            <Button type="button" variant="destructive" disabled={pending} onClick={confirmAnular}>
+            <Button type="button" variant="destructive" disabled={pending} data-requiere-conexion onClick={confirmAnular}>
               Anular
             </Button>
           </DialogFooter>

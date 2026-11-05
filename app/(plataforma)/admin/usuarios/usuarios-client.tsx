@@ -540,7 +540,7 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
                     type="button"
                     disabled={pending}
                     className="min-h-11"
-                    onClick={handleGenerateTemporaryPassword}
+                    data-requiere-conexion onClick={handleGenerateTemporaryPassword}
                   >
                     {pending ? "Generando…" : "Generar contraseña temporal"}
                   </Button>
@@ -566,7 +566,7 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
             <Button variant="ghost" onClick={() => setConfirmInactivar(null)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleInactivar}>
+            <Button variant="destructive" data-requiere-conexion onClick={handleInactivar}>
               Inactivar
             </Button>
           </DialogFooter>

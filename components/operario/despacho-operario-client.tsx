@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download, MapPin, RefreshCw, Truck } from "lucide-react";
 import {
-  crearRemisionDespacho,
   getCosechasDisponiblesDespacho,
+  type crearRemisionDespacho,
   type CosechaDisponibleDespachoRow,
   type RemisionListRow,
 } from "@/app/actions/despacho";
+import { useEnCola, useGuardarOffline, useOffline, type DatosDe } from "@/components/offline/estado-offline";
+import { advertenciaSobrecarga } from "@/lib/despacho-validacion";
+import { conCache } from "@/lib/offline/referencia";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +38,7 @@ async function captureGps(): Promise<{ lat: number; lng: number } | null> {
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 12_000,
+        timeout: 30_000, // arranque en frío sin señal: sin datos móviles el GPS tarda más
         maximumAge: 30_000,
         enableHighAccuracy: true,
       });
@@ -63,7 +66,19 @@ export function DespachoOperarioClient({
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const [disponibles, setDisponibles] = useServerPropsState(initialDisponibles);
+  const [disponiblesServidor, setDisponibles] = useServerPropsState(initialDisponibles);
+  const guardar = useGuardarOffline();
+  const { operaciones } = useOffline();
+  // Cosechas ya incluidas en una remisión guardada en este dispositivo no se ofrecen de nuevo.
+  const enCola = useEnCola("remision", "cosecha_ids");
+  const disponibles = useMemo(
+    () => disponiblesServidor.filter((d) => !enCola.has(d.id)),
+    [disponiblesServidor, enCola]
+  );
+  // Solo se despachan cosechas que ya llegaron al servidor (las de la cola aún no tienen registro).
+  const cosechasSinSincronizar = operaciones.filter(
+    (o) => o.tipo === "cosecha" && o.estado !== "sincronizado"
+  ).length;
   const [remisiones, setRemisiones] = useServerPropsState(initialRemisiones);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [placa, setPlaca] = useState("");
@@ -120,7 +135,7 @@ export function DespachoOperarioClient({
 
   async function refreshDisponibles() {
     if (!fincaId) return;
-    const res = await getCosechasDisponiblesDespacho(fincaId);
+    const res = await conCache(`despacho:${fincaId}`, () => getCosechasDisponiblesDespacho(fincaId));
     if (res.success) {
       setDisponibles(res.data);
       setSelected(new Set());
@@ -142,8 +157,13 @@ export function DespachoOperarioClient({
       setErr(gpsError ?? "GPS obligatorio para la salida del vehículo.");
       return;
     }
+    // Validación local de capacidad para que también funcione sin conexión.
+    if (!confirmarSobrecarga && advertenciaSobrecarga(totales.kg, capacidad === "" ? null : Number(capacidad))) {
+      setConfirmSobrecarga(true);
+      return;
+    }
     setPending(true);
-    const res = await crearRemisionDespacho({
+    const res = await guardar<DatosDe<typeof crearRemisionDespacho>>("remision", {
       finca_id: fincaId,
       cosecha_ids: [...selected],
       placa_vehiculo: placa,
@@ -165,11 +185,12 @@ export function DespachoOperarioClient({
       setErr(res.error);
       return;
     }
-    toast("Remisión creada.", "success");
-    window.open(res.data.pdf_download_url, "_blank");
     setSelected(new Set());
     setPlaca("");
     setConductorId("");
+    if (res.offline) return;
+    toast("Remisión creada.", "success");
+    window.open(res.data.pdf_download_url, "_blank");
     router.refresh();
     void refreshDisponibles();
   }
@@ -192,6 +213,12 @@ export function DespachoOperarioClient({
         <p className="mt-1 text-sm text-muted-foreground">
           Seleccione cosechas en acopio del mismo día. Al cerrar, la fruta pasa a en tránsito (RN85).
         </p>
+        {cosechasSinSincronizar > 0 ? (
+          <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+            {cosechasSinSincronizar} cosecha{cosechasSinSincronizar === 1 ? "" : "s"} de este dispositivo aún sin sincronizar:
+            podrá despacharlas cuando se envíen al servidor.
+          </p>
+        ) : null}
 
         {disponibles.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">

@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useCallback, useMemo, useState } from "react";
 import { addMonths, format, subMonths } from "date-fns";
 import { Views, type SlotInfo, type View } from "react-big-calendar";
@@ -81,7 +82,7 @@ export function AgendaLaboresClient({
     async (view: View, date: Date) => {
       const { desde, hasta } = rangeForView(view, date);
       setLoadingRange(true);
-      const res = await getLaboresRango(fincaId, desde, hasta);
+      const res = await conCache(`labores:${fincaId}:${desde}:${hasta}:`, () => getLaboresRango(fincaId, desde, hasta));
       setLoadingRange(false);
       if (!res.success) {
         toast(`No se pudo cargar el calendario: ${res.error}`, "error");

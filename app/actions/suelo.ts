@@ -9,6 +9,7 @@ import {
   type RegistrarAnalisisSueloInput,
 } from "@/lib/validations/suelo";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 import type { Database, Tables } from "@/lib/database.types";
 import { z } from "zod";
@@ -449,6 +450,7 @@ export async function registrarAnalisisSueloDesdeFormulario(
   const { data, error } = await supabase
     .from("analisis_suelo")
     .insert({
+      ...metaOffline(formData),
       id,
       finca_id: input.finca_id,
       lote_id: input.lote_id,

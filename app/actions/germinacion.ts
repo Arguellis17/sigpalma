@@ -9,6 +9,7 @@ import {
   type CrearRegistroGerminacionInput,
 } from "@/lib/validations/germinacion";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 async function assertMaterialGeneticoFinca(
@@ -80,6 +81,7 @@ export async function crearRegistroGerminacion(
   const { data: inserted, error: insErr } = await supabase
     .from("registros_germinacion")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       catalogo_material_id: input.catalogo_material_id,
       lote_id: input.lote_id ?? null,

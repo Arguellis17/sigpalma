@@ -1,10 +1,10 @@
 "use client";
 
+import { MENSAJE_GUARDADO_OFFLINE, useGuardarOffline, type DatosDe } from "@/components/offline/estado-offline";
+import { conCache } from "@/lib/offline/referencia";
+
 import { useEffect, useMemo, useState } from "react";
-import {
-  getCapacidadPalmasLote,
-  registrarCensoSanitario,
-} from "@/app/actions/censo-sanitario";
+import { getCapacidadPalmasLote, type registrarCensoSanitario } from "@/app/actions/censo-sanitario";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
 import {
@@ -34,7 +34,7 @@ type Props = {
   defaultFincaId: string | null;
   catalogo: CatalogoFitosanidadOption[];
   embedded?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (info: { offline: boolean }) => void;
 };
 
 const LOTE_SELECT_IDLE = "__lote_idle__";
@@ -59,6 +59,7 @@ export function CensoSanitarioForm({
   const [afectadas, setAfectadas] = useState("");
   const [notas, setNotas] = useState("");
   const [capacidadLote, setCapacidadLote] = useState<number | null>(null);
+  const guardar = useGuardarOffline();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -69,7 +70,8 @@ export function CensoSanitarioForm({
       return;
     }
     let cancelled = false;
-    void getCapacidadPalmasLote(loteId).then((res) => {
+    void conCache(`capacidad:${loteId}`, () => getCapacidadPalmasLote(loteId))
+      .then((res) => {
       if (cancelled) return;
       setCapacidadLote(res.success ? res.data.total_estimado : null);
     });
@@ -99,8 +101,12 @@ export function CensoSanitarioForm({
       setError("Seleccione plaga o enfermedad del catálogo (RN68).");
       return;
     }
+    if (capacidadLote !== null && inspeccionadasNum > capacidadLote) {
+      setError(`Las palmas inspeccionadas (${inspeccionadasNum}) superan la capacidad estimada del lote (${capacidadLote} palmas).`);
+      return;
+    }
     setPending(true);
-    const res = await registrarCensoSanitario({
+    const res = await guardar<DatosDe<typeof registrarCensoSanitario>>("censo", {
       finca_id: fincaId,
       lote_id: loteId,
       catalogo_item_id: catalogoId,
@@ -120,7 +126,11 @@ export function CensoSanitarioForm({
     setAfectadas("");
     setNotas("");
     if (onSuccess) {
-      onSuccess();
+      onSuccess({ offline: res.offline });
+      return;
+    }
+    if (res.offline) {
+      setMessage(MENSAJE_GUARDADO_OFFLINE);
       return;
     }
     setMessage(
@@ -145,7 +155,7 @@ export function CensoSanitarioForm({
     : "surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6";
 
   return (
-    <form onSubmit={onSubmit} className={formClass}>
+    <form onSubmit={onSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="c-finca">Finca</Label>
         <Select value={fincaId} onValueChange={setFincaId}>

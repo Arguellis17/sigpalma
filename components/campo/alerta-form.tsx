@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  crearAlertaFitosanitaria,
-  crearReporteEnfermedad,
-  crearReportePlaga,
-  subirEvidenciaAlertaFitosanitaria,
-} from "@/app/actions/alertas";
+import type { CrearAlertaResult } from "@/app/actions/alertas";
+import { useGuardarOffline } from "@/components/offline/estado-offline";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import type { CatalogoFitosanidadOption } from "@/app/actions/queries";
 import { labelCategoriaFitosanitaria } from "@/lib/validations/catalogo";
@@ -30,7 +26,7 @@ type Props = {
   defaultFincaId: string | null;
   catalogo: CatalogoFitosanidadOption[];
   embedded?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (info: { offline: boolean }) => void;
   /** Plagas / enfermedades: catálogo obligatorio por tipo. */
   variant?: "general" | "plaga" | "enfermedad";
 };
@@ -45,6 +41,10 @@ const SEVERIDADES = [
 ] as const;
 
 const ACCEPT_IMAGES = "image/jpeg,image/png,image/webp";
+
+function fotoClave(f: File) {
+  return `${f.name}-${f.size}-${f.lastModified}`;
+}
 
 function catalogoObligatorio(variant: Props["variant"]): boolean {
   return variant === "plaga" || variant === "enfermedad";
@@ -65,7 +65,9 @@ export function AlertaForm({
   const [severidad, setSeveridad] =
     useState<(typeof SEVERIDADES)[number]["value"]>("media");
   const [descripcion, setDescripcion] = useState("");
-  const [evidenciaPaths, setEvidenciaPaths] = useState<string[]>([]);
+  // Fotos ya comprimidas en el dispositivo; se suben al guardar (con o sin conexión, vía la cola offline).
+  const [evidenciaPaths, setEvidenciaPaths] = useState<File[]>([]);
+  const guardar = useGuardarOffline();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function AlertaForm({
 
   const inputCameraRef = useRef<HTMLInputElement>(null);
   const inputGalleryRef = useRef<HTMLInputElement>(null);
-  const evidenciaPathsRef = useRef<string[]>([]);
+  const evidenciaPathsRef = useRef<File[]>([]);
 
   useEffect(() => {
     evidenciaPathsRef.current = evidenciaPaths;
@@ -91,22 +93,18 @@ export function AlertaForm({
       }
       setSubiendo(`Optimizando foto (${file.name})…`);
       const compresion = await comprimirImagen(file);
-      setSubiendo(`Subiendo foto (${formatearBytes(compresion.bytesFinal)})…`);
-      const fd = new FormData();
-      fd.set("finca_id", fincaId);
-      fd.set("archivo", compresion.archivo);
-      const up = await subirEvidenciaAlertaFitosanitaria(fd);
-      if (!up.success) {
+      if (compresion.archivo.size > 4 * 1024 * 1024) {
         setSubiendo(null);
-        setError(up.error);
+        setError(`La foto pesa ${formatearBytes(compresion.archivo.size)}; el máximo es 4 MB.`);
         return;
       }
+      const foto = compresion.archivo;
       setEvidenciaPaths((prev) => {
-        const next = [...prev, up.data.path];
+        const next = [...prev, foto];
         evidenciaPathsRef.current = next;
         return next;
       });
-      setResumenFotos((prev) => ({ ...prev, [up.data.path]: resumenCompresion(compresion) }));
+      setResumenFotos((prev) => ({ ...prev, [fotoClave(foto)]: resumenCompresion(compresion) }));
     }
     setSubiendo(null);
     if (inputCameraRef.current) inputCameraRef.current.value = "";
@@ -148,15 +146,15 @@ export function AlertaForm({
       catalogo_item_id: catalogoId || null,
       severidad,
       descripcion: descripcion.trim() || null,
-      evidencia_urls: evidenciaPaths,
+      evidencia_urls: [] as string[],
       source: "web" as const,
     };
-    const res =
-      variant === "plaga"
-        ? await crearReportePlaga({ ...payload, catalogo_item_id: catalogoId })
-        : variant === "enfermedad"
-          ? await crearReporteEnfermedad({ ...payload, catalogo_item_id: catalogoId })
-          : await crearAlertaFitosanitaria(payload);
+    const loteCodigo = lotes.find((l) => l.id === loteId)?.codigo ?? "";
+    const res = await guardar<CrearAlertaResult>(
+      variant === "plaga" ? "reporte_plaga" : variant === "enfermedad" ? "reporte_enfermedad" : "alerta",
+      payload,
+      { archivos: evidenciaPaths, resumen: `Lote ${loteCodigo} · severidad ${severidad}` }
+    );
     setPending(false);
     if (!res.success) {
       setError(res.error);
@@ -166,11 +164,15 @@ export function AlertaForm({
     setEvidenciaPaths([]);
     evidenciaPathsRef.current = [];
     if (onSuccess) {
-      onSuccess();
+      onSuccess({ offline: res.offline });
       return;
     }
     setMessage(
-      res.data.lote_estado_alerta
+      res.offline
+        ? "Reporte guardado en este dispositivo. Se enviará al técnico automáticamente cuando vuelva la señal."
+        : res.data.posible_duplicado_de
+          ? "Reporte registrado. Ya había un reporte pendiente de la misma amenaza en este lote: el técnico los revisará juntos."
+          : res.data.lote_estado_alerta
         ? "Alerta crítica registrada: el lote queda marcado para seguimiento."
         : variant === "plaga"
           ? "Reporte de plaga registrado. Queda pendiente de validación del técnico."
@@ -194,7 +196,7 @@ export function AlertaForm({
     : "surface-panel flex max-w-2xl flex-col gap-5 rounded-[2rem] p-5 sm:p-6";
 
   return (
-    <form onSubmit={onSubmit} className={formClass}>
+    <form onSubmit={onSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="a-finca">Finca</Label>
         <Select value={fincaId} onValueChange={setFincaId}>
@@ -398,14 +400,14 @@ export function AlertaForm({
         ) : null}
         {evidenciaPaths.length > 0 ? (
           <ul className="flex flex-col gap-2 text-sm">
-            {evidenciaPaths.map((path, idx) => (
+            {evidenciaPaths.map((foto, idx) => (
               <li
-                key={`${path}-${idx}`}
+                key={`${fotoClave(foto)}-${idx}`}
                 className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background/60 px-3 py-2"
               >
-                <span className="min-w-0 truncate text-xs text-muted-foreground" title={path}>
+                <span className="min-w-0 truncate text-xs text-muted-foreground" title={foto.name}>
                   Foto {idx + 1}
-                  {resumenFotos[path] ? ` · ${resumenFotos[path]}` : ""}
+                  {resumenFotos[fotoClave(foto)] ? ` · ${resumenFotos[fotoClave(foto)]}` : ""}
                 </span>
                 <Button
                   type="button"

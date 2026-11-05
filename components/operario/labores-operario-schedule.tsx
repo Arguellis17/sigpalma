@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { addMonths, format, subMonths } from "date-fns";
@@ -64,11 +65,8 @@ export function LaboresOperarioSchedule({
     async (view: View, date: Date) => {
       const { desde, hasta } = rangeForView(view, date);
       setLoadingRange(true);
-      const res = await getLaboresRango(
-        fincaId,
-        desde,
-        hasta,
-        operarioId ? { operarioId } : undefined
+      const res = await conCache(`labores:${fincaId}:${desde}:${hasta}:${operarioId ?? ""}`, () =>
+        getLaboresRango(fincaId, desde, hasta, operarioId ? { operarioId } : undefined)
       );
       setLoadingRange(false);
       if (!res.success) {

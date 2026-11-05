@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  actualizarAnalisisSueloDesdeFormulario,
-  registrarAnalisisSueloDesdeFormulario,
-} from "@/app/actions/suelo";
+import { actualizarAnalisisSueloDesdeFormulario } from "@/app/actions/suelo";
+import { useGuardarOffline } from "@/components/offline/estado-offline";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
 import { Input } from "@/components/ui/input";
@@ -54,7 +52,7 @@ type Props = {
   record?: AnalisisSueloFormRecord | null;
   /** Preselecciona lote al crear (p. ej. enlace desde plan nutrición). */
   defaultLoteId?: string | null;
-  onSuccess: () => void;
+  onSuccess: (info: { offline: boolean }) => void;
   onCancel: () => void;
 };
 
@@ -77,6 +75,7 @@ export function AnalisisSueloForm({
 
   const lotes = fincaId ? (lotesPorFinca[fincaId] ?? []) : [];
   const isEdit = Boolean(record);
+  const guardar = useGuardarOffline();
 
   useEffect(() => {
     if (record || !defaultLoteId) return;
@@ -117,17 +116,28 @@ export function AnalisisSueloForm({
 
     const fd = new FormData(e.currentTarget);
 
-    const result =
-      isEdit && record
-        ? await actualizarAnalisisSueloDesdeFormulario(fd)
-        : await registrarAnalisisSueloDesdeFormulario(fd);
+    if (isEdit && record) {
+      const editado = await actualizarAnalisisSueloDesdeFormulario(fd);
+      setPending(false);
+      if (!editado.success) setError(editado.error);
+      else onSuccess({ offline: false });
+      return;
+    }
+
+    const payload: Record<string, unknown> = {};
+    const archivos: File[] = [];
+    fd.forEach((valor, campo) => {
+      if (typeof valor === "string") payload[campo] = valor;
+      else if (valor.size > 0) archivos.push(valor);
+    });
+    const result = await guardar("analisis_suelo", payload, { archivos });
 
     setPending(false);
 
     if (!result.success) {
       setError(result.error);
     } else {
-      onSuccess();
+      onSuccess({ offline: result.offline });
     }
   }
 
@@ -137,7 +147,12 @@ export function AnalisisSueloForm({
       : "flex flex-col gap-4";
 
   return (
-    <form onSubmit={handleSubmit} className={shellClass} encType="multipart/form-data">
+    <form
+      onSubmit={handleSubmit}
+      className={shellClass}
+      encType="multipart/form-data"
+      data-offline-ok={isEdit ? undefined : ""}
+    >
       {isEdit && record ? (
         <input type="hidden" name="id" value={record.id} />
       ) : null}

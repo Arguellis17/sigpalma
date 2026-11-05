@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -112,7 +113,7 @@ export function PlanNutricionClient({
       setAnalisis(undefined);
       return;
     }
-    const res = await getUltimoAnalisisSueloPorLote(lid);
+    const res = await conCache(`ultimo-analisis:${lid}`, () => getUltimoAnalisisSueloPorLote(lid));
     if (!res.success) {
       setAnalisis(undefined);
       return;
@@ -151,7 +152,7 @@ export function PlanNutricionClient({
     setLoadingDetalle(true);
     setDialogOpen(true);
     setEditingId(row.id);
-    const det = await getPlanNutricionDetalle(row.id);
+    const det = await conCache(`plan-nutricion:${row.id}`, () => getPlanNutricionDetalle(row.id));
     setLoadingDetalle(false);
     if (!det.success) {
       toast(det.error, "error");
@@ -795,7 +796,7 @@ export function PlanNutricionClient({
             <Button type="button" variant="outline" onClick={() => setAnularOpen(false)}>
               No
             </Button>
-            <Button type="button" variant="destructive" onClick={() => void confirmarAnular()}>
+            <Button type="button" variant="destructive" data-requiere-conexion onClick={() => void confirmarAnular()}>
               Sí, anular
             </Button>
           </DialogFooter>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getLotesPorFinca } from "@/app/actions/queries";
+import { conCache } from "@/lib/offline/referencia";
 
 type FincaMini = { id: string };
 type LoteMini = { id: string; codigo: string };
@@ -48,17 +49,19 @@ export function useFincaLoteOptions(
     queueMicrotask(() => {
       if (!cancelled) setLoadingLotes(true);
     });
-    void getLotesPorFinca(fincaId).then((res) => {
-      if (cancelled) return;
-      setLoadingLotes(false);
-      if (res.success) {
-        setLotes(res.data);
-        setLoteId(res.data[0]?.id ?? "");
-      } else {
-        setLotes([]);
-        setLoteId("");
-      }
-    });
+    // Sin conexión se usan los lotes guardados la última vez que se abrió el formulario.
+    void conCache(`lotes:${fincaId}`, () => getLotesPorFinca(fincaId))
+      .then((res) => {
+        if (cancelled) return;
+        setLoadingLotes(false);
+        if (res.success) {
+          setLotes(res.data);
+          setLoteId(res.data[0]?.id ?? "");
+        } else {
+          setLotes([]);
+          setLoteId("");
+        }
+      });
     return () => {
       cancelled = true;
     };

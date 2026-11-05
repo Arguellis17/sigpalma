@@ -1,9 +1,10 @@
 "use client";
 
+import { useGuardarOffline } from "@/components/offline/estado-offline";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Plus, RefreshCw, Search } from "lucide-react";
-import { registrarAplicacionFitosanitaria } from "@/app/actions/fitosanidad";
 import type { AplicacionFitosanitariaListRow } from "@/app/actions/fitosanidad";
 import { useServerPropsState } from "@/hooks/use-server-props-state";
 import { parseCantidadDosis, mensajeDesviacionDosis } from "@/lib/sanidad-dosis";
@@ -46,7 +47,7 @@ async function captureGps(): Promise<{ lat: number; lng: number } | null> {
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 12_000,
+        timeout: 30_000, // arranque en frío sin señal: sin datos móviles el GPS tarda más
         maximumAge: 30_000,
         enableHighAccuracy: true,
       });
@@ -64,7 +65,7 @@ function AplicacionForm({
 }: {
   ordenes: OrdenPendienteRow[];
   embedded?: boolean;
-  onSuccess: () => void;
+  onSuccess: (info: { offline: boolean }) => void;
 }) {
   const [ordenId, setOrdenId] = useState(ordenes[0]?.id ?? "");
   const [fecha, setFecha] = useState(() => todayLocalYmd());
@@ -76,6 +77,7 @@ function AplicacionForm({
   const [gpsPending, setGpsPending] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const guardar = useGuardarOffline();
   const [err, setErr] = useState<string | null>(null);
 
   const selected = ordenes.find((o) => o.id === ordenId);
@@ -155,7 +157,7 @@ function AplicacionForm({
       }
     }
     setPending(true);
-    const res = await registrarAplicacionFitosanitaria({
+    const res = await guardar("aplicacion_fitosanitaria", {
       orden_id: ordenId,
       fecha_aplicacion: fecha,
       cantidad_aplicada: qty,
@@ -171,11 +173,11 @@ function AplicacionForm({
       setErr(res.error);
       return;
     }
-    onSuccess();
+    onSuccess({ offline: res.offline });
   }
 
   return (
-    <form onSubmit={onSubmit} className={formClass}>
+    <form onSubmit={onSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="orden">Orden de control</Label>
         <Select value={ordenId} onValueChange={setOrdenId}>
@@ -309,8 +311,9 @@ export function AplicacionesOperarioClient({ ordenes, initialHistorial }: Props)
     });
   }, [historial, search]);
 
-  function afterSuccess() {
+  function afterSuccess(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Aplicación registrada. Orden cerrada.", "success");
     router.refresh();
   }

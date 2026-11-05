@@ -7,7 +7,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // sw.js: service worker de notificaciones; el navegador no acepta redirecciones al registrarlo.
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // PWA: el service worker (/serwist/*), la página sin conexión y el manifiesto deben cargarse
+    // sin sesión ni redirecciones (el navegador rechaza un service worker redirigido).
+    // api/v1/ping: comprobación de conectividad cada 30 s, sin consultar la sesión.
+    "/((?!_next/static|_next/image|favicon.ico|serwist/|~offline|manifest\\.webmanifest|api/v1/ping|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

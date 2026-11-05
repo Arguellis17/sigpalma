@@ -1,7 +1,8 @@
 "use client";
 
+import { useGuardarOffline } from "@/components/offline/estado-offline";
+
 import { useState } from "react";
-import { crearRegistroGerminacion } from "@/app/actions/germinacion";
 import type {
   CatalogoMaterialGeneticoOption,
   LoteOption,
@@ -27,7 +28,7 @@ type Props = {
   materiales: CatalogoMaterialGeneticoOption[];
   lotes: LoteOption[];
   embedded?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (info: { offline: boolean }) => void;
 };
 
 export function GerminacionForm({
@@ -48,6 +49,7 @@ export function GerminacionForm({
   const [notas, setNotas] = useState("");
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const guardar = useGuardarOffline();
 
   const formClass = embedded
     ? "flex max-w-none flex-col gap-5"
@@ -61,7 +63,7 @@ export function GerminacionForm({
       return;
     }
     setPending(true);
-    const res = await crearRegistroGerminacion({
+    const res = await guardar("germinacion", {
       finca_id: fincaId,
       catalogo_material_id: catalogoMaterialId,
       lote_id: loteId === LOTE_NONE ? null : loteId,
@@ -76,14 +78,14 @@ export function GerminacionForm({
       return;
     }
     if (onSuccess) {
-      onSuccess();
+      onSuccess({ offline: res.offline });
       return;
     }
     setNotas("");
   }
 
   return (
-    <form onSubmit={onSubmit} className={formClass}>
+    <form onSubmit={onSubmit} className={formClass} data-offline-ok>
       {!embedded ? (
         <>
           <h3 className="text-lg font-semibold text-foreground">Nuevo registro</h3>

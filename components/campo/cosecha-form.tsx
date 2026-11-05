@@ -1,9 +1,12 @@
 "use client";
 
+import { useGuardarOffline, type DatosDe } from "@/components/offline/estado-offline";
+import { conCache } from "@/lib/offline/referencia";
+
 import { useEffect, useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
-import { reportarCosecha } from "@/app/actions/cosecha";
-import { getLotesCosechables, getMaxPesoCosechaLote } from "@/app/actions/queries";
+import type { reportarCosecha } from "@/app/actions/cosecha";
+import { getLotesConCosechaProgramada, getLotesCosechables, getMaxPesoCosechaLote } from "@/app/actions/queries";
 import {
   mensajePesoInusual,
   pesoEsInusual,
@@ -38,7 +41,7 @@ type Props = {
   fincas: FincaRow[];
   defaultFincaId: string | null;
   embedded?: boolean;
-  onSuccess?: () => void;
+  onSuccess?: (info: { offline: boolean }) => void;
 };
 
 async function captureGps(): Promise<{ lat: number; lng: number } | null> {
@@ -46,7 +49,7 @@ async function captureGps(): Promise<{ lat: number; lng: number } | null> {
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 12_000,
+        timeout: 30_000, // arranque en frío sin señal: sin datos móviles el GPS tarda más
         maximumAge: 30_000,
         enableHighAccuracy: true,
       });
@@ -69,6 +72,8 @@ export function CosechaForm({
   const [loteId, setLoteId] = useState("");
   const [lotes, setLotes] = useState<{ id: string; codigo: string }[]>([]);
   const [loadingLotes, setLoadingLotes] = useState(false);
+  const [lotesProgramados, setLotesProgramados] = useState<string[] | null>(null);
+  const guardar = useGuardarOffline();
 
   const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [pesoKg, setPesoKg] = useState("");
@@ -96,7 +101,8 @@ export function CosechaForm({
     }
     let cancelled = false;
     setLoadingLotes(true);
-    void getLotesCosechables(fincaId, fecha).then((res) => {
+    void conCache(`cosechables:${fincaId}`, () => getLotesCosechables(fincaId, fecha))
+      .then((res) => {
       if (cancelled) return;
       setLoadingLotes(false);
       if (res.success) {
@@ -115,12 +121,24 @@ export function CosechaForm({
   }, [fincaId, fecha]);
 
   useEffect(() => {
+    if (!fincaId) return;
+    let cancelled = false;
+    void conCache(`cosecha-programada:${fincaId}`, () => getLotesConCosechaProgramada(fincaId, fecha)).then((res) => {
+      if (!cancelled) setLotesProgramados(res.success ? res.data : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fincaId, fecha]);
+
+  useEffect(() => {
     if (!loteId) {
       setMaxPesoHistorico(null);
       return;
     }
     let cancelled = false;
-    void getMaxPesoCosechaLote(loteId).then((res) => {
+    void conCache(`max-peso:${loteId}`, () => getMaxPesoCosechaLote(loteId))
+      .then((res) => {
       if (cancelled) return;
       setMaxPesoHistorico(res.success ? res.data : null);
     });
@@ -179,7 +197,7 @@ export function CosechaForm({
       return;
     }
     setPending(true);
-    const res = await reportarCosecha({
+    const res = await guardar<DatosDe<typeof reportarCosecha>>("cosecha", {
       finca_id: fincaId,
       lote_id: loteId,
       fecha,
@@ -205,9 +223,10 @@ export function CosechaForm({
     setConteo("");
     setObs("");
     if (onSuccess) {
-      onSuccess();
+      onSuccess({ offline: res.offline });
       return;
     }
+    if (res.offline) return;
     setResultado({
       id: res.data.id,
       rendimiento: res.data.rendimiento_ton_ha,
@@ -242,7 +261,7 @@ export function CosechaForm({
 
   return (
     <>
-      <form onSubmit={onSubmit} className={formClass}>
+      <form onSubmit={onSubmit} className={formClass} data-offline-ok>
         <div className="space-y-2">
           <Label htmlFor="c-finca">Finca</Label>
           <Select value={fincaId} onValueChange={setFincaId}>
@@ -343,6 +362,13 @@ export function CosechaForm({
             </Button>
           </div>
         </div>
+        {/* Solo avisa: la lista puede estar desactualizada y bloquear perdería el registro de campo. */}
+        {loteId && lotesProgramados && !lotesProgramados.includes(loteId) ? (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100 sm:col-span-2" data-testid="aviso-sin-programacion">
+            Este lote no tiene una labor «Cosecha RFF» programada. Puede guardar el registro, pero el servidor lo
+            rechazará hasta que el agrónomo la programe; luego podrá reintentarlo.
+          </p>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="peso">Peso total (kg)</Label>
           <NumericInput

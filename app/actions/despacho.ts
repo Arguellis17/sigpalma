@@ -13,6 +13,7 @@ import { renderRemisionPdfBuffer } from "@/lib/pdf/render-remision-pdf";
 import type { RemisionPdfData } from "@/lib/pdf/remision-pdf-types";
 import { crearRemisionDespachoSchema } from "@/lib/validations/despacho";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 export type CosechaDisponibleDespachoRow = {
@@ -246,6 +247,7 @@ export async function crearRemisionDespacho(
     return actionError("La finca no coincide con su asignación.");
   }
 
+  const meta = metaOffline(raw);
   const placaRes = validarPlacaVehiculo(input.placa_vehiculo);
   if (!placaRes.ok) return actionError(placaRes.error);
 
@@ -262,7 +264,9 @@ export async function crearRemisionDespacho(
 
   if (ce) return actionError(ce.message);
   if (!cosechas?.length || cosechas.length !== input.cosecha_ids.length) {
-    return actionError("Una o más cosechas no están disponibles para despacho.");
+    return actionError(
+      `${PREFIJO_CONFLICTO}Una o más cosechas ya no están disponibles para despacho (otra remisión las incluyó).`
+    );
   }
 
   const cosechaRows = cosechas.map((c) => ({
@@ -316,10 +320,17 @@ export async function crearRemisionDespacho(
       p_created_by: session.user.id,
       p_source: input.source,
       p_cosecha_ids: input.cosecha_ids,
+      // Solo con id de operación se usa la sobrecarga idempotente del RPC (modo offline).
+      ...(meta.client_op_id
+        ? { p_client_op_id: meta.client_op_id, p_capturado_en: meta.capturado_en }
+        : {}),
     }
   );
 
   if (rpcErr || !remisionId) {
+    if (rpcErr?.message?.includes("no están disponibles")) {
+      return actionError(`${PREFIJO_CONFLICTO}${rpcErr.message}`);
+    }
     return actionError(rpcErr?.message ?? "No se pudo crear la remisión.");
   }
 

@@ -42,6 +42,7 @@ export default async function PlataformaLayout({
       <AppShell
         session={{
           userId: session.user.id,
+          fincaId,
           email: session.user.email ?? null,
           fullName: session.profile?.full_name ?? null,
           role: session.profile?.role ?? null,

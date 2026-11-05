@@ -8,6 +8,7 @@ import {
   type CrearEvaluacionViveroInput,
 } from "@/lib/validations/evaluacion-vivero";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 const EVIDENCIA_BUCKET = "evidencia-tecnica";
@@ -56,7 +57,7 @@ export async function crearEvaluacionVivero(
 
   if (existente) {
     return actionError(
-      "Ya existe una evaluación de vivero activa para esta germinación. Anúlela antes de crear otra."
+      `${PREFIJO_CONFLICTO}Ya existe una evaluación de vivero activa para esta germinación. Anúlela antes de crear otra.`
     );
   }
 
@@ -65,6 +66,7 @@ export async function crearEvaluacionVivero(
   const { data: inserted, error: insErr } = await supabase
     .from("evaluaciones_vivero")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       germinacion_id: input.germinacion_id,
       total_inicial: input.total_inicial,

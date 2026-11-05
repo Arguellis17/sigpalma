@@ -51,8 +51,9 @@ export function CensosSanitariosClient({
     });
   }, [rows, search]);
 
-  function afterCreate() {
+  function afterCreate(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Censo sanitario registrado.", "success");
     router.refresh();
   }

@@ -34,6 +34,7 @@ import {
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CentroNotificaciones } from "@/components/notificaciones/centro-notificaciones";
+import { IndicadorOffline, OfflineProvider } from "@/components/offline/estado-offline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +72,7 @@ type AppShellProps = {
     email: string | null;
     fullName: string | null;
     role: UserRole | null;
+    fincaId: string | null;
     /** Finca asignada (admin, agrónomo, operario); null para superadmin sin finca */
     fincaName: string | null;
     /** HU13 RN37: monitoreos pendientes asignados al operario */
@@ -657,8 +659,11 @@ export function AppShell({ children, session }: AppShellProps) {
   );
   const pageMeta = useMemo(() => getPageMeta(pathname), [pathname]);
   const breadcrumbs = useMemo(() => buildBreadcrumbs(pathname), [pathname]);
+  // Páginas del rol que se precargan para abrirlas sin conexión.
+  const rutasPrecarga = useMemo(() => [...new Set(navGroups.flatMap((g) => g.items.map((i) => i.href)))], [navGroups]);
 
   return (
+    <OfflineProvider userId={session.userId} fincaId={session.fincaId} rutasPrecarga={rutasPrecarga}>
     <SidebarProvider defaultOpen>
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
@@ -797,7 +802,7 @@ export function AppShell({ children, session }: AppShellProps) {
 
       <SidebarInset
         className={cn(
-          "min-h-svh bg-transparent",
+          "min-h-svh min-w-0 bg-transparent",
           // Tighter than default shadcn inset: no outer “card” margin, flush with sidebar column
           "md:peer-data-[variant=inset]:!m-0 md:peer-data-[variant=inset]:!rounded-none md:peer-data-[variant=inset]:!shadow-none",
           "md:peer-data-[variant=inset]:peer-data-[state=collapsed]:!m-0"
@@ -845,6 +850,7 @@ export function AppShell({ children, session }: AppShellProps) {
                 </p>
               </div>
 
+              <IndicadorOffline />
               {session.isActive && (session.role === "agronomo" || session.role === "operario") ? (
                 <CentroNotificaciones
                   usuarioId={session.userId}
@@ -865,6 +871,7 @@ export function AppShell({ children, session }: AppShellProps) {
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </OfflineProvider>
   );
 }
 

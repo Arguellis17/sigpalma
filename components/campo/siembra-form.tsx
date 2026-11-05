@@ -87,7 +87,7 @@ export function SiembraForm({
   }
 
   return (
-    <form onSubmit={onRequestSubmit} className={formClass}>
+    <form onSubmit={onRequestSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="lote">Lote</Label>
         <Select value={loteKey} onValueChange={setLoteKey}>

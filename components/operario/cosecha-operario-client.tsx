@@ -32,6 +32,8 @@ export type CosechaListRow = {
   area_ha: number;
   rendimiento_ton_ha: number;
   created_at: string;
+  /** Mismo lote, fecha, peso y racimos que otra cosecha: revisar y anular si fue doble registro. */
+  posible_duplicado_de: string | null;
 };
 
 type Finca = { id: string; nombre: string };
@@ -76,8 +78,9 @@ export function CosechaOperarioClient({
     });
   }, [rows, search]);
 
-  function afterCreate() {
+  function afterCreate(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Cosecha registrada.", "success");
     router.refresh();
   }
@@ -157,7 +160,12 @@ export function CosechaOperarioClient({
                     <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                       {formatDate(r.fecha)}
                     </td>
-                    <td className="px-4 py-3 font-medium">{r.lote_codigo}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {r.lote_codigo}
+                      {r.posible_duplicado_de ? (
+                        <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-100">Posible duplicado</span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 tabular-nums">
                       {Number(r.peso_kg).toLocaleString("es-CO", { maximumFractionDigits: 3 })}
                     </td>
@@ -300,7 +308,7 @@ export function CosechaOperarioClient({
             <Button variant="ghost" onClick={() => setConfirmAnular(null)} disabled={pendingAnular}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleAnular} disabled={pendingAnular}>
+            <Button variant="destructive" data-requiere-conexion onClick={handleAnular} disabled={pendingAnular}>
               {pendingAnular ? "Anulando…" : "Anular"}
             </Button>
           </DialogFooter>

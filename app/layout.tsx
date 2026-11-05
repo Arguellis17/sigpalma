@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import { IBM_Plex_Mono, Lora, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,13 @@ export const metadata: Metadata = {
   title: "SIG-Palma",
   description:
     "Gestión técnica y trazabilidad del cultivo de palma de aceite (UFPS).",
+  applicationName: "SIG-Palma",
+  appleWebApp: { capable: true, title: "SIG-Palma", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1f5f3f",
 };
 
 export default function RootLayout({
@@ -42,9 +50,13 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${ibmPlexMono.variable} ${lora.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground selection:bg-primary/20 selection:text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
+        {/* PWA: registra el service worker; sin recarga automática al volver la señal para no
+            interrumpir formularios ni la sincronización de la cola offline. */}
+        <SerwistProvider swUrl="/serwist/sw.js" reloadOnOnline={false} cacheOnNavigation>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

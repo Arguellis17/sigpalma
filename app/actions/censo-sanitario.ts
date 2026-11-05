@@ -9,6 +9,7 @@ import {
 } from "@/lib/censo-sanitario";
 import { registrarCensoSanitarioSchema } from "@/lib/validations/censo-sanitario";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 import { crearAlertaDesdeCensoUmbral } from "./alertas";
 
@@ -30,6 +31,8 @@ export type CapacidadPalmasLote = {
   lote_id: string;
   codigo: string;
   total_estimado: number | null;
+  area_ha: number | string | null;
+  densidad_palmas_ha: number | string | null;
 };
 
 export async function getCapacidadPalmasLote(
@@ -63,6 +66,8 @@ export async function getCapacidadPalmasLote(
     lote_id: lote.id,
     codigo: lote.codigo,
     total_estimado: estimarTotalPalmasLote(lote.area_ha, lote.densidad_palmas_ha),
+    area_ha: lote.area_ha,
+    densidad_palmas_ha: lote.densidad_palmas_ha,
   });
 }
 
@@ -152,6 +157,7 @@ export async function registrarCensoSanitario(
   const { data, error } = await supabase
     .from("censos_sanitarios")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       catalogo_item_id: input.catalogo_item_id,

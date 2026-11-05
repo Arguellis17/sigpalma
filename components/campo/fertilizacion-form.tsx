@@ -43,7 +43,7 @@ async function captureGps(): Promise<{ lat: number; lng: number } | null> {
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 12_000,
+        timeout: 30_000, // arranque en frío sin señal: sin datos móviles el GPS tarda más
         maximumAge: 30_000,
         enableHighAccuracy: true,
       });
@@ -163,7 +163,7 @@ export function FertilizacionAplicacionForm({
   }
 
   return (
-    <form onSubmit={onRequestSubmit} className={formClass}>
+    <form onSubmit={onRequestSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="tarea">Tarea programada</Label>
         <Select value={itemId} onValueChange={setItemId}>

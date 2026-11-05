@@ -13,10 +13,13 @@ import {
 import { EVIDENCIA_TECNICA_BUCKET } from "@/lib/storage-evidencia-tecnica";
 import { notificarAlertaFitosanitaria } from "@/lib/push/enviar";
 import { after } from "next/server";
+import { metaOffline, type MetaOffline } from "@/lib/offline/meta";
 import { actionError, actionOk, type ActionResult } from "./types";
 import { registrarEventoFinca } from "./audit";
 
 const MAX_IMG_BYTES = 4 * 1024 * 1024;
+/** Ventana para marcar dos reportes del mismo lote y amenaza como posible duplicado. */
+const VENTANA_DUPLICADO_MS = 72 * 60 * 60 * 1000;
 
 /**
  * Sube evidencia fotográfica de alerta fitosanitaria al bucket evidencia-tecnica.
@@ -80,12 +83,19 @@ export async function subirEvidenciaAlertaFitosanitaria(
 type CrearAlertaOpts = {
   /** HU25/HU26: exige categoría del ítem de catálogo. */
   categoriaRequerida?: "plaga" | "enfermedad";
+  meta?: MetaOffline;
+};
+
+export type CrearAlertaResult = {
+  id: string;
+  lote_estado_alerta: boolean;
+  posible_duplicado_de: string | null;
 };
 
 async function crearAlertaFitosanitariaInternal(
   input: AlertaFitosanitariaInput,
   opts?: CrearAlertaOpts
-): Promise<ActionResult<{ id: string; lote_estado_alerta: boolean }>> {
+): Promise<ActionResult<CrearAlertaResult>> {
   const session = await getSessionProfile();
   if (!session?.user || !session.profile?.is_active) {
     return actionError("Sesión no válida. Inicie sesión nuevamente.");
@@ -137,9 +147,30 @@ async function crearAlertaFitosanitariaInternal(
 
   const lote_estado_alerta = input.severidad === "critica";
 
+  // Offline-first: dos personas pueden reportar la misma amenaza sin conexión. Se conservan ambos
+  // reportes (evidencia RSPO) y el nuevo queda enlazado al existente para revisión del técnico.
+  let posible_duplicado_de: string | null = null;
+  if (input.catalogo_item_id) {
+    const desde = new Date(Date.now() - VENTANA_DUPLICADO_MS).toISOString();
+    const { data: previa } = await supabase
+      .from("alertas_fitosanitarias")
+      .select("id")
+      .eq("lote_id", input.lote_id)
+      .eq("catalogo_item_id", input.catalogo_item_id)
+      .eq("validacion_estado", "pendiente")
+      .eq("is_voided", false)
+      .gte("created_at", desde)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    posible_duplicado_de = previa?.id ?? null;
+  }
+
   const { data, error } = await supabase
     .from("alertas_fitosanitarias")
     .insert({
+      ...(opts?.meta ?? {}),
+      posible_duplicado_de,
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       catalogo_item_id: input.catalogo_item_id ?? null,
@@ -193,16 +224,22 @@ async function crearAlertaFitosanitariaInternal(
       loteEnEstadoAlerta: data.lote_estado_alerta,
       evidencias: input.evidencia_urls.length,
       validacionEstado: "pendiente",
+      posibleDuplicadoDe: posible_duplicado_de,
+      capturadoEn: opts?.meta?.capturado_en ?? null,
     },
   });
 
-  // Web Push a los técnicos de la finca, sin retrasar la respuesta al operario.
+  // Web Push a los técnicos de la finca, sin retrasar la respuesta al operario. Un posible duplicado no
+  // se vuelve a notificar: los técnicos ya recibieron el aviso de la alerta original.
   const alertaId = data.id;
-  after(() => notificarAlertaFitosanitaria(alertaId).catch((e) => console.error("[push] alerta:", e)));
+  if (!posible_duplicado_de) {
+    after(() => notificarAlertaFitosanitaria(alertaId).catch((e) => console.error("[push] alerta:", e)));
+  }
 
   return actionOk({
     id: data.id,
     lote_estado_alerta: data.lote_estado_alerta,
+    posible_duplicado_de,
   });
 }
 
@@ -290,34 +327,34 @@ export async function crearAlertaDesdeCensoUmbral(
 
 export async function crearAlertaFitosanitaria(
   raw: unknown
-): Promise<ActionResult<{ id: string; lote_estado_alerta: boolean }>> {
+): Promise<ActionResult<CrearAlertaResult>> {
   const parsed = alertaFitosanitariaSchema.safeParse(raw);
   if (!parsed.success) {
     return actionError(parsed.error.issues.map((i) => i.message).join("; "));
   }
-  return crearAlertaFitosanitariaInternal(parsed.data);
+  return crearAlertaFitosanitariaInternal(parsed.data, { meta: metaOffline(raw) });
 }
 
 /** HU25 / RF25: reporte de plaga con catálogo y foto obligatorios (RN71–RN73). */
 export async function crearReportePlaga(
   raw: unknown
-): Promise<ActionResult<{ id: string; lote_estado_alerta: boolean }>> {
+): Promise<ActionResult<CrearAlertaResult>> {
   const parsed = reportePlagaSchema.safeParse(raw);
   if (!parsed.success) {
     return actionError(parsed.error.issues.map((i) => i.message).join("; "));
   }
   const input: ReportePlagaInput = parsed.data;
-  return crearAlertaFitosanitariaInternal(input, { categoriaRequerida: "plaga" });
+  return crearAlertaFitosanitariaInternal(input, { categoriaRequerida: "plaga", meta: metaOffline(raw) });
 }
 
 /** HU26 / RF26: reporte de enfermedad con catálogo y foto obligatorios (RN74–RN76). */
 export async function crearReporteEnfermedad(
   raw: unknown
-): Promise<ActionResult<{ id: string; lote_estado_alerta: boolean }>> {
+): Promise<ActionResult<CrearAlertaResult>> {
   const parsed = reporteEnfermedadSchema.safeParse(raw);
   if (!parsed.success) {
     return actionError(parsed.error.issues.map((i) => i.message).join("; "));
   }
   const input: ReporteEnfermedadInput = parsed.data;
-  return crearAlertaFitosanitariaInternal(input, { categoriaRequerida: "enfermedad" });
+  return crearAlertaFitosanitariaInternal(input, { categoriaRequerida: "enfermedad", meta: metaOffline(raw) });
 }

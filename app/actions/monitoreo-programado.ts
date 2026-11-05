@@ -23,6 +23,7 @@ import { after } from "next/server";
 import { notificarMonitoreoAsignado } from "@/lib/push/enviar";
 import { debeNotificarAsignacion } from "@/lib/notificaciones/monitoreo-asignado";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 const DUP_MSG =
@@ -363,14 +364,18 @@ export async function marcarMonitoreoCompletado(
 
   const { data: prev, error: pe } = await supabase
     .from("monitoreos_fitosanitarios_programados")
-    .select("id, finca_id, lote_id, estado, is_voided")
+    .select("id, finca_id, lote_id, estado, is_voided, assigned_to")
     .eq("id", id)
     .maybeSingle();
 
   if (pe || !prev) return actionError("Programación no encontrada.");
-  if (prev.is_voided) return actionError("La programación está anulada.");
+  if (prev.is_voided) return actionError(`${PREFIJO_CONFLICTO}La programación fue anulada por el técnico.`);
+  // Reintento de sincronización: ya la completó este mismo operario → éxito.
+  if (prev.estado === "completada" && prev.assigned_to === activeSession.user.id) {
+    return actionOk({ id: prev.id });
+  }
   if (prev.estado !== "pendiente") {
-    return actionError("Solo puede completar inspecciones pendientes.");
+    return actionError(`${PREFIJO_CONFLICTO}La inspección ya no está pendiente (estado: ${prev.estado}).`);
   }
   if (activeSession.profile!.finca_id !== prev.finca_id) {
     return actionError("La programación no pertenece a su finca.");

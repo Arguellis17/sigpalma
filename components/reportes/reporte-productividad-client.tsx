@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileDown, FileSpreadsheet } from "lucide-react";
@@ -53,7 +54,7 @@ export function ReporteProductividadClient({
     if (!fincaId) return;
     setReporte(null);
     let cancelled = false;
-    void getLotesPorFinca(fincaId).then((res) => {
+    void conCache(`lotes:${fincaId}`, () => getLotesPorFinca(fincaId)).then((res) => {
       if (cancelled) return;
       if (res.success) {
         setLotes(res.data);

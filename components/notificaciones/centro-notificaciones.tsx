@@ -1,5 +1,6 @@
 "use client";
 
+import { conCache } from "@/lib/offline/referencia";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BellRing, CheckCheck, ClipboardList, ShieldAlert, Trash2, X } from "lucide-react";
@@ -63,7 +64,7 @@ export function CentroNotificaciones({ usuarioId, textoInvitacion }: Props) {
   }, [router]);
 
   const recargar = useCallback(async () => {
-    const r = await listarNotificaciones();
+    const r = await conCache("notificaciones", () => listarNotificaciones());
     if (r.success) {
       setItems(r.data.items);
       setNoLeidas(r.data.noLeidas);
@@ -72,7 +73,7 @@ export function CentroNotificaciones({ usuarioId, textoInvitacion }: Props) {
 
   useEffect(() => {
     let vigente = true;
-    void listarNotificaciones().then((r) => {
+    void conCache("notificaciones", () => listarNotificaciones()).then((r) => {
       if (!vigente || !r.success) return;
       setItems(r.data.items);
       setNoLeidas(r.data.noLeidas);
@@ -118,18 +119,18 @@ export function CentroNotificaciones({ usuarioId, textoInvitacion }: Props) {
     const ahora = new Date().toISOString();
     setItems((prev) => prev.map((n) => (!ids || ids.includes(n.id)) && !n.leida_at ? { ...n, leida_at: ahora } : n));
     setNoLeidas((c) => (ids ? Math.max(0, c - items.filter((n) => ids.includes(n.id) && !n.leida_at).length) : 0));
-    await marcarNotificacionesLeidas(ids);
+    await marcarNotificacionesLeidas(ids).catch(() => undefined); // sin conexión: se reintenta al abrirlas de nuevo
   }
 
   async function eliminar(ids: string[]) {
     setNoLeidas((c) => Math.max(0, c - items.filter((n) => ids.includes(n.id) && !n.leida_at).length));
     setItems((prev) => prev.filter((n) => !ids.includes(n.id)));
-    await eliminarNotificaciones({ ids });
+    await eliminarNotificaciones({ ids }).catch(() => undefined);
   }
 
   async function eliminarLeidas() {
     setItems((prev) => prev.filter((n) => !n.leida_at));
-    await eliminarNotificaciones({ soloLeidas: true });
+    await eliminarNotificaciones({ soloLeidas: true }).catch(() => undefined);
   }
 
   function abrir(n: NotificacionRow) {

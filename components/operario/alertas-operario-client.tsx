@@ -73,20 +73,23 @@ export function AlertasOperarioClient({
     });
   }, [rows, search, filtroTipo]);
 
-  function afterCreateEnfermedad() {
+  function afterCreateEnfermedad(info?: { offline: boolean }) {
     setCreateEnfermedadOpen(false);
+    if (info?.offline) return;
     toast("Reporte de enfermedad registrado.", "success");
     router.refresh();
   }
 
-  function afterCreatePlaga() {
+  function afterCreatePlaga(info?: { offline: boolean }) {
     setCreatePlagaOpen(false);
+    if (info?.offline) return;
     toast("Reporte de plaga registrado.", "success");
     router.refresh();
   }
 
-  function afterCreate() {
+  function afterCreate(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Alerta registrada.", "success");
     router.refresh();
   }

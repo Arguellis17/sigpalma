@@ -27,6 +27,8 @@ import {
 export type AlertaPendienteRow = {
   id: string;
   created_at: string;
+  /** Otra alerta pendiente del mismo lote y amenaza (dos personas reportaron lo mismo). */
+  posible_duplicado_de: string | null;
   severidad: string;
   descripcion: string | null;
   lote_codigo: string;
@@ -148,7 +150,12 @@ export function ValidacionFitosanidadClient({
                     })}
                   </td>
                   <td className="px-4 py-3 font-medium">{a.lote_codigo}</td>
-                  <td className="px-4 py-3">{a.amenaza ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    {a.amenaza ?? "—"}
+                    {a.posible_duplicado_de ? (
+                      <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-100">Posible duplicado</span>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3 capitalize">{a.severidad}</td>
                   <td className="px-4 py-3 text-right">
                     <Button
@@ -333,7 +340,7 @@ export function ValidacionFitosanidadClient({
                 <Button type="button" variant="outline" onClick={close}>
                   Cancelar
                 </Button>
-                <Button type="button" onClick={onConfirm} disabled={pending}>
+                <Button type="button" data-requiere-conexion onClick={onConfirm} disabled={pending}>
                   {pending ? "Guardando…" : "Confirmar"}
                 </Button>
               </DialogFooter>

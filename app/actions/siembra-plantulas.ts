@@ -12,6 +12,7 @@ import {
   type RegistrarSiembraPlantulasInput,
 } from "@/lib/validations/siembra-plantulas";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 export async function registrarSiembraPlantulas(
@@ -132,7 +133,7 @@ export async function registrarSiembraPlantulas(
     .maybeSingle();
 
   if (existente) {
-    return actionError("Este lote ya tiene un registro de siembra activo.");
+    return actionError(`${PREFIJO_CONFLICTO}Este lote ya tiene un registro de siembra activo.`);
   }
 
   const anioSiembra = Number(input.fecha_siembra.slice(0, 4));
@@ -140,6 +141,7 @@ export async function registrarSiembraPlantulas(
   const { data: row, error: insertErr } = await supabase
     .from("registros_siembra")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       lote_id: input.lote_id,
       plan_siembra_id: plan.id,

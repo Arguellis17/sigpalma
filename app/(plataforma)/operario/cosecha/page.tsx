@@ -17,6 +17,7 @@ type CosechaRaw = {
   lote_id: string;
   fecha: string;
   peso_kg: string;
+  posible_duplicado_de: string | null;
   conteo_racimos: number;
   madurez_frutos_caidos_min: number | null;
   madurez_frutos_caidos_max: number | null;
@@ -36,7 +37,7 @@ export default async function OperarioCosechaPage() {
     ? await supabase
         .from("cosechas_rff")
         .select(
-          "id, lote_id, fecha, peso_kg, conteo_racimos, madurez_frutos_caidos_min, madurez_frutos_caidos_max, observaciones_calidad, latitud, longitud, created_at"
+          "id, lote_id, fecha, peso_kg, conteo_racimos, madurez_frutos_caidos_min, madurez_frutos_caidos_max, observaciones_calidad, latitud, longitud, created_at, posible_duplicado_de"
         )
         .eq("finca_id", fincaId)
         .eq("is_voided", false)
@@ -69,6 +70,7 @@ export default async function OperarioCosechaPage() {
       id: c.id,
       fecha: c.fecha,
       peso_kg: c.peso_kg,
+      posible_duplicado_de: c.posible_duplicado_de,
       conteo_racimos: c.conteo_racimos,
       madurez_frutos_caidos_min: c.madurez_frutos_caidos_min,
       madurez_frutos_caidos_max: c.madurez_frutos_caidos_max,

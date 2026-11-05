@@ -17,7 +17,7 @@ import {
  * Requiere NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY y VAPID_SUBJECT; sin ellas no envía nada.
  */
 
-/** Lo que recibe `public/sw.js` en el evento `push`. */
+/** Lo que recibe el service worker (`app/sw.ts`) en el evento `push`. */
 export type PushPayload = {
   title: string;
   body: string;

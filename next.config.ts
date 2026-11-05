@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSerwist } from "@serwist/turbopack";
 import { createRequire } from "node:module";
 import path from "node:path";
 
@@ -33,4 +34,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Serwist: excluye esbuild del bundle del servidor (compila el service worker en app/serwist).
+export default withSerwist(nextConfig);

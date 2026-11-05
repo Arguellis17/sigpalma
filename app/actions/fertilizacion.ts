@@ -10,6 +10,7 @@ import {
   type RegistrarAplicacionFertilizacionInput,
 } from "@/lib/validations/fertilizacion";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 export async function registrarAplicacionFertilizacion(
@@ -91,7 +92,7 @@ export async function registrarAplicacionFertilizacion(
     .eq("is_voided", false)
     .maybeSingle();
   if (existApp) {
-    return actionError("Esta línea de fertilización ya fue registrada como aplicada.");
+    return actionError(`${PREFIJO_CONFLICTO}Esta línea de fertilización ya fue registrada como aplicada.`);
   }
 
   const { data: lote, error: loteErr } = await supabase
@@ -152,6 +153,7 @@ export async function registrarAplicacionFertilizacion(
   const { data: row, error: insertErr } = await supabase
     .from("aplicaciones_fertilizacion")
     .insert({
+      ...metaOffline(raw),
       finca_id: input.finca_id,
       lote_id: plan.lote_id,
       plan_id: plan.id,

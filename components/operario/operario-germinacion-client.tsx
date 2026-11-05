@@ -52,8 +52,9 @@ export function OperarioGerminacionClient({
     });
   }, [rows, search]);
 
-  function afterCreate() {
+  function afterCreate(info?: { offline: boolean }) {
     setCreateOpen(false);
+    if (info?.offline) return;
     toast("Germinación registrada.", "success");
     router.refresh();
   }

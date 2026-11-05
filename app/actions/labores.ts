@@ -20,6 +20,7 @@ import {
 } from "@/lib/labor-ejecucion";
 import { assertOperarioAsignadoFinca } from "@/lib/operario-finca";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { metaOffline, PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 async function fetchLaborCatalogItem(
@@ -226,7 +227,9 @@ export async function registrarLaborEjecutada(
   }
 
   const supabase = await createClient();
-  const ejecutadaAt = new Date().toISOString();
+  const meta = metaOffline(raw);
+  // Sin conexión, la ejecución ocurrió cuando se capturó en el dispositivo, no al sincronizar.
+  const ejecutadaAt = meta.capturado_en ?? new Date().toISOString();
 
   const cat = await fetchLaborCatalogItem(supabase, input.catalogo_item_id);
   if (!cat.success) return cat;
@@ -257,7 +260,7 @@ export async function registrarLaborEjecutada(
       return actionError("Esta labor está asignada a otro operario.");
     }
     if (programada.cantidad_ejecutada != null) {
-      return actionError("Esta labor ya fue reportada como ejecutada.");
+      return actionError(`${PREFIJO_CONFLICTO}Esta labor ya fue reportada como ejecutada.`);
     }
     if (programada.catalogo_item_id !== input.catalogo_item_id) {
       return actionError("El tipo de labor no coincide con la programación.");
@@ -290,7 +293,8 @@ export async function registrarLaborEjecutada(
         ejecutada_at: ejecutadaAt,
         fecha_ejecucion: input.fecha_ejecucion,
         notas: notasMerged,
-        updated_at: ejecutadaAt,
+        updated_at: new Date().toISOString(),
+        ...meta,
       })
       .eq("id", input.labor_programada_id)
       .is("cantidad_ejecutada", null)
@@ -299,7 +303,11 @@ export async function registrarLaborEjecutada(
       .single();
 
     if (upErr || !updated) {
-      return actionError(upErr?.message ?? "No se pudo completar la labor programada.");
+      return actionError(
+        upErr?.code === "PGRST116"
+          ? `${PREFIJO_CONFLICTO}Esta labor ya fue reportada como ejecutada.`
+          : (upErr?.message ?? "No se pudo completar la labor programada.")
+      );
     }
 
     await registrarEventoFinca({
@@ -351,6 +359,7 @@ export async function registrarLaborEjecutada(
       cantidad_ejecutada: input.cantidad_ejecutada,
       unidad_medida: input.unidad_medida,
       ejecutada_at: ejecutadaAt,
+      ...meta,
     })
     .select("id")
     .single();

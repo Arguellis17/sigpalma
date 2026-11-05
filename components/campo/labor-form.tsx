@@ -1,7 +1,11 @@
 "use client";
 
+import { MENSAJE_GUARDADO_OFFLINE, useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
+import { getCapacidadPalmasLote } from "@/app/actions/censo-sanitario";
+import { validarCantidadLaborVsLote } from "@/lib/labor-ejecucion";
+import { conCache } from "@/lib/offline/referencia";
+
 import { useEffect, useState } from "react";
-import { registrarLaborEjecutada } from "@/app/actions/labores";
 import { useFincaLoteOptions } from "@/hooks/use-finca-lote-options";
 import {
   UNIDAD_MEDIDA_LABOR_LABEL,
@@ -39,14 +43,14 @@ type Props = {
   open?: boolean;
   defaultFechaYmd?: string;
   defaultPendienteId?: string;
-  onSuccess?: () => void;
+  onSuccess?: (info: { offline: boolean }) => void;
 };
 
 export function LaborForm({
   fincas,
   defaultFincaId,
   catalogoLabores,
-  pendientes,
+  pendientes: pendientesServidor,
   initialLotes,
   embedded = false,
   open = true,
@@ -64,6 +68,10 @@ export function LaborForm({
   const [fecha, setFecha] = useState(() => todayLocalYmd());
   const [notas, setNotas] = useState("");
   const [pending, setPending] = useState(false);
+  const guardar = useGuardarOffline();
+  // Labores programadas ya reportadas en este dispositivo (aún sin sincronizar) no se ofrecen de nuevo.
+  const laboresEnCola = useEnCola("labor_ejecutada", "labor_programada_id");
+  const pendientes = pendientesServidor.filter((p) => !laboresEnCola.has(p.id));
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,9 +135,19 @@ export function LaborForm({
       setError("Seleccione finca y lote.");
       return;
     }
+    // RN61 con los datos del lote guardados en el dispositivo (si no los hay, valida el servidor).
+    const idLote = pendienteSeleccionada?.lote_id ?? loteId;
+    const lote = await conCache(`capacidad:${idLote}`, () => getCapacidadPalmasLote(idLote));
+    if (lote.success && lote.data.area_ha != null) {
+      const excede = validarCantidadLaborVsLote(cantidadNum, unidad, lote.data);
+      if (excede) {
+        setError(excede);
+        return;
+      }
+    }
 
     setPending(true);
-    const result = await registrarLaborEjecutada({
+    const result = await guardar("labor_ejecutada", {
       finca_id: fincaId,
       lote_id: pendienteSeleccionada?.lote_id ?? loteId,
       catalogo_item_id: catalogoId,
@@ -149,10 +167,10 @@ export function LaborForm({
 
     resetAdHoc();
     if (onSuccess) {
-      onSuccess();
+      onSuccess({ offline: result.offline });
       return;
     }
-    setMessage("Labor registrada correctamente.");
+    setMessage(result.offline ? MENSAJE_GUARDADO_OFFLINE : "Labor registrada correctamente.");
   }
 
   if (fincas.length === 0) {
@@ -171,7 +189,7 @@ export function LaborForm({
   const catalogoLocked = !!pendienteSeleccionada;
 
   return (
-    <form onSubmit={onSubmit} className={formClass}>
+    <form onSubmit={onSubmit} className={formClass} data-offline-ok>
       {pendientes.length > 0 ? (
         <div className="space-y-2 rounded-2xl border border-primary/15 bg-primary/5 p-4">
           <Label htmlFor="pendiente">Tarea programada asignada (opcional)</Label>

@@ -234,6 +234,8 @@ export const laboresAgronomicas = pgTable("labores_agronomicas", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -289,6 +291,8 @@ export const preparacionesTerreno = pgTable("preparaciones_terreno", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -323,6 +327,8 @@ export const registrosSiembra = pgTable("registros_siembra", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -435,6 +441,8 @@ export const registrosGerminacion = pgTable("registros_germinacion", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -463,6 +471,8 @@ export const evaluacionesVivero = pgTable("evaluaciones_vivero", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -499,6 +509,8 @@ export const remisionesDespacho = pgTable(
     createdBy: uuid("created_by").notNull(),
     source: registroSourceEnum("source").notNull().default("web"),
     isVoided: boolean("is_voided").notNull().default(false),
+    clientOpId: uuid("client_op_id"),
+    capturadoEn: timestamp("capturado_en", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -539,6 +551,9 @@ export const cosechasRff = pgTable("cosechas_rff", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
+  posibleDuplicadoDe: uuid("posible_duplicado_de"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -571,6 +586,8 @@ export const analisisSuelo = pgTable("analisis_suelo", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -603,6 +620,9 @@ export const alertasFitosanitarias = pgTable("alertas_fitosanitarias", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
+  posibleDuplicadoDe: uuid("posible_duplicado_de"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -665,6 +685,8 @@ export const aplicacionesFitosanitarias = pgTable(
     notas: text("notas"),
     createdBy: uuid("created_by").notNull(),
     source: registroSourceEnum("source").notNull().default("web"),
+    clientOpId: uuid("client_op_id"),
+    capturadoEn: timestamp("capturado_en", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -714,6 +736,8 @@ export const aplicacionesFertilizacion = pgTable("aplicaciones_fertilizacion", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -776,6 +800,8 @@ export const censosSanitarios = pgTable("censos_sanitarios", {
   createdBy: uuid("created_by").notNull(),
   source: registroSourceEnum("source").notNull().default("web"),
   isVoided: boolean("is_voided").notNull().default(false),
+  clientOpId: uuid("client_op_id"),
+  capturadoEn: timestamp("capturado_en", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -456,7 +456,7 @@ export function PlanSiembraClient({
             >
               Volver
             </Button>
-            <Button type="button" variant="destructive" disabled={pending} onClick={confirmarAnular}>
+            <Button type="button" variant="destructive" disabled={pending} data-requiere-conexion onClick={confirmarAnular}>
               {pending ? "Anulando…" : "Anular plan"}
             </Button>
           </DialogFooter>

@@ -112,7 +112,7 @@ export function PreparacionTerrenoValidacionClient({ pendientes }: Props) {
         size="lg"
         className="min-h-12 rounded-2xl"
         disabled={pending}
-        onClick={() => void onValidar()}
+        data-requiere-conexion onClick={() => void onValidar()}
       >
         {pending ? "Validando…" : "Aprobar y habilitar siembra"}
       </Button>

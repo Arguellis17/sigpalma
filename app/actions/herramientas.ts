@@ -15,6 +15,7 @@ import {
   tomarHerramientaSchema,
 } from "@/lib/validations/herramientas";
 import { actionError, actionOk, type ActionResult } from "./types";
+import { PREFIJO_CONFLICTO } from "@/lib/offline/meta";
 import { registrarEventoFinca } from "./audit";
 
 type InventarioRow = Database["public"]["Tables"]["inventario_herramientas"]["Row"];
@@ -161,20 +162,33 @@ export async function tomarHerramienta(raw: unknown): Promise<ActionResult<{ id:
   if (!canAccessFinca(profile, row.finca_id)) {
     return actionError("No tiene permiso para esta finca.");
   }
+  // Reintento de sincronización: ya la tiene este mismo usuario → éxito sin repetir el registro.
+  if (row.estado === "en_uso" && row.assigned_to === user.id) {
+    return actionOk({ id: row.id });
+  }
+  if (row.estado === "en_uso") {
+    return actionError(`${PREFIJO_CONFLICTO}La herramienta ${row.codigo} ya fue tomada por otro trabajador.`);
+  }
   if (!estadoPermiteAsignacion(row.estado)) {
     return actionError("Solo puede tomar herramientas en estado disponible (RN81).");
   }
 
-  const { error } = await supabase
+  const { data: tomada, error } = await supabase
     .from("inventario_herramientas")
     .update({
       estado: "en_uso",
       assigned_to: user.id,
       notas_dano: null,
     })
-    .eq("id", row.id);
+    .eq("id", row.id)
+    .eq("estado", "disponible")
+    .select("id");
 
   if (error) return actionError(error.message);
+  // Otro trabajador la tomó entre la lectura y la escritura.
+  if (!tomada?.length) {
+    return actionError(`${PREFIJO_CONFLICTO}La herramienta ${row.codigo} ya fue tomada por otro trabajador.`);
+  }
 
   await registrarEventoFinca({
     fincaId: row.finca_id,

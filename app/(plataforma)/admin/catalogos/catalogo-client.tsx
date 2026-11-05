@@ -596,7 +596,7 @@ export function CatalogoClient({
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setConfirmInactivar(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleInactivar}>Inactivar</Button>
+            <Button variant="destructive" data-requiere-conexion onClick={handleInactivar}>Inactivar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,9 +1,11 @@
 "use client";
 
+import { useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
+import { validarCantidadPalmasSiembra } from "@/lib/siembra-plantulas";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { registrarSiembraPlantulas } from "@/app/actions/siembra-plantulas";
 import type { RegistroSiembraListRow } from "@/app/actions/siembra-plantulas";
 import type { SiembraPendienteRow } from "@/app/actions/queries";
 import { SiembraForm, type SiembraConfirmSnapshot } from "@/components/campo/siembra-form";
@@ -28,9 +30,13 @@ type Props = {
 
 export function SiembraOperarioClient({
   fincaId,
-  pendientes,
+  pendientes: pendientesServidor,
   initialHistorial,
 }: Props) {
+  const guardar = useGuardarOffline();
+  // Lo ya registrado en este dispositivo (aún sin sincronizar) no se ofrece de nuevo.
+  const enCola = useEnCola("siembra", "lote_id");
+  const pendientes = pendientesServidor.filter((p) => !enCola.has(p.lote_id));
   const router = useRouter();
   const { toast } = useToast();
   const [historial] = useServerPropsState(initialHistorial);
@@ -59,8 +65,14 @@ export function SiembraOperarioClient({
     if (!fincaId || !confirmSnapshot) return;
 
     const qty = Number(confirmSnapshot.cantidad.replace(",", "."));
+    const excede = validarCantidadPalmasSiembra(qty, confirmSnapshot.selected);
+    if (excede) {
+      setConfirmOpen(false);
+      toast(excede, "error");
+      return;
+    }
     setPending(true);
-    const res = await registrarSiembraPlantulas({
+    const res = await guardar("siembra", {
       finca_id: fincaId,
       lote_id: confirmSnapshot.selected.lote_id,
       plan_siembra_id: confirmSnapshot.selected.plan_siembra_id,
@@ -82,6 +94,7 @@ export function SiembraOperarioClient({
 
     setCreateOpen(false);
     setConfirmSnapshot(null);
+    if (res.offline) return;
     toast("Siembra registrada. Lote en producción.", "success");
     router.refresh();
   }

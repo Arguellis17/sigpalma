@@ -23,7 +23,7 @@ export default async function TecnicoSanidadValidacionPage() {
   const { data: raw } = await supabase
     .from("alertas_fitosanitarias")
     .select(
-      "id, created_at, severidad, descripcion, catalogo_item_id, lote_id, evidencia_urls"
+      "id, created_at, capturado_en, posible_duplicado_de, severidad, descripcion, catalogo_item_id, lote_id, evidencia_urls"
     )
     .eq("finca_id", fincaId)
     .eq("is_voided", false)
@@ -58,7 +58,9 @@ export default async function TecnicoSanidadValidacionPage() {
       paths.length > 0 ? await createSignedUrlsForStoragePaths(supabase, paths) : [];
     alertas.push({
       id: row.id,
-      created_at: row.created_at,
+      // Sin conexión, el reporte se hizo cuando se capturó, no cuando llegó al servidor.
+      created_at: row.capturado_en ?? row.created_at,
+      posible_duplicado_de: row.posible_duplicado_de,
       severidad: row.severidad,
       descripcion: row.descripcion,
       lote_codigo: loteMap.get(row.lote_id) ?? "—",

@@ -277,6 +277,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -295,6 +297,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -313,6 +317,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [];
       };
@@ -334,6 +340,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -352,6 +360,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -370,6 +380,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [];
       };
@@ -610,6 +622,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -625,6 +639,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -640,6 +656,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [
           {
@@ -683,6 +701,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -700,6 +720,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -717,6 +739,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [
           {
@@ -800,6 +824,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -823,6 +849,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -846,6 +874,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [
           {
@@ -882,6 +912,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -900,6 +932,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -918,6 +952,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [
           {
@@ -957,6 +993,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -978,6 +1016,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -999,6 +1039,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [
           {
@@ -1030,6 +1072,9 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
+          posible_duplicado_de: string | null;
         };
         Insert: {
           id?: string;
@@ -1050,6 +1095,9 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
+          posible_duplicado_de?: string | null;
         };
         Update: {
           id?: string;
@@ -1070,6 +1118,9 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
+          posible_duplicado_de?: string | null;
         };
         Relationships: [
           {
@@ -1100,6 +1151,9 @@ export type Database = {
           validacion_diagnostico: string | null;
           validado_por: string | null;
           validado_en: string | null;
+          client_op_id: string | null;
+          capturado_en: string | null;
+          posible_duplicado_de: string | null;
         };
         Insert: {
           id?: string;
@@ -1119,6 +1173,9 @@ export type Database = {
           validacion_diagnostico?: string | null;
           validado_por?: string | null;
           validado_en?: string | null;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
+          posible_duplicado_de?: string | null;
         };
         Update: {
           id?: string;
@@ -1137,6 +1194,9 @@ export type Database = {
           validacion_diagnostico?: string | null;
           validado_por?: string | null;
           validado_en?: string | null;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
+          posible_duplicado_de?: string | null;
         };
         Relationships: [];
       };
@@ -1200,6 +1260,8 @@ export type Database = {
           source: Database["public"]["Enums"]["registro_source"];
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -1218,6 +1280,8 @@ export type Database = {
           source?: Database["public"]["Enums"]["registro_source"];
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -1236,6 +1300,8 @@ export type Database = {
           source?: Database["public"]["Enums"]["registro_source"];
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [];
       };
@@ -1263,6 +1329,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -1287,6 +1355,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -1311,6 +1381,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [];
       };
@@ -1376,6 +1448,8 @@ export type Database = {
           is_voided: boolean;
           created_at: string;
           updated_at: string;
+          client_op_id: string | null;
+          capturado_en: string | null;
         };
         Insert: {
           id?: string;
@@ -1393,6 +1467,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Update: {
           id?: string;
@@ -1410,6 +1486,8 @@ export type Database = {
           is_voided?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_op_id?: string | null;
+          capturado_en?: string | null;
         };
         Relationships: [];
       };
@@ -1499,6 +1577,9 @@ export type Database = {
           p_created_by: string;
           p_source: Database["public"]["Enums"]["registro_source"];
           p_cosecha_ids: string[];
+          /** Modo offline: idempotencia (misma operación → misma remisión). */
+          p_client_op_id?: string;
+          p_capturado_en?: string | null;
         };
         Returns: string;
       };

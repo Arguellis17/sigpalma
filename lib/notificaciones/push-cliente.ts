@@ -36,7 +36,7 @@ export async function sincronizarSuscripcionPush(): Promise<boolean> {
   const clavePublica = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!pushSoportado() || Notification.permission !== "granted" || !clavePublica) return false;
 
-  await navigator.serviceWorker.register("/sw.js");
+  // El service worker lo registra SerwistProvider (app/layout.tsx); aquí solo se espera a que esté activo.
   const registro = await navigator.serviceWorker.ready;
   const clave = base64UrlABytes(clavePublica);
 

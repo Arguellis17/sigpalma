@@ -1,9 +1,11 @@
 "use client";
 
+import { useEnCola, useGuardarOffline } from "@/components/offline/estado-offline";
+import { validarJustificacionDesviacionFertilizacion } from "@/lib/validations/fertilizacion";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { registrarAplicacionFertilizacion } from "@/app/actions/fertilizacion";
 import type { AplicacionFertilizacionListRow } from "@/app/actions/fertilizacion";
 import type { NutricionPendienteRow } from "@/app/actions/queries";
 import {
@@ -43,9 +45,13 @@ function formatDate(iso: string) {
 
 export function FertilizacionOperarioClient({
   fincaId,
-  pendientes,
+  pendientes: pendientesServidor,
   initialHistorial,
 }: Props) {
+  const guardar = useGuardarOffline();
+  // Lo ya registrado en este dispositivo (aún sin sincronizar) no se ofrece de nuevo.
+  const enCola = useEnCola("fertilizacion", "plan_item_id");
+  const pendientes = pendientesServidor.filter((p) => !enCola.has(p.plan_item_id));
   const router = useRouter();
   const { toast } = useToast();
   const [historial] = useServerPropsState(initialHistorial);
@@ -73,9 +79,15 @@ export function FertilizacionOperarioClient({
   async function onConfirmSubmit() {
     if (!fincaId || !confirmSnapshot) return;
 
-    setPending(true);
     const qty = Number(confirmSnapshot.cantidad.replace(",", "."));
-    const res = await registrarAplicacionFertilizacion({
+    const sinJustificar = validarJustificacionDesviacionFertilizacion(qty, confirmSnapshot.selected.dosis_cantidad, confirmSnapshot.justificacion);
+    if (sinJustificar) {
+      setConfirmOpen(false);
+      toast(sinJustificar, "error");
+      return;
+    }
+    setPending(true);
+    const res = await guardar("fertilizacion", {
       finca_id: fincaId,
       plan_item_id: confirmSnapshot.selected.plan_item_id,
       fecha_aplicacion: confirmSnapshot.fecha,
@@ -97,6 +109,7 @@ export function FertilizacionOperarioClient({
 
     setCreateOpen(false);
     setConfirmSnapshot(null);
+    if (res.offline) return;
     toast("Aplicación de fertilización registrada.", "success");
     router.refresh();
   }

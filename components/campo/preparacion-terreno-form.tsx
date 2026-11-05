@@ -108,7 +108,7 @@ export function PreparacionTerrenoForm({
   }
 
   return (
-    <form onSubmit={onRequestSubmit} className={formClass}>
+    <form onSubmit={onRequestSubmit} className={formClass} data-offline-ok>
       <div className="space-y-2">
         <Label htmlFor="lote">Lote planificado</Label>
         <Select value={loteKey} onValueChange={setLoteKey}>

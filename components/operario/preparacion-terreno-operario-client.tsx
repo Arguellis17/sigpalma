@@ -1,9 +1,11 @@
 "use client";
 
+import { useEnCola, useGuardarOffline, type DatosDe } from "@/components/offline/estado-offline";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
-import { registrarPreparacionTerreno } from "@/app/actions/preparacion-terreno";
+import type { registrarPreparacionTerreno } from "@/app/actions/preparacion-terreno";
 import type { PreparacionTerrenoListRow } from "@/app/actions/preparacion-terreno";
 import type { PreparacionTerrenoPendienteRow } from "@/app/actions/queries";
 import {
@@ -33,9 +35,13 @@ type Props = {
 
 export function PreparacionTerrenoOperarioClient({
   fincaId,
-  pendientes,
+  pendientes: pendientesServidor,
   initialHistorial,
 }: Props) {
+  const guardar = useGuardarOffline();
+  // Lo ya registrado en este dispositivo (aún sin sincronizar) no se ofrece de nuevo.
+  const enCola = useEnCola("preparacion_terreno", "lote_id");
+  const pendientes = pendientesServidor.filter((p) => !enCola.has(p.lote_id));
   const router = useRouter();
   const { toast } = useToast();
   const [historial] = useServerPropsState(initialHistorial);
@@ -67,7 +73,7 @@ export function PreparacionTerrenoOperarioClient({
 
     const pendienteNum = Number(confirmSnapshot.pendiente.replace(",", "."));
     setPending(true);
-    const res = await registrarPreparacionTerreno({
+    const res = await guardar<DatosDe<typeof registrarPreparacionTerreno>>("preparacion_terreno", {
       finca_id: fincaId,
       lote_id: confirmSnapshot.selected.lote_id,
       plan_siembra_id: confirmSnapshot.selected.plan_siembra_id,
@@ -87,6 +93,7 @@ export function PreparacionTerrenoOperarioClient({
     setCreateOpen(false);
     setConfirmSnapshot(null);
 
+    if (res.offline) return;
     if (res.data.requiere_validacion_tecnico) {
       toast(
         "Registro guardado. Pendiente de validación técnica por pendiente ≥ 12%.",
