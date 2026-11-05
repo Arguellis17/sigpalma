@@ -55,3 +55,8 @@ docs/15-04-2026/documentacion/primer-corte/bpmn
 docs
 .serena
 CLAUDE.md
+
+# Playwright
+/e2e/.auth/
+/test-results/
+/playwright-report/

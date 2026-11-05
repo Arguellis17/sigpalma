@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
-
-function isPublicAuthPath(pathname: string) {
-  return pathname.startsWith("/auth") || pathname === "/login";
-}
+import {
+  DASHBOARD_POR_ROL,
+  isPlatformRoute,
+  isPublicAuthPath,
+  segmentRoleRedirect,
+  type RolUsuario,
+} from "@/lib/auth/rutas-rol";
 
 /** Refresh/session errors where cookies should be cleared to avoid a broken half-session. */
 function isStaleSessionAuthError(error: { code?: string } | null) {
@@ -15,13 +18,6 @@ function isStaleSessionAuthError(error: { code?: string } | null) {
     code === "invalid_grant"
   );
 }
-
-const dashboardMap: Record<string, string> = {
-  superadmin: "/superadmin",
-  admin: "/admin",
-  agronomo: "/tecnico",
-  operario: "/operario",
-};
 
 const CHANGE_PASSWORD_PATH = "/auth/cambiar-contrasena";
 /** Tras enlace de correo (recovery); debe permitirse con sesión para no redirigir al panel antes de `updateUser`. */
@@ -64,32 +60,6 @@ function redirectPreservingAuthCookies(
     res.cookies.set(c.name, c.value);
   });
   return res;
-}
-
-function isPlatformRoute(pathname: string) {
-  return (
-    pathname.startsWith("/operario") ||
-    pathname.startsWith("/tecnico") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/superadmin")
-  );
-}
-
-/** If this role may not open this path, return the dashboard URL for that role. */
-function segmentRoleRedirect(pathname: string, role: string): string | null {
-  if (pathname.startsWith("/operario") && role !== "operario") {
-    return dashboardMap[role] ?? "/tecnico";
-  }
-  if (pathname.startsWith("/tecnico") && role !== "agronomo") {
-    return dashboardMap[role] ?? "/operario";
-  }
-  if (pathname.startsWith("/admin") && role !== "admin") {
-    return dashboardMap[role] ?? "/superadmin";
-  }
-  if (pathname.startsWith("/superadmin") && role !== "superadmin") {
-    return dashboardMap[role] ?? "/admin";
-  }
-  return null;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -208,7 +178,7 @@ export async function updateSession(request: NextRequest) {
         supabaseResponse
       );
     }
-    const dest = dashboardMap[activeRole] ?? "/operario";
+    const dest = DASHBOARD_POR_ROL[activeRole as RolUsuario] ?? "/operario";
     return redirectPreservingAuthCookies(request, dest, supabaseResponse);
   }
 
@@ -237,7 +207,7 @@ export async function updateSession(request: NextRequest) {
     ) {
       return supabaseResponse;
     }
-    const dest = dashboardMap[activeRole] ?? "/operario";
+    const dest = DASHBOARD_POR_ROL[activeRole as RolUsuario] ?? "/operario";
     return redirectPreservingAuthCookies(request, dest, supabaseResponse);
   }
 
