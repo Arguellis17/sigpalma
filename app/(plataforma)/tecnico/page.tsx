@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { Layers } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
 export default async function TecnicoDashboardPage() {

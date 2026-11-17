@@ -24,7 +24,7 @@ export async function openXlsx(buf: Buffer) {
   const zip = await JSZip.loadAsync(buf);
   const read = (path: string) => zip.file(path)!.async("string");
   const files = Object.keys(zip.files);
-  const charts = files.filter((f) => /^xl\/charts\/chart\d+\.xml$/.test(f)).sort();
+  const charts = files.filter((f) => /^xl\/charts\/chart\d+\.xml$/.test(f)).sort((a, b) => a.localeCompare(b));
   for (const f of files.filter((f) => f.endsWith(".xml") || f.endsWith(".rels"))) {
     expectWellFormedXml(await read(f), f);
   }

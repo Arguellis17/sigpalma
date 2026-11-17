@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const nextPath = safeInternalPath(searchParams.get("next"));
 
   const redirectUrl = new URL(nextPath, origin);
-  let redirectResponse = NextResponse.redirect(redirectUrl);
+  const redirectResponse = NextResponse.redirect(redirectUrl);
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

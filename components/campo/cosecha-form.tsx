@@ -19,7 +19,6 @@ import {
 } from "@/lib/cosecha-validacion";
 import { Button } from "@/components/ui/button";
 import { DatePickerField, todayLocalYmd } from "@/components/ui/date-picker-field";
-import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {

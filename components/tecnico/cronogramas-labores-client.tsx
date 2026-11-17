@@ -119,7 +119,7 @@ export function CronogramasLaboresClient({ fincaId, cronogramas, lotes, labores,
   }
 
   function alternarDia(valor: number) {
-    setDias((prev) => (prev.includes(valor) ? prev.filter((d) => d !== valor) : [...prev, valor].sort()));
+    setDias((prev) => (prev.includes(valor) ? prev.filter((d) => d !== valor) : [...prev, valor].sort((a, b) => a - b)));
   }
 
   async function guardar(e: React.FormEvent) {

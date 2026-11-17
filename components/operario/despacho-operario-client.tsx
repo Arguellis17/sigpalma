@@ -79,7 +79,7 @@ export function DespachoOperarioClient({
   const cosechasSinSincronizar = operaciones.filter(
     (o) => o.tipo === "cosecha" && o.estado !== "sincronizado"
   ).length;
-  const [remisiones, setRemisiones] = useServerPropsState(initialRemisiones);
+  const [remisiones] = useServerPropsState(initialRemisiones);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [placa, setPlaca] = useState("");
   const [conductorId, setConductorId] = useState("");

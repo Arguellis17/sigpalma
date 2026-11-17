@@ -47,7 +47,7 @@ export function SuperadminFincasClient({ fincas: initialFincas }: Props) {
   const [pending, setPending] = useState(false);
 
   const filtered = useMemo(() => {
-    let list = showInactive ? fincas : fincas.filter((f) => f.is_active);
+    const list = showInactive ? fincas : fincas.filter((f) => f.is_active);
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -58,7 +58,7 @@ export function SuperadminFincasClient({ fincas: initialFincas }: Props) {
     );
   }, [fincas, search, showInactive]);
 
-  function handleCreated(id: string) {
+  function handleCreated() {
     setDialog(null);
     router.refresh();
   }

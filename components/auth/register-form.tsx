@@ -21,10 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Database } from "@/lib/database.types";
-
-type UserRole = Database["public"]["Enums"]["user_role"];
-
 type FincaOption = { id: string; nombre: string };
 
 const SELECT_NONE = "__none__";

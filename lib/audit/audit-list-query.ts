@@ -52,7 +52,7 @@ export function parseAuditoriaListQuery(
   const pageSize = parseEnumInt(get("pageSize"), AUDIT_PAGE_SIZES, DEFAULT_PAGE_SIZE);
   const sort = parseSortKey(get("sort"));
   const dir = parseDir(get("dir"));
-  let page = parsePositiveInt(get("page"), DEFAULT_PAGE);
+  const page = parsePositiveInt(get("page"), DEFAULT_PAGE);
   const qRaw = get("q") ?? "";
   const q = sanitizeIlikeFragment(qRaw);
 

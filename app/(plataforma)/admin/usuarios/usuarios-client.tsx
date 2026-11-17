@@ -98,7 +98,7 @@ export function UsuariosClient({ fincas, usuarios: initialUsuarios, scope = "all
   }, [sheet]);
 
   const filtered = useMemo(() => {
-    let list = showInactive ? usuarios : usuarios.filter((u) => u.is_active);
+    const list = showInactive ? usuarios : usuarios.filter((u) => u.is_active);
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(

@@ -203,7 +203,7 @@ export function CatalogoClient({
     useEffect(() => {
       setCategoriaItem((item?.categoria as CategoriaCatalogo) ?? categoria);
       setSubcategoriaInsumo((item?.subcategoria as SubcategoriaInsumo) ?? "");
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- `categoria` is fixed per page mount
+       
     }, [item?.categoria, item?.id, item?.subcategoria]);
 
     return (

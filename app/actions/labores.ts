@@ -131,7 +131,7 @@ export async function registrarLabor(
   const supabase = await createClient();
 
   let tipoResolved = input.tipo.trim() || "Labor";
-  let catalogoItemId: string | null = input.catalogo_item_id ?? null;
+  const catalogoItemId: string | null = input.catalogo_item_id ?? null;
   let loteCodigo: string;
 
   if (role === "agronomo") {

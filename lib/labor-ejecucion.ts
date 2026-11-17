@@ -17,7 +17,7 @@ export function formatCantidadLabor(
   unidad: string
 ): string {
   const n = Number(cantidad);
-  const formatted = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+  const formatted = Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
   return `${formatted} ${labelUnidadMedidaLabor(unidad).toLowerCase()}`;
 }
 
