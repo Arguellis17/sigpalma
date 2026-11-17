@@ -24,14 +24,14 @@ export function SortableTableHead({
 }: Props) {
   const active = activeSort === columnId;
   return (
-    <TableHead className={cn("px-4 py-3", className)}>
+    <TableHead
+      className={cn("px-4 py-3", className)}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
       <button
         type="button"
         className="inline-flex w-full min-w-0 items-center gap-1.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => onToggle(columnId)}
-        aria-sort={
-          active ? (dir === "asc" ? "ascending" : "descending") : "none"
-        }
       >
         <span>{label}</span>
         {active ? (

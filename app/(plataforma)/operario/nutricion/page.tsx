@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth/session-profile";
 import { todayColombiaYmd } from "@/lib/date-colombia";
 import { listAplicacionesFertilizacionForFinca } from "@/app/actions/fertilizacion";

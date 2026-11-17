@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getSessionProfile,
   hasRole,
-  isSuperAdmin,
 } from "@/lib/auth/session-profile";
 import { pendienteRequiereValidacionTecnico } from "@/lib/preparacion-terreno";
 import {

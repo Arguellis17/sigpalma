@@ -43,7 +43,7 @@ export function FincasClient({ fincas: initialFincas, canCreateFinca }: Props) {
     );
   }, [initialFincas, search]);
 
-  function handleCreated(_id: string) {
+  function handleCreated() {
     setOpen(false);
     router.refresh();
   }

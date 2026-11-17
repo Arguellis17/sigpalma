@@ -9,6 +9,7 @@ export const metadata: Metadata = { title: "Sin conexión · SIG-Palma" };
 export default function SinConexionPage() {
   return (
     <main className="mx-auto flex min-h-svh max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element -- respaldo sin conexión: debe cargar sin el optimizador de imágenes */}
       <img src="/icons/icon-192.png" alt="" width={96} height={96} className="rounded-2xl" />
       <h1 className="text-2xl font-bold">Sin conexión</h1>
       <p className="text-sm leading-6 text-muted-foreground">
@@ -17,6 +18,7 @@ export default function SinConexionPage() {
         sincroniza solo cuando vuelva la conexión.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- respaldo sin conexión: navegación completa a propósito, sin el enrutador */}
         <a href="/" className="inline-flex min-h-12 items-center rounded-2xl bg-primary px-5 font-semibold text-primary-foreground">
           Ir al inicio
         </a>

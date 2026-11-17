@@ -209,13 +209,13 @@ export function AuditoriaFincaClient({
         </div>
         {fincas && fincas.length > 0 ? (
           <div className="w-full max-w-xs space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Finca</label>
+            <label htmlFor="auditoria-finca" className="text-xs font-medium text-muted-foreground">Finca</label>
             <Select
               value={fincaId}
               onValueChange={loadFinca}
               disabled={pending}
             >
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger id="auditoria-finca" className="rounded-xl">
                 <SelectValue placeholder="Elegir finca…" />
               </SelectTrigger>
               <SelectContent>
